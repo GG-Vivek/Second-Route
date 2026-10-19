@@ -6,6 +6,7 @@ import { UnitsListPage } from '@/pages/UnitsListPage'
 import { UnitDetailPage } from '@/pages/UnitDetailPage'
 import { NewIntakePage } from '@/pages/NewIntakePage'
 import { NewInspectionPage } from '@/pages/NewInspectionPage'
+import { DecisionPage } from '@/pages/decision/DecisionPage'
 
 export function App() {
   return (
@@ -17,6 +18,7 @@ export function App() {
         <Route path="units/:id" element={<UnitDetailPage />} />
         <Route path="intake/new" element={<NewIntakePage />} />
         <Route path="units/:id/inspection/new" element={<NewInspectionPage />} />
+        <Route path="units/:id/decision" element={<DecisionPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

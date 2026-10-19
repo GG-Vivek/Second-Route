@@ -168,6 +168,8 @@ class Settings(BaseSettings):
         url = str(self.DATABASE_URL)
         if url.startswith("postgresql+asyncpg://"):
             return url.replace("postgresql+asyncpg://", "postgresql://")
+        if url.startswith("sqlite+aiosqlite://"):
+            return url.replace("sqlite+aiosqlite://", "sqlite://")
         return url
 
 

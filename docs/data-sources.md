@@ -45,7 +45,23 @@
 
 | Source | Last Retrieved | Rows | Status | Error Count | Next Scheduled |
 |--------|----------------|------|--------|-------------|----------------|
-| — | — | — | — | — | — |
+| Synthetic generator (`ml/synthetic`) | on demand | varies | ✅ Working | 0 | n/a |
+| Synthetic price source (`SyntheticPriceSource`) | on demand | 64 per cell | ✅ Working | 0 | n/a |
+| eBay Browse API | — | — | 🔲 Not started | — | Phase 3 |
+| FRED API | — | — | 🔲 Not started | — | Phase 3 |
+| Wikimedia Pageviews | — | — | 🔲 Not started | — | Phase 3 |
+| Partner CSV imports | — | — | 🔲 Not started | — | Phase 3 |
+
+### Phase 2 sources in use
+
+| Source | Where it is used | Tagging |
+|---|---|---|
+| `ml/synthetic/generator.py` | Synthetic returns for demos and tests | `is_synthetic = true` |
+| `SyntheticPriceSource` | The Phase 2 price source adapter | `source = "synthetic"`, `is_synthetic = true` |
+| Default cost tables (`secondroute.costs.defaults`) | Fees, logistics, handling, repair, holding | `source = "synthetic_defaults"`, `as_of = 2025-01-01` |
+
+Every one of these is local and free. No network access, no API keys, no
+scraping.
 
 ---
 

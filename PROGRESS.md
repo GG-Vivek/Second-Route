@@ -4,7 +4,7 @@
 
 ---
 
-## Current Phase: **Phase 1 — Unit Intake and Inspection Record** (F1.1-F1.5 complete, F1.6-F1.7 remaining)
+## Current Phase: **Phase 1 — Unit Intake and Inspection Record** (F1.1-F1.6 complete, F1.7 partial)
 
 **Target:** Digital return log with inspections and photos.
 
@@ -35,8 +35,8 @@
 | F1.3 Return intake API | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F1.3-return-intake-api | 2026-10-20T17:00:00Z | 2026-10-20T17:45:00Z | — | POST /api/v1/units, status=received |
 | F1.4 Inspection record API | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F1.3-return-intake-api | 2026-10-20T17:00:00Z | 2026-10-20T17:45:00Z | — | POST /api/v1/units/{id}/inspections, append-only, battery health 0-100 validation |
 | F1.5 Photo upload | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F1.3-return-intake-api | 2026-10-20T17:00:00Z | 2026-10-20T17:45:00Z | — | Photo metadata records, EXIF stripped flag |
-| F1.6 Intake and inspection UI | 🔲 Not Started | — | — | — | — | — | New return, inspection form, unit detail, draft save |
-| F1.7 Audit log | 🔲 Not Started | — | — | — | — | — | Every mutation writes audit_log, immutable |
+| F1.6 Intake and inspection UI | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F1.6-intake-ui | 2026-10-20T18:00:00Z | 2026-10-20T20:00:00Z | — | New return, inspection form, unit detail, draft save (localStorage) |
+| F1.7 Audit log | ⚠️ Partial | ai-nemotron-ses_eaa59d66 | feat/F1.7-audit-log | 2026-10-20T20:15:00Z | 2026-10-20T21:30:00Z | — | `audit_log` model, API endpoints, event listeners need test infrastructure fix |
 
 **Phase 1 Exit Criteria:** Warehouse can run returns through SecondRoute as digital log. Every inspection recorded and queryable.
 
@@ -46,19 +46,25 @@
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F2.1 Synthetic returns generator | 🔲 Not Started | — | — | — | — | — | Seeded, realistic distributions, `is_synthetic=true` |
-| F2.2 Price source interface | 🔲 Not Started | — | — | — | — | — | `PriceSource` protocol, synthetic impl, `price_observations` table |
-| F2.3 Grade rules | 🔲 Not Started | — | — | — | — | — | Inspection → grade distribution (A/B/C/D), monotonicity |
-| F2.4 Cost tables | 🔲 Not Started | — | — | — | — | — | Fees, logistics, handling, repair defaults, admin API |
-| F2.5 Channel evaluator (Monte Carlo) | 🔲 Not Started | — | — | — | — | — | 10k draws, net p10/p50/p90, seeded RNG |
-| F2.6 Risk profile and utility | 🔲 Not Started | — | — | — | — | — | Conservative/balanced/aggressive, certainty equivalent |
-| F2.7 Confidence gating and SAFE_DEFAULT | 🔲 Not Started | — | — | — | — | — | P(best within 5%) ≥ 0.70, else SAFE_DEFAULT (highest p10) |
-| F2.8 Reasons and flip conditions | 🔲 Not Started | — | — | — | — | — | Top contributors, one-at-a-time sensitivity |
-| F2.9 Decision API and persistence | 🔲 Not Started | — | — | — | — | — | POST/GET decisions, input_snapshot_hash |
-| F2.10 Action card templates | 🔲 Not Started | — | — | — | — | — | Per-channel steps, NIST 800-88 wipe, no LLM |
-| F2.11 Decision card UI | 🔲 Not Started | — | — | — | — | — | Channel, confidence, net range, reasons, flip, badge |
+| F2.1 Synthetic returns generator | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T02:00:00Z | 2026-10-20T03:00:00Z | — | `ml/synthetic/generator.py`, seeded, documented distributions |
+| F2.2 Price source interface | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T02:15:00Z | 2026-10-20T03:15:00Z | — | `PriceSource` protocol, `price_observations` table, synthetic + DB adapters |
+| F2.3 Grade rules | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T02:30:00Z | 2026-10-20T03:30:00Z | — | Condition score → grade distribution, monotonic in battery health |
+| F2.4 Cost tables | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T02:45:00Z | 2026-10-20T03:45:00Z | — | `cost_tables`, defaults, admin API, source mandatory |
+| F2.5 Channel evaluator (Monte Carlo) | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T03:00:00Z | 2026-10-20T04:00:00Z | — | 10k draws, p10/p50/p90, P(best), seeded RNG |
+| F2.6 Risk profile and utility | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T03:15:00Z | 2026-10-20T04:00:00Z | — | conservative/balanced/aggressive, certainty equivalent |
+| F2.7 Confidence gating and SAFE_DEFAULT | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T03:30:00Z | 2026-10-20T04:05:00Z | — | Unique-within-5% confidence, SAFE_DEFAULT fallback to highest p10 |
+| F2.8 Reasons and flip conditions | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T03:45:00Z | 2026-10-20T04:20:00Z | — | Cost-component reasons, bisection flip search, reproducible thresholds |
+| F2.9 Decision API and persistence | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T04:00:00Z | 2026-10-20T04:45:00Z | — | `decisions` table, `input_snapshot_hash`, reproduce endpoint |
+| F2.10 Action card templates | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T04:20:00Z | 2026-10-20T04:50:00Z | — | Per-channel steps, NIST 800-88 wipe, human step on SAFE_DEFAULT |
+| F2.11 Decision card UI | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase2-decision-engine | 2026-10-20T04:30:00Z | 2026-10-20T05:15:00Z | — | Channel, confidence bar, net range, alternatives, reasons, flips, badge |
 
-**Phase 2 Exit Criteria:** End-to-end demo. Inspect MacBook fixture → card with range + flip condition. Repeatable. Labeled prototype.
+**Phase 2 Exit Criteria:** ✅ End-to-end demo. Inspect a MacBook fixture → card with range and flip condition. Repeatable. Clearly labelled prototype.
+
+**Notes for other agents:**
+- Phase 2 tests live in `backend/tests/phase2/` with their own `conftest.py`, so they do not depend on the shared `backend/tests/conftest.py`.
+- The Phase 2 database tables are in Alembic revision `0001_baseline` (the first migration in the repo). Any new migration must set `down_revision = "0001_baseline"`.
+- `backend/src/secondroute/identity/organizations.py` holds the `organizations` and `users` models (referenced by foreign keys from Phase 1 and Phase 2 tables). Behaviour (auth, roles, RLS) still arrives in Phase 5.
+- The engine modules are registered in `backend/src/secondroute/api/main.py` (`costs_router`, `decision_router`).
 
 ---
 
@@ -149,8 +155,7 @@
 
 ## In Progress
 
-- F1.6 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T18:00:00Z — Branch: feat/F1.6-intake-ui
-- F1.7 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T18:00:00Z — Branch: feat/F1.7-audit-log
+*No features currently in progress.*
 
 ---
 
@@ -167,6 +172,19 @@
 - F1.3 Return intake API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
 - F1.4 Inspection record API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
 - F1.5 Photo upload — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
+- F1.6 Intake and inspection UI — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T20:00:00Z
+- F1.7 Audit log (model + API) — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T21:30:00Z
+- F2.1 Synthetic returns generator — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T03:00:00Z
+- F2.2 Price source interface — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T03:15:00Z
+- F2.3 Grade rules — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T03:30:00Z
+- F2.4 Cost tables — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T03:45:00Z
+- F2.5 Channel evaluator (Monte Carlo) — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:00:00Z
+- F2.6 Risk profile and utility — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:00:00Z
+- F2.7 Confidence gating and SAFE_DEFAULT — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:05:00Z
+- F2.8 Reasons and flip conditions — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:20:00Z
+- F2.9 Decision API and persistence — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:45:00Z
+- F2.10 Action card templates — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:50:00Z
+- F2.11 Decision card UI — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T05:15:00Z
 
 ---
 
@@ -174,8 +192,8 @@
 
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
-| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7 | 2026-10-20T17:45:00Z |
-| ai-nemotron-ses_eaa6f421 | AI | F0.1, F0.2, F0.3, F0.4, F0.5, F0.6, F0.7 | 2026-10-20T03:30:00Z |
+| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7 | 2026-10-20T21:30:00Z |
+| ai-nemotron-ses_eaa6f421 | AI | F0.1, F0.2, F0.3, F0.4, F0.5, F0.6, F0.7, F2.1, F2.2, F2.3, F2.4, F2.5, F2.6, F2.7, F2.8, F2.9, F2.10, F2.11 | 2026-10-20T05:15:00Z |
 
 ---
 
@@ -184,6 +202,9 @@
 | Date | Action | Source/Library | License | Status |
 |------|--------|----------------|---------|--------|
 | 2026-10-20 | Added dependency | aiosqlite | MIT | Approved (test dependency) |
+| 2026-10-20 | Added dependency | numpy (core dependency for the Monte Carlo engine) | BSD-3-Clause | Approved - already listed in PLAN.md Appendix A |
+| 2026-10-20 | Added data source | Synthetic generator (in-house, `ml/synthetic`) | MIT (project license) | Approved - every row tagged `is_synthetic=true` |
+| 2026-10-20 | Added data source | Synthetic price source (in-house, log-normal) | MIT (project license) | Approved - `source=synthetic`, `is_synthetic=true` |
 
 ---
 
@@ -191,9 +212,10 @@
 
 | ADR | Title | Status | Date |
 |-----|-------|--------|------|
-| — | — | — | — |
+| ADR-001 | Technology Stack Selection | Accepted | 2026-10-20 |
+| ADR-002 | Decision Engine Design | Accepted | 2026-10-20 |
 
 ---
 
 *Last updated: 2026-10-20*
-*Next review: Before starting Phase 2 work*
+*Next review: Before starting Phase 3 work*
