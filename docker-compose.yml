@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: secondroute-postgres
+    environment:
+      POSTGRES_DB: secondroute
+      POSTGRES_USER: secondroute
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/alembic:/alembic:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U secondroute -d secondroute"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - secondroute-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: secondroute-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - secondroute-network
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: secondroute-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+      - EMAIL=${EMAIL:-admin@localhost}
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - secondroute-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: secondroute-backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://secondroute:${POSTGRES_PASSWORD:-changeme}@postgres:5432/secondroute
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - secondroute-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: secondroute-frontend
+    environment:
+      - VITE_API_BASE_URL=http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    networks:
+      - secondroute-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  secondroute-network:
+    driver: bridge

@@ -1,0 +1,284 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  # Renovate will update these versions
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+
+jobs:
+  # Backend linting and type checking
+  backend-lint:
+    name: Backend Lint & Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install uv
+          uv sync --frozen --all-extras
+
+      - name: Run ruff (lint)
+        run: uv run ruff check .
+
+      - name: Run ruff (format check)
+        run: uv run ruff format --check .
+
+      - name: Run mypy (typecheck)
+        run: uv run mypy .
+
+  # Backend tests
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: secondroute_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d secondroute_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install uv
+          uv sync --frozen --all-extras
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/secondroute_test
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: test
+          DEBUG: "true"
+          LOG_LEVEL: DEBUG
+          SECRET_KEY: test-secret-key
+        run: |
+          uv run pytest -v --cov=secondroute --cov-report=xml --cov-fail-under=80
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage.xml
+          flags: backend
+
+  # Frontend linting and type checking
+  frontend-lint:
+    name: Frontend Lint & Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript type check
+        run: npx tsc --noEmit
+
+  # Frontend tests
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:run -- --coverage
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./frontend/coverage/lcov.info
+          flags: frontend
+
+  # Docker Compose smoke test
+  compose-smoke:
+    name: Docker Compose Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start services
+        run: docker compose up -d --build
+
+      - name: Wait for services to be healthy
+        run: |
+          timeout 120 bash -c '
+            until docker compose ps | grep -q "healthy"; do
+              sleep 5
+              docker compose ps
+            done
+          '
+
+      - name: Test backend health endpoint
+        run: |
+          sleep 5
+          curl -f http://localhost:8000/health
+
+      - name: Test frontend
+        run: |
+          curl -f http://localhost:5173
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
+
+  # Alembic migration test
+  alembic-test:
+    name: Alembic Migration Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: secondroute_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U test -d secondroute_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install uv
+          uv sync --frozen --all-extras
+
+      - name: Run alembic upgrade head
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/secondroute_test
+        run: uv run alembic upgrade head
+
+      - name: Run alembic downgrade base
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/secondroute_test
+        run: uv run alembic downgrade base
+
+      - name: Run alembic upgrade head again
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/secondroute_test
+        run: uv run alembic upgrade head
+
+  # Build verification
+  build:
+    name: Build Verification
+    runs-on: ubuntu-latest
+    needs: [backend-lint, backend-test, frontend-lint, frontend-test]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build backend Docker image
+        run: docker build -t secondroute-backend:test ./backend
+
+      - name: Build frontend Docker image
+        run: docker build -t secondroute-frontend:test ./frontend
+
+  # Summary
+  ci-summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [backend-lint, backend-test, frontend-lint, frontend-test, compose-smoke, alembic-test, build]
+    if: always()
+    steps:
+      - name: Check job statuses
+        run: |
+          if [[ "${{ needs.backend-lint.result }}" != "success" ]]; then exit 1; fi
+          if [[ "${{ needs.backend-test.result }}" != "success" ]]; then exit 1; fi
+          if [[ "${{ needs.frontend-lint.result }}" != "success" ]]; then exit 1; fi
+          if [[ "${{ needs.frontend-test.result }}" != "success" ]]; then exit 1; fi
+          if [[ "${{ needs.compose-smoke.result }}" != "success" ]]; then exit 1; fi
+          if [[ "${{ needs.alembic-test.result }}" != "success" ]]; then exit 1; fi
+          if [[ "${{ needs.build.result }}" != "success" ]]; then exit 1; fi
+          echo "All checks passed!"

@@ -1,0 +1,91 @@
+{
+    # Global options
+    admin off
+    # Use local CA for development HTTPS
+    local_certs
+}
+
+# Development configuration
+localhost {
+    # API routes -> backend
+    handle_path /api/* {
+        reverse_proxy backend:8000
+    }
+
+    # Health check -> backend
+    handle /health {
+        reverse_proxy backend:8000
+    }
+
+    # Frontend (Vite dev server) -> frontend
+    handle {
+        reverse_proxy frontend:5173
+    }
+
+    # Enable compression
+    encode gzip zstd
+
+    # Security headers
+    header {
+        # HSTS (only on HTTPS)
+        # Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Access logging
+    log {
+        output stdout
+        format json
+    }
+}
+
+# Production configuration (activated when DOMAIN is set)
+{$DOMAIN:localhost} {
+    # Only apply production config when DOMAIN != localhost
+    @production {
+        host {$DOMAIN}
+    }
+
+    handle @production {
+        # API routes -> backend
+        handle_path /api/* {
+            reverse_proxy backend:8000
+        }
+
+        # Health check -> backend
+        handle /health {
+            reverse_proxy backend:8000
+        }
+
+        # Frontend static files (built)
+        handle {
+            root * /var/www/html
+            try_files {path} /index.html
+            file_server
+        }
+
+        # Enable compression
+        encode gzip zstd
+
+        # Security headers
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "DENY"
+            Referrer-Policy "strict-origin-when-cross-origin"
+            -Server
+        }
+
+        # Access logging
+        log {
+            output stdout
+            format json
+        }
+
+        # Automatic HTTPS via Let's Encrypt
+        tls {$EMAIL}
+    }
+}

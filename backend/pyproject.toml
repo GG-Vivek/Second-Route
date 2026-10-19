@@ -1,0 +1,223 @@
+[project]
+name = "secondroute"
+version = "0.1.0"
+description = "SecondRoute - Decision engine for returned electronics"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "SecondRoute Contributors"}]
+requires-python = ">=3.12"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+]
+dependencies = [
+    # Core
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.3.0",
+    "python-multipart>=0.0.9",
+    # Database
+    "sqlalchemy>=2.0.30",
+    "alembic>=1.13.0",
+    "asyncpg>=0.29.0",
+    "psycopg2-binary>=2.9.9",
+    # Redis / Jobs
+    "redis>=5.0.0",
+    "rq>=1.16.0",
+    # Config & Logging
+    "python-dotenv>=1.0.1",
+    "structlog>=24.1.0",
+    # Validation
+    "email-validator>=2.1.0",
+    "python-slugify>=8.0.0",
+    # Utilities
+    "python-dateutil>=2.9.0",
+    "tenacity>=8.2.0",
+    "httpx>=0.27.0",
+    "aiosqlite>=0.22.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
+    "httpx>=0.27.0",
+    "faker>=25.0.0",
+    "hypothesis>=6.99.0",
+    "schemathesis>=3.13.0",
+
+    # Linting & Type Checking
+    "ruff>=0.5.0",
+    "mypy>=1.10.0",
+    "types-python-dateutil>=2.9.0",
+
+    # Pre-commit
+    "pre-commit>=3.7.0",
+]
+
+ml = [
+    "scikit-learn>=1.5.0",
+    "lightgbm>=4.3.0",
+    "statsmodels>=0.14.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "mlflow>=2.14.0",
+]
+
+cv = [
+    "opencv-python-headless>=4.10.0",
+    "paddleocr>=2.7.0",
+    "pytesseract>=0.3.10",
+]
+
+pipelines = [
+    "prefect>=3.1.0",
+    "prefect-sqlalchemy>=0.3.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "pytest-mock>=3.14.0",
+    "httpx>=0.27.0",
+    "faker>=25.0.0",
+    "hypothesis>=6.99.0",
+    "schemathesis>=3.13.0",
+    "ruff>=0.5.0",
+    "mypy>=1.10.0",
+    "types-python-dateutil>=2.9.0",
+    "pre-commit>=3.7.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+exclude = [
+    ".venv",
+    "build",
+    "dist",
+    "*.egg-info",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "alembic/versions",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "PTH", # flake8-use-pathlib
+    "T20", # flake8-print
+    "ERA", # eradicate
+    "PL",  # pylint
+    "TRY", # tryceratops
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex (allow for now)
+    "TRY003", # avoid specifying long messages outside the exception class
+    "ERA001", # commented-out code (intentional placeholders)
+    "PLC0415", # import inside function (allowed for conditional imports)
+    "ARG001", # unused function argument (required by structlog interface)
+    "PLR2004", # magic values in tests (acceptable)
+    "E402", # module level import not at top (allowed for conditional imports)
+    "F401", # unused import (will be fixed)
+    "UP035", # typing import (handled by pyupgrade)
+    "UP045", # Optional -> X | None (handled by pyupgrade)
+    "W292", # no newline at end of file (handled by formatter)
+    "I001", # import block unsorted (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S106", "ARG002"]
+"scripts/*" = ["PTH123", "T201"]
+"tests/test_identity.py" = ["ARG002"]
+"src/secondroute/intake/schemas.py" = ["TRY301"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+show_error_codes = true
+pretty = true
+exclude = [
+    ".venv",
+    "build",
+    "dist",
+    ".*\\.egg-info",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "alembic/versions",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=secondroute",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-fail-under=40",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "property: Property-based tests",
+    "slow: Slow tests",
+]
+
+[tool.coverage.run]
+source = ["secondroute"]
+omit = [
+    "*/tests/*",
+    "*/alembic/*",
+    "*/migrations/*",
+    "*/conftest.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
