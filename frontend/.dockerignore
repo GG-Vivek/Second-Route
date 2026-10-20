@@ -1,0 +1,8 @@
+# The developer's local environment must never end up in an image.
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
+coverage

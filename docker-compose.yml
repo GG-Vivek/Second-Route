@@ -117,6 +117,12 @@ services:
     container_name: secondroute-frontend
     environment:
       - VITE_API_BASE_URL=http://backend:8000
+      # The dev server forwards the API inside the compose network. The
+      # source is mounted into the container, so a developer's
+      # frontend/.env is visible here as well: an environment variable
+      # takes priority over the file, so this is what the container uses
+      # and the host's address never leaks into it.
+      - VITE_PROXY_TARGET=http://backend:8000
     volumes:
       - ./frontend:/app
       - /app/node_modules

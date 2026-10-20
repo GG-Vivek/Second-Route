@@ -26,6 +26,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
+from tests.phase5.conftest import require_a_test_database
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = REPO_ROOT / "scripts"
 DRILL = SCRIPTS / "verify_restore.sh"
@@ -92,6 +94,9 @@ def postgres_url() -> str:
     """The PostgreSQL URL the drill runs against."""
     url = _postgres_url()
     assert url is not None
+    # The drill seeds into the database it backs up, so it has to be one a
+    # test may write to.
+    require_a_test_database(url)
     return url
 
 

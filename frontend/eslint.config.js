@@ -35,5 +35,12 @@ export default tseslint.config(
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
     },
+  },
+  {
+    // The build configuration runs in Node, not in the browser.
+    files: ['vite.config.ts', 'vitest.config.ts'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
   }
 )

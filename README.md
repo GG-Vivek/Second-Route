@@ -104,7 +104,7 @@ The stack is then on <http://localhost:5173>.
 
 The backend needs PostgreSQL; Redis is optional (the health check reports
 "degraded" without it, and only the session store and the job queue use
-it). With PostgreSQL 16 and Node installed:
+it). With PostgreSQL 16 and Node installed, from the repository root:
 
 ```bash
 # 1. PostgreSQL, with the roles the application and the backup use
@@ -127,10 +127,16 @@ uv run uvicorn secondroute.api.main:app --reload --port 8000
 # 3. The frontend (in another terminal)
 cd frontend
 npm install
-VITE_PROXY_TARGET=http://127.0.0.1:8000 npm run dev
+cp .env.example .env                     # VITE_PROXY_TARGET=http://127.0.0.1:8000
+npm run dev
 ```
 
 The frontend is then on <http://localhost:5173>.
+
+> **All the paths above are relative to the repository root.** The role
+> script in particular only exists at `docker/postgres/01-create-app-role.sh`
+> from the root, so running it from `backend/` fails with
+> `No such file or directory`. If you see that, `cd` to the root first.
 
 ### Which organisation a request acts for
 

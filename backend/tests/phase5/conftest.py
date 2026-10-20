@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncGenerator
 from typing import Any
+from urllib.parse import urlparse
 
 import pytest
 from sqlalchemy import text
@@ -26,6 +27,31 @@ from secondroute.feedback.audit import setup_audit_listeners
 
 #: The environment variable that points at the PostgreSQL to test against.
 POSTGRES_URL_ENV = "TEST_POSTGRES_URL"
+
+
+def require_a_test_database(url: str) -> None:
+    """Refuse to run against a database that is not a test one.
+
+    The PostgreSQL fixtures truncate the tables, so pointing them at the
+    database the application uses would delete the developer's data. The
+    check refuses rather than skips: a skipped test looks like a passing
+    one, and the point of the check is to be noticed.
+
+    Args:
+        url: The database the tests would run against.
+
+    Raises:
+        pytest.UsageError: When the database does not look like a test
+            database.
+    """
+    name = urlparse(url.replace("postgresql+asyncpg://", "postgresql://")).path.lstrip("/")
+    if "test" not in name.lower():
+        raise pytest.UsageError(
+            f"Refusing to run the PostgreSQL tests against '{name}': the "
+            "fixtures truncate the tables, so the database has to be one a "
+            "test may wipe. Its name has to contain 'test' - the CI uses "
+            "'secondroute_test'."
+        )
 
 
 def _postgres_url() -> str | None:
@@ -57,6 +83,7 @@ def postgres_url() -> str:
         pytest.skip(
             f"No PostgreSQL available. Set {POSTGRES_URL_ENV} to run the row-level security tests."
         )
+    require_a_test_database(url)
     return url
 
 
