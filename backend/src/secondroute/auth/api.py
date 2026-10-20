@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from secondroute.core.config import settings
-from secondroute.core.db import get_session, set_session_org_id
+from secondroute.core.db import get_session, set_current_actor, set_session_org_id
 from secondroute.identity.organizations import Organization, User
 from secondroute.auth.schemas import (
     OrganizationCreate,
@@ -80,6 +80,10 @@ async def get_current_user(
     # row-level security policies alike.
     await set_session_org_id(session, str(user.org_id) if user.org_id else None)
 
+    # The audit log names who made a change. Until Phase 5 there was nobody
+    # to name, so every row said "anonymous".
+    set_current_actor(user.email)
+
     return user
 
 
@@ -98,6 +102,7 @@ async def get_current_user_optional(
         user = result.scalar_one_or_none()
         if user is not None:
             await set_session_org_id(session, str(user.org_id) if user.org_id else None)
+            set_current_actor(user.email)
     except Exception:
         return None
     else:

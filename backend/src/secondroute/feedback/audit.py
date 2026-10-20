@@ -13,9 +13,9 @@ from typing import Any, Dict, List, Optional, Set
 from sqlalchemy import event, insert, inspect
 from sqlalchemy.orm import Mapper, Session
 
-from secondroute.core.db import Base
+from secondroute.core.db import Base, get_current_actor
 from secondroute.decision.models import Decision
-from secondroute.feedback.models import AuditLog, AuditAction, Override
+from secondroute.feedback.models import AuditLog, AuditAction, Outcome, Override
 from secondroute.identity.models import SKU, SerialPrefix
 from secondroute.identity.organizations import Organization
 from secondroute.intake.models import Unit, Inspection, Photo
@@ -25,6 +25,16 @@ AUDIT_PENDING_KEY = "_secondroute_pending_audits"
 
 
 # Entities to audit - maps model class to entity name
+#
+# A decision is deliberately not in this list. The decision row is already
+# append-only, and it carries the model version, the input snapshot hash
+# and the whole input snapshot, so it is its own record of what the
+# engine did and when. Auditing it would copy that snapshot into the
+# audit log a second time, for no gain.
+#
+# An outcome is a different matter: it is a human asserting that a unit
+# sold for a given price, and that assertion is exactly the kind of fact
+# an audit trail has to carry.
 AUDITED_MODELS: dict[type[Any], str] = {
     SKU: "skus",
     SerialPrefix: "serial_prefixes",
@@ -32,6 +42,7 @@ AUDITED_MODELS: dict[type[Any], str] = {
     Inspection: "inspections",
     Photo: "photos",
     Override: "overrides",
+    Outcome: "outcomes",
     Organization: "organizations",
 }
 
@@ -390,7 +401,7 @@ def _build_audit_values(item: PendingAudit, session: Session) -> Optional[dict[s
     return {
         "id": uuid.uuid4(),
         "org_id": org_id,
-        "actor": "anonymous",
+        "actor": get_current_actor(),
         "action": item.action.value,
         "entity": item.entity_name,
         "entity_id": str(entity_id),

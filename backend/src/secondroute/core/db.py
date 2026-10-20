@@ -24,6 +24,17 @@ from secondroute.core.config import settings
 # Context variable for current org_id (for RLS emulation in SQLite)
 current_org_id: ContextVar[str | None] = ContextVar("current_org_id", default=None)
 
+# Context variable for the user the current request acts as.
+#
+# The audit log records who made a change. Until Phase 5 there was nobody
+# to name, so every row said "anonymous". Now that the requests are
+# authenticated, the name of the user is carried here and read by the
+# audit listeners.
+current_actor: ContextVar[str | None] = ContextVar("current_actor", default=None)
+
+#: The actor recorded for a change made by an unauthenticated request.
+ANONYMOUS_ACTOR = "anonymous"
+
 
 class Base(DeclarativeBase):
     """Base class for all models."""
@@ -173,6 +184,25 @@ def get_current_org_id() -> str | None:
 def set_current_org_id(org_id: str | None) -> None:
     """Set the current org_id in context."""
     current_org_id.set(org_id)
+
+
+def get_current_actor() -> str:
+    """Return the user the current request acts as.
+
+    Returns:
+        The user's email, or ``anonymous`` when the request is not
+        authenticated.
+    """
+    return current_actor.get() or ANONYMOUS_ACTOR
+
+
+def set_current_actor(actor: str | None) -> None:
+    """Set the user the current request acts as.
+
+    Args:
+        actor: The user's email, or None for an unauthenticated request.
+    """
+    current_actor.set(actor)
 
 
 def _is_postgres(session: AsyncSession) -> bool:
