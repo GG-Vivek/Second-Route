@@ -15,13 +15,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from secondroute.analytics.calibration import CalibrationService
 from secondroute.analytics.predicted_vs_realized import PredictedVsRealizedService
 from secondroute.analytics.regret import RegretService
+from secondroute.analytics.reports import BASELINE_CHANNEL, AnalyticsReportService
 from secondroute.analytics.schemas import (
     CalibrationReportRead,
     CalibrationVersionRead,
+    NorthStarRead,
+    NorthStarSectionRead,
+    OverrideRateRead,
+    OverrideRateSectionRead,
     PredictedVsRealizedListRead,
     PredictedVsRealizedRead,
+    RegretBucketRead,
     RegretEstimateRead,
     RegretMeasurementRead,
+    RegretOverTimeRead,
     RegretReportRead,
     StoredRegretRead,
     TimeToSellCellRead,
@@ -271,3 +278,86 @@ async def recalibrate(
     record = await service.recalibrate(session, bins=bins, version=version)
 
     return CalibrationVersionRead.model_validate(record)
+
+
+@router.get(
+    "/north-star",
+    response_model=NorthStarRead,
+    summary="The net recovered per return, above the baseline",
+)
+async def get_north_star(session: SessionDep) -> NorthStarRead:
+    """Return the north star of the recorded dispositions.
+
+    The recovered value is the realized net of the channel that was used.
+    The baseline is the salvage default: its realized net when it was
+    tried for the unit, and the model's prediction when it was not. The
+    two are counted apart.
+
+    The synthetic and the real data are returned separately and are never
+    added together.
+
+    Args:
+        session: Database session.
+
+    Returns:
+        The north star, one section per kind of data.
+    """
+    service = AnalyticsReportService()
+    sections = await service.north_star(session)
+
+    return NorthStarRead(
+        synthetic=NorthStarSectionRead.model_validate(sections["synthetic"]),
+        real=NorthStarSectionRead.model_validate(sections["real"]),
+        baseline_channel=BASELINE_CHANNEL,
+    )
+
+
+@router.get(
+    "/regret-over-time",
+    response_model=RegretOverTimeRead,
+    summary="The regret over time",
+)
+async def get_regret_over_time(
+    session: SessionDep,
+    bucket: Annotated[str, Query(pattern="^(month|week)$")] = "month",
+) -> RegretOverTimeRead:
+    """Return the regret of the recorded dispositions, period by period.
+
+    Args:
+        session: Database session.
+        bucket: ``month`` or ``week``.
+
+    Returns:
+        The buckets, one list per kind of data.
+    """
+    service = AnalyticsReportService()
+    sections = await service.regret_over_time(session, bucket=bucket)
+
+    return RegretOverTimeRead(
+        bucket=bucket,
+        synthetic=[RegretBucketRead.model_validate(item) for item in sections["synthetic"]],
+        real=[RegretBucketRead.model_validate(item) for item in sections["real"]],
+    )
+
+
+@router.get(
+    "/override-rate",
+    response_model=OverrideRateRead,
+    summary="The override rate by reason",
+)
+async def get_override_rate(session: SessionDep) -> OverrideRateRead:
+    """Return how often the recommendations were overridden, and why.
+
+    Args:
+        session: Database session.
+
+    Returns:
+        The override rate, one section per kind of data.
+    """
+    service = AnalyticsReportService()
+    sections = await service.override_rate(session)
+
+    return OverrideRateRead(
+        synthetic=OverrideRateSectionRead.model_validate(sections["synthetic"]),
+        real=OverrideRateSectionRead.model_validate(sections["real"]),
+    )

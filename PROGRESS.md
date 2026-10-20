@@ -103,7 +103,7 @@
 | F4.4 Time-to-sell model | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:05:00Z | 2026-10-20T18:08:00Z | 51182d8 | Kaplan-Meier by channel/grade, fallback to prior |
 | F4.5 Regret calculation | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:09:00Z | 2026-10-20T18:20:00Z | — | Observed + estimated (labeled), never summed silently |
 | F4.6 Calibration | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:35:00Z | 2026-10-20T18:50:00Z | — | Reliability curve, ECE, isotonic recalibration (versioned) |
-| F4.7 Analytics page | 🔲 Not Started | — | — | — | — | — | North star, regret over time, calibration, override rate |
+| F4.7 Analytics page | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:55:00Z | 2026-10-20T19:05:00Z | — | North star, regret over time, calibration, override rate |
 | F4.8 Data export | 🔲 Not Started | — | — | — | — | — | CSV export decisions/overrides/outcomes, round-trip |
 
 **Phase 4 Exit Criteria:** System measures own accuracy and decision quality. First calibration and regret numbers exist (even on synthetic).

@@ -14,6 +14,9 @@ import type {
   RegretReport,
   CalibrationReport,
   CalibrationVersion,
+  NorthStarReport,
+  OverrideRateReport,
+  RegretOverTimeReport,
   TimeToSellReport,
 } from '@/types/decision'
 
@@ -43,6 +46,9 @@ export type {
   RegretReport,
   CalibrationReport,
   CalibrationVersion,
+  NorthStarReport,
+  OverrideRateReport,
+  RegretOverTimeReport,
   RiskProfile,
   TimeToSellReport,
 } from '@/types/decision'
@@ -198,4 +204,24 @@ export async function recalibrate(params?: {
   if (params?.version) search.set('version', params.version)
   const query = search.toString()
   return api.post<CalibrationVersion>(`/analytics/calibration/recalibrate${query ? `?${query}` : ''}`)
+}
+
+/** Fetch the north star: the net recovered per return, above the baseline. */
+export async function getNorthStar(): Promise<NorthStarReport> {
+  return api.get<NorthStarReport>('/analytics/north-star')
+}
+
+/** Fetch the regret of every period. */
+export async function getRegretOverTime(params?: {
+  bucket?: 'month' | 'week'
+}): Promise<RegretOverTimeReport> {
+  const search = new URLSearchParams()
+  if (params?.bucket) search.set('bucket', params.bucket)
+  const query = search.toString()
+  return api.get<RegretOverTimeReport>(`/analytics/regret-over-time${query ? `?${query}` : ''}`)
+}
+
+/** Fetch the override rate and the reasons behind it. */
+export async function getOverrideRate(): Promise<OverrideRateReport> {
+  return api.get<OverrideRateReport>('/analytics/override-rate')
 }
