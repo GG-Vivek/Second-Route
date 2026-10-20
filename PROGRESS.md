@@ -91,7 +91,7 @@
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F4.1 Override with reason | 🟡 In Progress | ai-nemotron-ses_eaa59d66 | feat/F4.1-override-with-reason | 2026-10-20T39:00:00Z | — | — | POST /decisions/{id}/override, required reason, UI dialog |
+| F4.1 Override with reason | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F4.1-override-with-reason | 2026-10-20T39:00:00Z | 2026-10-20T39:30:00Z | — | POST /decisions/{id}/override, required reason, UI dialog |
 | F4.2 Outcome logging | 🔲 Not Started | — | — | — | — | — | POST /units/{id}/outcome, append-only, linked to decision |
 | F4.3 Predicted vs realized view | 🔲 Not Started | — | — | — | — | — | Residual, in-range flag per unit |
 | F4.4 Time-to-sell model | 🔲 Not Started | — | — | — | — | — | Kaplan-Meier by channel/grade, fallback to prior |
@@ -113,7 +113,7 @@
 | F5.3 Risk profile settings | 🔲 Not Started | — | — | — | — | — | UI/API to set profile, recomputes decisions, audited |
 | F5.4 Batch decisions | 🔲 Not Started | — | — | — | — | — | POST /batches/decide, grouping, filter, CSV export |
 | F5.5 Offline inspection | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T22:45:00Z | 2026-10-20T40:00:00Z | b62d40f | IndexedDB drafts, queue sync, conflict resolution, `offline_created` flag + migration `0004` |
-| F5.6 Historical backtest | 🔲 Not Started | — | — | — | — | — | No look-ahead, baseline comparison, bootstrap CI |
+| F5.6 Historical backtest | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T41:00:00Z | 2026-10-20T42:30:00Z | — | Look-ahead detector, paired bootstrap CI, pluggable baseline, `backtest_runs` table + migration `0005` |
 | F5.7 Explanation text (optional) | 🔲 Not Started | — | — | — | — | — | Ollama + open-weights, validator, fallback to template |
 | F5.8 Staging deployment and backups | 🔲 Not Started | — | — | — | — | — | Compose on Linux VM, Caddy TLS, pg_dump + restic |
 
@@ -125,7 +125,8 @@
 - The audit row's `org_id` is resolved from the audited object, and falls back to the org of its unit for inspections and photos, which do not carry `org_id` of their own. The F5.2 tenant-isolation policy on `audit_log` has a `WITH CHECK` on `org_id`, so a null `org_id` would make the insert fail. If F5.2 later adds `org_id` to `inspections` and `photos`, the fallback becomes redundant but stays harmless.
 - The offline module lives in `frontend/src/offline/`. IndexedDB is shimmed in tests by `fake-indexeddb` (dev-only, Apache-2.0); see ADR-004.
 - The `offline_created` column is added to `inspections` by Alembic revision `0004_offline_inspection.py`.
-- **Alembic chain (read before merging):** the Phase 4 and Phase 5 branches were built in parallel, so each one carries only its own migration. The intended merged chain is `0001_baseline` → `0002_phase3_market_intelligence` (on `main`) → `0002_overrides` (F4.1) → `0003_rls_policies` (F5.2) → `0004_offline_inspection` (F5.5). `0002_overrides` currently points at `0001_baseline` and must be repointed at `0002_phase3_market_intelligence` when the branches are merged, or a merge revision must be added. Until that is done, `alembic upgrade head` reports multiple heads, and `alembic upgrade head` on a single feature branch reports a missing predecessor — the same situation the F5.2 branch is in.
+- **The backtest module is `backend/src/secondroute/backtest/`.** The look-ahead detector walks each decision's recorded provenance (the `price_as_of`, `cost_as_of` and snapshot as-of dates) and refuses to run a backtest over a decision that used data dated after it was made. The comparison is a paired one over the same units, and the interval is a seeded percentile bootstrap. The baseline is a protocol, not a constant, because which channel the partner uses is still an open question (PLAN.md, Appendix F); the report always names the baseline it used.
+- **Alembic chain (read before merging):** the Phase 4 and Phase 5 branches were built in parallel, so each one carries only its own migration. The intended merged chain is `0001_baseline` → `0002_phase3_market_intelligence` (on `main`) → `0002_overrides` (F4.1) → `0003_rls_policies` (F5.2) → `0004_offline_inspection` (F5.5) → `0005_backtest_runs` (F5.6). `0002_overrides` currently points at `0001_baseline` and must be repointed at `0002_phase3_market_intelligence` when the branches are merged, or a merge revision must be added. Until that is done, `alembic upgrade head` reports multiple heads, and `alembic upgrade head` on a single feature branch reports a missing predecessor — the same situation the F5.2 branch is in.
 
 ---
 
@@ -164,7 +165,7 @@
 
 ## In Progress
 
-- F4.1 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T39:00:00Z — Branch: feat/F4.1-override-with-reason
+*No features currently in progress.*
 
 ---
 
@@ -211,6 +212,7 @@
 - F7.4 Upstream return-reason insights — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T36:30:00Z
 - F7.5 Partner integrations via open APIs — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T37:30:00Z
 - F7.6 Data ownership tools — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T38:30:00Z
+- F4.1 Override with reason — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T39:30:00Z
 - F6.1 Model registry — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T24:30:00Z
 - F6.2 Shadow mode — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T25:30:00Z
 - F6.3 Promotion gate — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T26:30:00Z
@@ -235,7 +237,7 @@
 
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
-| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F6.1, F6.2, F6.3, F6.4, F6.5, F6.6, F6.7, F6.8, F6.9, F7.1, F7.2, F7.3, F7.4, F7.5, F7.6 | 2026-10-20T38:30:00Z |
+| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F4.1, F6.1, F6.2, F6.3, F6.4, F6.5, F6.6, F6.7, F6.8, F6.9, F7.1, F7.2, F7.3, F7.4, F7.5, F7.6 | 2026-10-20T39:30:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.1, F0.2, F0.3, F0.4, F0.5, F0.6, F0.7, F2.1, F2.2, F2.3, F2.4, F2.5, F2.6, F2.7, F2.8, F2.9, F2.10, F2.11 | 2026-10-20T05:15:00Z |
 | ai-minimax-m3.1-flash-ses_ea89089b | AI | F5.5 | 2026-10-20T40:00:00Z |
 
@@ -265,4 +267,4 @@
 ---
 
 *Last updated: 2026-10-20*
-*Next review: Before starting Phase 4 work (Feedback Loop and Analytics)*
+*Next review: Before starting Phase 4 work (F4.2 Outcome logging)*

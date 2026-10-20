@@ -158,7 +158,11 @@ ignore = [
 "src/secondroute/condition/grades.py" = ["PLR0913"]
 "src/secondroute/pricing/protocols.py" = ["PLR0913"]
 "src/secondroute/feedback/*.py" = ["PLR0913", "PLR0917"]
+# The backtest takes the replay window, the baseline and the interval
+# settings as explicit keyword arguments so the call sites stay readable.
+"src/secondroute/backtest/*.py" = ["PLR0913", "PLR0917"]
 "tests/phase2/*" = ["PLR0913", "PLR0917"]
+"tests/phase5/*" = ["PLR0913", "PLR0917"]
 
 [tool.ruff.format]
 quote-style = "double"

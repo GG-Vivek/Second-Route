@@ -1,10 +1,11 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, HeartPulse } from 'lucide-react'
+import { LayoutDashboard, HeartPulse, FlaskConical } from 'lucide-react'
 import { cn } from '@/utils/cn'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Units', href: '/units', icon: LayoutDashboard },
+  { name: 'Backtest', href: '/backtest', icon: FlaskConical },
   { name: 'Health', href: '/health', icon: HeartPulse },
 ]
 

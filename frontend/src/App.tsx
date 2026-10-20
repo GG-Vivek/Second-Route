@@ -7,6 +7,7 @@ import { UnitDetailPage } from '@/pages/UnitDetailPage'
 import { NewIntakePage } from '@/pages/NewIntakePage'
 import { NewInspectionPage } from '@/pages/NewInspectionPage'
 import { DecisionPage } from '@/pages/decision/DecisionPage'
+import { BacktestPage } from '@/pages/BacktestPage'
 
 export function App() {
   return (
@@ -19,6 +20,7 @@ export function App() {
         <Route path="intake/new" element={<NewIntakePage />} />
         <Route path="units/:id/inspection/new" element={<NewInspectionPage />} />
         <Route path="units/:id/decision" element={<DecisionPage />} />
+        <Route path="backtest" element={<BacktestPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
