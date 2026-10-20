@@ -13,7 +13,8 @@ SecondRoute is an open-source decision engine for returned electronics. It helps
 | Phase 0 — Foundation | ✅ Complete |
 | Phase 1 — Unit Intake and Inspection | ✅ F1.1–F1.7 complete |
 | Phase 2 — Decision Engine v0 | ✅ Complete |
-| Phase 3 — Market and Component Intelligence | 🔲 Not started |
+| Phase 3 — Market and Component Intelligence | ✅ Complete |
+| Phase 4 — Feedback Loop and Analytics | 🔲 Not started |
 
 See [PLAN.md](PLAN.md) for the full phased build plan.
 See [PROGRESS.md](PROGRESS.md) for current feature tracking.
@@ -39,6 +40,8 @@ inspection -> grade distribution -> Monte Carlo over every channel
   hash. `GET /api/v1/decisions/{id}/reproduce` replays it and proves the match.
 * **Prototype, clearly labelled.** Prices and costs are synthetic. The card
   says so, every time.
+* **Real data when there is any.** Stored observations are preferred over the
+  synthetic source, so the same code path serves both.
 
 ### Try it
 
@@ -63,6 +66,11 @@ checks the whole card payload. It needs no network and no database server.
 | `PATCH` | `/api/v1/costs/{id}` | Update a cost value |
 | `GET` | `/api/v1/costs/kinds` | Document every cost kind |
 | `GET` | `/health` | Liveness and dependency check |
+| `POST` | `/api/v1/imports/sales/preview` | See a sales file's columns and suggested mapping |
+| `POST` | `/api/v1/imports/sales` | Import a partner sales file (or dry-run it) |
+| `GET` | `/api/v1/components/prices` | The component prices, with a staleness flag |
+| `POST` | `/api/v1/components/prices/pull-fred` | Pull the configured FRED series |
+| `GET` | `/api/v1/sources/health` | When each source last spoke, and whether it is fresh |
 
 ## Quick Start
 
@@ -135,6 +143,8 @@ alembic history
 | `decision/` | 2 | The decision engine |
 | `instructions/` | 2 | Action card templates |
 | `ml/synthetic/` | 2 | The synthetic data generator |
+| `ingest/` | 3 | Inbound data: sales import, FRED, demand, launch calendar |
+| `admin/` | 3 | Source health and operator endpoints |
 
 ## Documentation
 

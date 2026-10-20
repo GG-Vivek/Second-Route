@@ -3,8 +3,10 @@
 export type DispositionChannel =
   | 'RESELL_OPEN_BOX'
   | 'RESELL_REFURB'
+  | 'PARTS_HARVEST'
   | 'RECYCLE'
   | 'DONATE'
+  | 'HOLD'
   | 'SAFE_DEFAULT'
 
 export type RiskProfile = 'conservative' | 'balanced' | 'aggressive'
@@ -129,8 +131,10 @@ export interface ReproducibilityResult {
 export const CHANNEL_LABELS: Record<string, string> = {
   RESELL_OPEN_BOX: 'Resell as open-box',
   RESELL_REFURB: 'Refurbish and resell',
+  PARTS_HARVEST: 'Harvest the parts',
   RECYCLE: 'Recycle',
   DONATE: 'Donate',
+  HOLD: 'Hold for a better price',
   SAFE_DEFAULT: 'Safe default - human check needed',
 }
 
@@ -144,6 +148,10 @@ export function channelShortLabel(channel: string): string {
       return 'Open-box'
     case 'RESELL_REFURB':
       return 'Refurbish'
+    case 'PARTS_HARVEST':
+      return 'Parts'
+    case 'HOLD':
+      return 'Hold'
     case 'RECYCLE':
       return 'Recycle'
     case 'DONATE':
