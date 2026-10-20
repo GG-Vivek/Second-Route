@@ -156,6 +156,8 @@ from secondroute.intake import intake_router
 from secondroute.feedback import feedback_router
 from secondroute.costs.api import router as costs_router
 from secondroute.decision.api import router as decision_router
+from secondroute.ingest.api import component_router
+from secondroute.ingest.api import router as ingest_router
 # from secondroute.api import condition, analytics, admin
 
 app.include_router(identity_router, prefix=API_PREFIX)
@@ -163,6 +165,8 @@ app.include_router(intake_router, prefix=API_PREFIX)
 app.include_router(feedback_router, prefix=API_PREFIX)
 app.include_router(costs_router, prefix=API_PREFIX)
 app.include_router(decision_router, prefix=API_PREFIX)
+app.include_router(ingest_router, prefix=API_PREFIX)
+app.include_router(component_router, prefix=API_PREFIX)
 # ...
 
 

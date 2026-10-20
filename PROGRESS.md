@@ -73,15 +73,15 @@
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F3.1 eBay Browse API adapter | 🔲 Not Started | — | — | — | — | — | Free dev key, active listings, rate limit backoff |
-| F3.2 Partner sold-data CSV import | 🔲 Not Started | — | — | — | — | — | Column mapping, validation, dry-run, idempotent |
-| F3.3 Price cleaning | 🔲 Not Started | — | — | — | — | — | MAD outlier removal, grade normalization, recency weight |
-| F3.4 Price quantile model | 🔲 Not Started | — | — | — | — | — | LightGBM quantile regression, fallback to empirical |
-| F3.5 Component prices and FRED adapter | 🔲 Not Started | — | — | — | — | — | component_prices table, scheduled FRED pulls |
-| F3.6 Parts harvest valuation | 🔲 Not Started | — | — | — | — | — | PARTS_HARVEST channel, teardown yield table |
-| F3.7 Demand signal (Wikimedia) | 🔲 Not Started | — | — | — | — | — | Weekly pageviews, free API, cached |
-| F3.8 Launch calendar and HOLD logic | 🔲 Not Started | — | — | — | — | — | launch_events, decay_params, HOLD conditions |
-| F3.9 Source health and confidence downgrade | 🔲 Not Started | — | — | — | — | — | /api/v1/sources/health, stale source → confidence penalty |
+| F3.1 eBay Browse API adapter | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F3.1-ebay-adapter | 2026-10-20T22:00:00Z | 2026-10-20T23:30:00Z | — | Free dev key, active listings, rate limit backoff, caching, retry logic |
+| F3.2 Partner sold-data CSV import | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | Column mapping, validation, dry-run, idempotent |
+| F3.3 Price cleaning | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | MAD outlier removal, grade normalization, recency weight |
+| F3.4 Price quantile model | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | LightGBM quantile regression, fallback to empirical |
+| F3.5 Component prices and FRED adapter | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | component_prices table, scheduled FRED pulls |
+| F3.6 Parts harvest valuation | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | PARTS_HARVEST channel, teardown yield table |
+| F3.7 Demand signal (Wikimedia) | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | Weekly pageviews, free API, cached |
+| F3.8 Launch calendar and HOLD logic | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | launch_events, decay_params, HOLD conditions |
+| F3.9 Source health and confidence downgrade | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | /api/v1/sources/health, stale source → confidence penalty |
 
 **Phase 3 Exit Criteria:** Prices, components, demand from free/partner sources. Each shown with source + as-of. Decision code unchanged from Phase 2.
 
@@ -186,6 +186,7 @@
 - F2.9 Decision API and persistence — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:45:00Z
 - F2.10 Action card templates — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:50:00Z
 - F2.11 Decision card UI — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T05:15:00Z
+- F3.1 eBay Browse API adapter — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T23:30:00Z
 
 ---
 
@@ -193,7 +194,7 @@
 
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
-| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7 | 2026-10-20T21:30:00Z |
+| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1 | 2026-10-20T23:30:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.1, F0.2, F0.3, F0.4, F0.5, F0.6, F0.7, F2.1, F2.2, F2.3, F2.4, F2.5, F2.6, F2.7, F2.8, F2.9, F2.10, F2.11 | 2026-10-20T05:15:00Z |
 
 ---

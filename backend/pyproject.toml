@@ -159,6 +159,8 @@ ignore = [
 "src/secondroute/pricing/protocols.py" = ["PLR0913"]
 "src/secondroute/feedback/*.py" = ["PLR0913", "PLR0917"]
 "tests/phase2/*" = ["PLR0913", "PLR0917"]
+"tests/phase3/*" = ["PLR0913", "PLR0917", "PLR0911"]
+"src/secondroute/ingest/*.py" = ["PLR0913", "PLR0917", "TRY301"]
 
 [tool.ruff.format]
 quote-style = "double"

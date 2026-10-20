@@ -134,6 +134,47 @@ class Settings(BaseSettings):
 
     FRED_API_KEY: str | None = Field(default=None, description="FRED API Key")
 
+    # FRED series used as component-price signals.
+    # Component type -> FRED series id. The series are producer price indices
+    # for electronic components; they are market indicators, not per-unit
+    # quotes, so each one is scaled by FRED_SERIES_SCALE before it is used.
+    FRED_SERIES_IDS: dict[str, str] = Field(
+        default_factory=lambda: {
+            "semiconductor": "PCU334433334433",
+            "electronics_ppi": "WPU117",
+        },
+        description="Component type to FRED series id",
+    )
+
+    # Component type -> factor that turns a FRED index into an approximate
+    # price per unit in USD. These are deliberately rough: an index tells you
+    # the direction and the rough magnitude of a component's price, not the
+    # price. The confidence weight attached to the row says as much.
+    FRED_SERIES_SCALE: dict[str, float] = Field(
+        default_factory=lambda: {
+            "semiconductor": 0.85,
+            "electronics_ppi": 4.20,
+        },
+        description="Component type to index-to-price scale factor",
+    )
+
+    # How confident a scaled index is compared with a direct quote.
+    FRED_SERIES_CONFIDENCE: dict[str, float] = Field(
+        default_factory=lambda: {
+            "semiconductor": 0.35,
+            "electronics_ppi": 0.25,
+        },
+        description="Component type to confidence weight for FRED-derived prices",
+    )
+
+    # Component prices older than this are flagged stale.
+    COMPONENT_PRICE_FRESHNESS_DAYS: int = Field(
+        default=90,
+        ge=1,
+        le=3650,
+        description="How old a component price may be before it is flagged stale",
+    )
+
     # MLflow
     MLFLOW_TRACKING_URI: str = Field(
         default="http://localhost:5000",
