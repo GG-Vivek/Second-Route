@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Check, ChevronDown, ChevronUp, FlaskConical } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, ChevronUp, FlaskConical, Pencil } from 'lucide-react'
 import { ConfidenceBar } from '@/components/decision/ConfidenceBar'
 import { NetRange } from '@/components/decision/NetRange'
+import { OverrideDialog } from '@/components/OverrideDialog'
 import { cn } from '@/utils/cn'
 import {
   channelLabel,
@@ -26,6 +27,8 @@ function eligibleCandidates(decision: Decision): Candidate[] {
 export function DecisionCard({ decision, onAccept, className }: DecisionCardProps) {
   const [showAllCandidates, setShowAllCandidates] = useState(false)
   const [accepted, setAccepted] = useState(false)
+  const [overrideOpen, setOverrideOpen] = useState(false)
+  const [overrideMessage, setOverrideMessage] = useState<string | null>(null)
 
   const eligible = useMemo(() => eligibleCandidates(decision), [decision])
   const recommended = useMemo(
@@ -283,7 +286,7 @@ export function DecisionCard({ decision, onAccept, className }: DecisionCardProp
       </section>
 
       {/* Accept */}
-      <div className="flex items-center gap-3 border-t pt-6">
+      <div className="flex flex-wrap items-center gap-3 border-t pt-6">
         <button
           type="button"
           disabled={accepted}
@@ -297,10 +300,30 @@ export function DecisionCard({ decision, onAccept, className }: DecisionCardProp
           <Check className="h-4 w-4" aria-hidden="true" />
           {accepted ? 'Accepted' : 'Accept recommendation'}
         </button>
+        <button
+          type="button"
+          onClick={() => setOverrideOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg border px-5 py-2.5 text-sm font-medium transition-colors hover:bg-accent"
+          data-testid="override-button"
+        >
+          <Pencil className="h-4 w-4" aria-hidden="true" />
+          Override
+        </button>
         <p className="text-xs text-muted-foreground">
-          Overrides arrive in a later phase. Every decision is logged.
+          {overrideMessage
+            ? overrideMessage
+            : 'Overriding requires a reason. Every decision is logged.'}
         </p>
       </div>
+
+      <OverrideDialog
+        decisionId={decision.id}
+        recommendedChannel={decision.recommended_channel}
+        availableChannels={eligible.map((candidate) => candidate.channel)}
+        open={overrideOpen}
+        onClose={() => setOverrideOpen(false)}
+        onSuccess={(message) => setOverrideMessage(message)}
+      />
 
       {/* Provenance */}
       <details className="rounded-lg border bg-card p-4 text-sm">

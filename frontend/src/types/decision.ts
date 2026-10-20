@@ -128,6 +128,27 @@ export interface ReproducibilityResult {
   details: Record<string, unknown>
 }
 
+export interface Override {
+  id: string
+  decision_id: string
+  user_id: string | null
+  chosen_channel: string
+  reason_text: string
+  created_at: string
+}
+
+export interface OverrideList {
+  items: Override[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface CreateOverrideRequest {
+  chosen_channel: string
+  reason_text: string
+}
+
 export const CHANNEL_LABELS: Record<string, string> = {
   RESELL_OPEN_BOX: 'Resell as open-box',
   RESELL_REFURB: 'Refurbish and resell',

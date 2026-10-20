@@ -168,11 +168,30 @@ describe('DecisionCard', () => {
     expect(screen.getByText(/NIST SP 800-88 Rev\. 1/)).toBeInTheDocument()
   })
 
-  it('offers an accept button and nothing else', () => {
+  it('offers an accept button and an override button', () => {
     render(<DecisionCard decision={makeDecision()} />)
     expect(screen.getByTestId('accept-button')).toBeInTheDocument()
-    // Overrides arrive in Phase 4, so no override control is rendered yet.
-    expect(screen.queryByRole('button', { name: /override/i })).not.toBeInTheDocument()
+    expect(screen.getByTestId('override-button')).toBeInTheDocument()
+  })
+
+  it('opens the override dialog with the recommended channel preselected', async () => {
+    render(<DecisionCard decision={makeDecision()} />)
+    await userEvent.click(screen.getByTestId('override-button'))
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toBeInTheDocument()
+    expect(screen.getByLabelText(/channel used/i)).toHaveValue('RESELL_OPEN_BOX')
+  })
+
+  it('requires a reason before the override can be submitted', async () => {
+    render(<DecisionCard decision={makeDecision()} />)
+    await userEvent.click(screen.getByTestId('override-button'))
+
+    const submit = screen.getByRole('button', { name: /record override/i })
+    expect(submit).toBeDisabled()
+
+    await userEvent.type(screen.getByLabelText(/reason/i), 'Customer insisted')
+    expect(submit).toBeEnabled()
   })
 
   it('calls onAccept when the button is clicked', async () => {
