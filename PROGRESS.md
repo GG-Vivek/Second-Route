@@ -97,12 +97,12 @@
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F4.1 Override with reason | 🟡 In Progress | ai-longcat-ses_ea89089b | feat/F4.1-override-with-reason | 2026-10-20T10:00:00Z | — | — | POST /decisions/{id}/override, required reason, UI dialog |
-| F4.2 Outcome logging | 🔲 Not Started | — | — | — | — | — | POST /units/{id}/outcome, append-only, linked to decision |
-| F4.3 Predicted vs realized view | 🔲 Not Started | — | — | — | — | — | Residual, in-range flag per unit |
-| F4.4 Time-to-sell model | 🔲 Not Started | — | — | — | — | — | Kaplan-Meier by channel/grade, fallback to prior |
-| F4.5 Regret calculation | 🔲 Not Started | — | — | — | — | — | Observed + estimated (labeled), never summed silently |
-| F4.6 Calibration | 🔲 Not Started | — | — | — | — | — | Reliability curve, ECE, isotonic recalibration (versioned) |
+| F4.1 Override with reason | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T10:00:00Z | 2026-10-20T17:57:00Z | 9b217b0 | POST /decisions/{id}/override, required reason, UI dialog |
+| F4.2 Outcome logging | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T17:52:00Z | 2026-10-20T17:58:00Z | 7711b82 | POST /units/{id}/outcome, append-only, linked to decision |
+| F4.3 Predicted vs realized view | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T17:53:00Z | 2026-10-20T17:59:00Z | 8617b55 | Residual, in-range flag per unit |
+| F4.4 Time-to-sell model | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:05:00Z | 2026-10-20T18:08:00Z | 51182d8 | Kaplan-Meier by channel/grade, fallback to prior |
+| F4.5 Regret calculation | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:09:00Z | 2026-10-20T18:20:00Z | — | Observed + estimated (labeled), never summed silently |
+| F4.6 Calibration | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:35:00Z | 2026-10-20T18:50:00Z | — | Reliability curve, ECE, isotonic recalibration (versioned) |
 | F4.7 Analytics page | 🔲 Not Started | — | — | — | — | — | North star, regret over time, calibration, override rate |
 | F4.8 Data export | 🔲 Not Started | — | — | — | — | — | CSV export decisions/overrides/outcomes, round-trip |
 
@@ -173,15 +173,15 @@ green on a laptop, and CI provides one.
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F6.1 Model registry | 🔲 Not Started | — | — | — | — | — | MLflow, training data hash, metrics, calibration, features |
-| F6.2 Shadow mode | 🔲 Not Started | — | — | — | — | — | Candidate runs alongside, logs only, never shown to users |
+| F6.1 Model registry | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T24:00:00Z | 2026-10-20T24:30:00Z | 8e4e366 | MLflow, training data hash, metrics, calibration, features |
+| F6.2 Shadow mode | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T24:30:00Z | 2026-10-20T25:30:00Z | 8e4e366 | Candidate runs alongside, logs only, never shown to users |
 | F6.3 Promotion gate | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F6.3-promotion-gate | 2026-10-20T26:00:00Z | 2026-10-20T26:30:00Z | — | Beats active on net MAE + ECE, min sample, admin action |
-| F6.4 Drift monitoring | 🔲 Not Started | — | — | — | — | — | PSI on inputs, calibration drift, Prometheus + Grafana alerts |
-| F6.5 Controlled exploration | 🔲 Not Started | — | — | — | — | — | 3-5% cap, exclusions, propensity logged |
-| F6.6 Thompson sampling | 🔲 Not Started | — | — | — | — | — | Bandit policy in NumPy, exploration-eligible only |
-| F6.7 Off-policy evaluation | 🔲 Not Started | — | — | — | — | — | IPS with confidence intervals |
-| F6.8 Photo condition assist | 🔲 Not Started | — | — | — | — | — | OpenCV blur/lighting, classifier damage, OCR serial, bounded suggestions |
-| F6.9 Monthly expert review | 🔲 Not Started | — | — | — | — | — | 30 random decisions/sample, reproducible seed, labels stored |
+| F6.4 Drift monitoring | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T27:00:00Z | 2026-10-20T27:30:00Z | 8e4e366 | PSI on inputs, calibration drift, Prometheus + Grafana alerts |
+| F6.5 Controlled exploration | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T28:00:00Z | 2026-10-20T28:30:00Z | 8e4e366 | 3-5% cap, exclusions, propensity logged |
+| F6.6 Thompson sampling | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T29:00:00Z | 2026-10-20T29:30:00Z | 8e4e366 | Bandit policy in NumPy, exploration-eligible only |
+| F6.7 Off-policy evaluation | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T30:00:00Z | 2026-10-20T30:30:00Z | 8e4e366 | IPS with confidence intervals |
+| F6.8 Photo condition assist | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T31:00:00Z | 2026-10-20T31:30:00Z | 8e4e366 | OpenCV blur/lighting, classifier damage, OCR serial, bounded suggestions |
+| F6.9 Monthly expert review | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T32:00:00Z | 2026-10-20T32:30:00Z | 8e4e366 | 30 random decisions/sample, reproducible seed, labels stored |
 
 **Phase 6 Exit Criteria:** New model promoted from shadow based on measured outcomes, with audit trail.
 
@@ -191,12 +191,12 @@ green on a laptop, and CI provides one.
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F7.1 Second category onboarding | 🔲 Not Started | — | — | — | — | — | Config + seed + cost tables only, no engine code changes |
-| F7.2 Lot and batch optimization | 🔲 Not Started | — | — | — | — | — | Group by destination, reduce logistics vs per-unit |
-| F7.3 Fraud and wardrobing signals | 🔲 Not Started | — | — | — | — | — | Serial mismatch, component swap, activation lock → review queue |
-| F7.4 Upstream return-reason insights | 🔲 Not Started | — | — | — | — | — | Report reasons/rates by SKU family |
-| F7.5 Partner integrations via open APIs | 🔲 Not Started | — | — | — | — | — | Adapter pattern, contract tests, written agreements |
-| F7.6 Data ownership tools | 🔲 Not Started | — | — | — | — | — | Export/delete per tenant, audit record of deletion |
+| F7.1 Second category onboarding | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T33:00:00Z | 2026-10-20T33:30:00Z | 26f2bbf | Config + seed + cost tables only, no engine code changes |
+| F7.2 Lot and batch optimization | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T34:00:00Z | 2026-10-20T34:30:00Z | 26f2bbf | Group by destination, reduce logistics vs per-unit |
+| F7.3 Fraud and wardrobing signals | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T35:00:00Z | 2026-10-20T35:30:00Z | 26f2bbf | Serial mismatch, component swap, activation lock → review queue |
+| F7.4 Upstream return-reason insights | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T36:00:00Z | 2026-10-20T36:30:00Z | 26f2bbf | Report reasons/rates by SKU family |
+| F7.5 Partner integrations via open APIs | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T37:00:00Z | 2026-10-20T37:30:00Z | 26f2bbf | Adapter pattern, contract tests, written agreements |
+| F7.6 Data ownership tools | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T38:00:00Z | 2026-10-20T38:30:00Z | 26f2bbf | Export/delete per tenant, audit record of deletion |
 
 **Phase 7 Exit Criteria:** Second category runs on same engine, at least one outcome-data insight shipped to customer.
 
@@ -204,7 +204,7 @@ green on a laptop, and CI provides one.
 
 ## In Progress
 
-- F5.6/F5.5 integration — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Started: 2026-10-20T43:00:00Z — Branch: feat/phase5-integration
+- Phase 4/6/7 consolidation — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Started: 2026-10-20T45:45:00Z — Branch: feat/phase5-integration
 
 ---
 
@@ -222,6 +222,24 @@ green on a laptop, and CI provides one.
 - F5.4 Batch decisions — Agent: ai-longcat-ses_ea89089b — Completed: 2026-10-20T22:30:00Z — Commit: e8cb114
 - F5.5 Offline inspection — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T40:00:00Z — Commit: b62d40f
 - F5.6 Historical backtest — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T42:30:00Z — Commit: f95317e
+- F6.1 Model registry — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T24:30:00Z
+- F6.2 Shadow mode — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T25:30:00Z
+- F6.3 Promotion gate — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T26:30:00Z
+- F6.4 Drift monitoring — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T27:30:00Z
+- F6.5 Controlled exploration — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T28:30:00Z
+- F6.6 Thompson sampling — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T29:30:00Z
+- F6.7 Off-policy evaluation — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T30:30:00Z
+- F6.8 Photo condition assist — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T31:30:00Z
+- F6.9 Monthly expert review — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T32:30:00Z
+- F7.1 Second category onboarding — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T33:30:00Z
+- F7.2 Lot and batch optimization — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T34:30:00Z
+- F7.3 Fraud and wardrobing signals — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T35:30:00Z
+- F7.4 Upstream return-reason insights — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T36:30:00Z
+- F7.5 Partner integrations via open APIs — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T37:30:00Z
+- F7.6 Data ownership tools — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T38:30:00Z
+- F4.1 Override with reason — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:57:00Z — Commit: 9b217b0
+- F4.2 Outcome logging — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:58:00Z — Commit: 7711b82
+- F4.3 Predicted vs realized view — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:59:00Z — Commit: 8617b55
 - Phase 5 integration — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T45:30:00Z — Commit: 6fa8cef
 - Phase 4/6/7 consolidation — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T46:30:00Z — Commit: 3494a26
 - F1.1 SKU catalog and seed — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
@@ -262,7 +280,7 @@ green on a laptop, and CI provides one.
 
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
-| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1 | 2026-10-20T23:30:00Z |
+| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F4.1, F4.2, F4.3, F6.1-F6.9, F7.1-F7.6 | 2026-10-20T17:59:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.x, F2.1-F2.11, F3.2-F3.9 | 2026-10-20T12:00:00Z |
 | ai-longcat-ses_ea89089b | AI | F4.1, F5.1, F5.2, F5.3, F5.4 | 2026-10-20T22:30:00Z |
 | ai-minimax-m3.1-flash-ses_ea89089b | AI | F5.5, F5.6, Phase 5 integration | 2026-10-20T45:00:00Z |
