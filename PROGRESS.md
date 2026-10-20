@@ -133,7 +133,7 @@
 |---------|--------|-------|--------|---------|-----------|--------|-------|
 | F6.1 Model registry | 🔲 Not Started | — | — | — | — | — | MLflow, training data hash, metrics, calibration, features |
 | F6.2 Shadow mode | 🔲 Not Started | — | — | — | — | — | Candidate runs alongside, logs only, never shown to users |
-| F6.3 Promotion gate | 🔲 Not Started | — | — | — | — | — | Beats active on net MAE + ECE, min sample, admin action |
+| F6.3 Promotion gate | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F6.3-promotion-gate | 2026-10-20T26:00:00Z | 2026-10-20T26:30:00Z | — | Beats active on net MAE + ECE, min sample, admin action |
 | F6.4 Drift monitoring | 🔲 Not Started | — | — | — | — | — | PSI on inputs, calibration drift, Prometheus + Grafana alerts |
 | F6.5 Controlled exploration | 🔲 Not Started | — | — | — | — | — | 3-5% cap, exclusions, propensity logged |
 | F6.6 Thompson sampling | 🔲 Not Started | — | — | — | — | — | Bandit policy in NumPy, exploration-eligible only |
