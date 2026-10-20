@@ -220,6 +220,7 @@ green on a laptop, and CI provides one.
 - F5.4 Batch decisions — Agent: ai-longcat-ses_ea89089b — Completed: 2026-10-20T22:30:00Z — Commit: e8cb114
 - F5.5 Offline inspection — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T40:00:00Z — Commit: b62d40f
 - F5.6 Historical backtest — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T42:30:00Z — Commit: f95317e
+- Phase 5 integration — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T45:30:00Z — Commit: 6fa8cef
 - F1.1 SKU catalog and seed — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
 - F1.2 Serial prefix lookup — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
 - F1.3 Return intake API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
