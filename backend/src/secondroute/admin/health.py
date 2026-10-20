@@ -161,8 +161,8 @@ async def collect_source_health(
         .all()
     )
     latest_cost: dict[str, datetime] = {}
-    for row in cost_rows:
-        latest_cost.setdefault(row.source, row.updated_at)
+    for cost_row in cost_rows:
+        latest_cost.setdefault(cost_row.source, cost_row.updated_at)
     for source, last_update in latest_cost.items():
         statuses.append(
             _status(
@@ -182,8 +182,8 @@ async def collect_source_health(
         .all()
     )
     latest_component: dict[str, datetime] = {}
-    for row in component_rows:
-        latest_component.setdefault(row.source, row.created_at)
+    for component_row in component_rows:
+        latest_component.setdefault(component_row.source, component_row.created_at)
     for source, last_update in latest_component.items():
         statuses.append(
             _status(
@@ -203,8 +203,8 @@ async def collect_source_health(
         .all()
     )
     latest_demand: dict[str, datetime] = {}
-    for row in demand_rows:
-        latest_demand.setdefault(row.source, row.fetched_at)
+    for demand_row in demand_rows:
+        latest_demand.setdefault(demand_row.source, demand_row.fetched_at)
     for source, last_update in latest_demand.items():
         statuses.append(
             _status(

@@ -215,7 +215,10 @@ class PriceSource(Protocol):
     does.
     """
 
-    source_tag: str
+    @property
+    def source_tag(self) -> str:
+        """The tag the observations from this source carry."""
+        ...
 
     async def get_distribution(
         self,
