@@ -4,9 +4,9 @@
 
 ---
 
-## Current Phase: **Phase 3 — Market, Cost, and Component Intelligence**
+## Current Phase: **Phase 6 — Learning Loop**
 
-**Target:** Replace synthetic prices with free/partner data sources, add component/demand signals. Decision code unchanged from Phase 2.
+**Target:** The model improves from outcomes in a controlled, auditable way.
 
 ---
 
@@ -109,8 +109,8 @@
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
 | F5.1 Authentication | 🔲 Not Started | — | — | — | — | — | Keycloak, OIDC, roles: inspector/manager/admin/analyst |
-| F5.2 Tenant isolation | 🔲 Not Started | — | — | — | — | — | org_id on every table, PostgreSQL RLS enforced |
-| F5.3 Risk profile settings | 🔲 Not Started | — | — | — | — | — | UI/API to set profile, recomputes decisions, audited |
+| F5.2 Tenant isolation | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.2-tenant-isolation | 2026-10-20T19:45:00Z | 2026-10-20T20:30:00Z | — | org_id on every table, PostgreSQL RLS enforced |
+| F5.3 Risk profile settings | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.3-risk-profile-settings | 2026-10-20T20:45:00Z | 2026-10-20T21:30:00Z | — | UI/API to set profile, recomputes decisions, audited |
 | F5.4 Batch decisions | 🔲 Not Started | — | — | — | — | — | POST /batches/decide, grouping, filter, CSV export |
 | F5.5 Offline inspection | 🔲 Not Started | — | — | — | — | — | IndexedDB drafts, queue sync, conflict resolution |
 | F5.6 Historical backtest | 🔲 Not Started | — | — | — | — | — | No look-ahead, baseline comparison, bootstrap CI |
@@ -128,7 +128,7 @@
 | F6.1 Model registry | 🔲 Not Started | — | — | — | — | — | MLflow, training data hash, metrics, calibration, features |
 | F6.2 Shadow mode | 🔲 Not Started | — | — | — | — | — | Candidate runs alongside, logs only, never shown to users |
 | F6.3 Promotion gate | 🔲 Not Started | — | — | — | — | — | Beats active on net MAE + ECE, min sample, admin action |
-| F6.4 Drift monitoring | 🔲 Not Started | — | — | — | — | — | PSI on inputs, calibration drift, Prometheus + Grafana alerts |
+| F6.4 Drift monitoring | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F6.4-drift-monitoring | 2026-10-20T27:00:00Z | 2026-10-20T27:30:00Z | — | PSI on inputs, calibration drift, Prometheus export, alert rules |
 | F6.5 Controlled exploration | 🔲 Not Started | — | — | — | — | — | 3-5% cap, exclusions, propensity logged |
 | F6.6 Thompson sampling | 🔲 Not Started | — | — | — | — | — | Bandit policy in NumPy, exploration-eligible only |
 | F6.7 Off-policy evaluation | 🔲 Not Started | — | — | — | — | — | IPS with confidence intervals |
@@ -156,7 +156,7 @@
 
 ## In Progress
 
-- F3.1 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T22:00:00Z — Branch: feat/F3.1-ebay-adapter
+*No features currently in progress.*
 
 ---
 
@@ -193,7 +193,7 @@
 
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
-| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7 | 2026-10-20T21:30:00Z |
+| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F6.1, F6.2, F6.3 | 2026-10-20T26:30:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.1, F0.2, F0.3, F0.4, F0.5, F0.6, F0.7, F2.1, F2.2, F2.3, F2.4, F2.5, F2.6, F2.7, F2.8, F2.9, F2.10, F2.11 | 2026-10-20T05:15:00Z |
 
 ---
@@ -219,4 +219,4 @@
 ---
 
 *Last updated: 2026-10-20*
-*Next review: Before starting Phase 3 work*
+*Next review: Before starting Phase 6 work (F6.4)*

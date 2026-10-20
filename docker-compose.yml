@@ -37,6 +37,30 @@ services:
     networks:
       - secondroute-network
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: secondroute-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/secondroute
+      KC_DB_USERNAME: secondroute
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-localhost}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY: edge
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - secondroute-network
+
   caddy:
     image: caddy:2-alpine
     container_name: secondroute-caddy
