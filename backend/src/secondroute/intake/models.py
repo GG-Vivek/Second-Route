@@ -22,7 +22,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from secondroute.core.db import Base
 
@@ -68,7 +68,7 @@ class Unit(Base):
 
     __tablename__ = "units"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     org_id = Column(UUID(as_uuid=True), nullable=True, index=True)  # FK added in Phase 5
     sku_id = Column(
         UUID(as_uuid=True), ForeignKey("skus.id", ondelete="RESTRICT"), nullable=False, index=True
@@ -122,13 +122,13 @@ class Inspection(Base):
         String(10), nullable=False
     )  # Stored as string to preserve precision
     battery_cycles = Column(String(20), nullable=True)
-    cosmetic_grade = Column(String(20), nullable=False)
+    cosmetic_grade: Mapped[str] = mapped_column(String(20), nullable=False)
     functional_tests_json = Column(JSON, nullable=False, default=dict)
     activation_lock = Column(
         String(20), nullable=False, default="unknown"
     )  # "none", "present", "unknown"
     accessories_json = Column(JSON, nullable=False, default=dict)
-    notes = Column(Text, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     offline_created = Column(Boolean, nullable=False, default=False)
 
     # Relationships

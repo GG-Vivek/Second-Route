@@ -179,16 +179,24 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_is_deterministic(self) -> None:
         """Test that the simulation is reproducible for a fixed seed."""
-        kwargs = {
-            "true_policy_values": {"RESELL": 100.0, "RECYCLE": 50.0},
-            "behavior_policy": {"RESELL": 0.5, "RECYCLE": 0.5},
-            "target_policy": {"RESELL": 0.7, "RECYCLE": 0.3},
-            "n_samples": 500,
-            "rng_seed": 7,
-        }
+        true_values = {"RESELL": 100.0, "RECYCLE": 50.0}
+        behavior = {"RESELL": 0.5, "RECYCLE": 0.5}
+        target = {"RESELL": 0.7, "RECYCLE": 0.3}
 
-        first = simulate_off_policy_evaluation(**kwargs)
-        second = simulate_off_policy_evaluation(**kwargs)
+        first = simulate_off_policy_evaluation(
+            true_policy_values=true_values,
+            behavior_policy=behavior,
+            target_policy=target,
+            n_samples=500,
+            rng_seed=7,
+        )
+        second = simulate_off_policy_evaluation(
+            true_policy_values=true_values,
+            behavior_policy=behavior,
+            target_policy=target,
+            n_samples=500,
+            rng_seed=7,
+        )
 
         assert first["ips_estimate"] == second["ips_estimate"]
         assert first["snips_estimate"] == second["snips_estimate"]

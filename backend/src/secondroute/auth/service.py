@@ -6,11 +6,11 @@ Provides Keycloak OIDC integration, session management, and token handling.
 
 import json
 import time
-from typing import Optional, Dict, Any
+from typing import Any, Optional, cast
 from uuid import UUID
 
 import httpx
-from jose import jwt, JWTError
+from jose import jwt, JWTError  # type: ignore[import-untyped]
 from pydantic import BaseModel
 
 from secondroute.core.config import settings
@@ -68,24 +68,24 @@ class TokenData(BaseModel):
 class KeycloakService:
     """Keycloak OIDC integration service."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.config = KeycloakConfig(
             base_url=settings.OIDC_BASE_URL or "http://localhost:8080",
             realm=settings.OIDC_REALM or "secondroute",
             client_id=settings.OIDC_CLIENT_ID or "secondroute",
             client_secret=settings.OIDC_CLIENT_SECRET or "dev-secret",
         )
-        self._jwks_cache: Optional[Dict] = None
+        self._jwks_cache: Optional[dict] = None
         self._jwks_cache_time: float = 0
 
-    async def get_discovery_document(self) -> Dict[str, Any]:
+    async def get_discovery_document(self) -> dict[str, Any]:
         """Get OIDC discovery document."""
         async with httpx.AsyncClient() as client:
             response = await client.get(self.config.discovery_uri)
             response.raise_for_status()
-            return response.json()
+            return cast("dict[str, Any]", response.json())
 
-    async def get_jwks(self) -> Dict[str, Any]:
+    async def get_jwks(self) -> dict[str, Any]:
         """Get JWKS with caching."""
         now = time.time()
         if self._jwks_cache and (now - self._jwks_cache_time) < 3600:  # 1 hour cache
@@ -98,7 +98,7 @@ class KeycloakService:
             self._jwks_cache_time = time.time()
             return self._jwks_cache
 
-    async def get_public_keys(self) -> Dict[str, Any]:
+    async def get_public_keys(self) -> dict[str, Any]:
         """Get public keys for JWT verification."""
         jwks = await self.get_jwks()
         keys = {}
@@ -113,19 +113,24 @@ class KeycloakService:
         try:
             # Get public keys
             import asyncio
-            keys = asyncio.run(self.get_public_keys())
+
+            _keys = asyncio.run(self.get_public_keys())
 
             # Get the key ID from the token header
             header = jwt.get_unverified_header(token)
-            kid = header.get("kid")
-            if not kid:
-                raise JWTError("Token missing key ID")
+        except JWTError as e:
+            raise ValueError(f"Invalid token: {e}") from e
 
-            key = asyncio.run(self.get_public_keys()).get(kid)
-            if not key:
-                raise JWTError(f"Key not found for kid: {kid}")
+        kid = header.get("kid")
+        if not kid:
+            raise ValueError("Token missing key ID")
 
-            # Verify and decode
+        key = _keys.get(kid)
+        if not key:
+            raise ValueError(f"Key not found for kid: {kid}")
+
+        # Verify and decode
+        try:
             payload = jwt.decode(
                 token,
                 key,
@@ -133,11 +138,12 @@ class KeycloakService:
                 audience=settings.OIDC_CLIENT_ID,
                 issuer=self.config.issuer,
             )
-            return TokenData(**payload)
         except JWTError as e:
-            raise ValueError(f"Invalid token: {e}")
+            raise ValueError(f"Invalid token: {e}") from e
 
-    async def exchange_code_for_tokens(self, code: str, redirect_uri: str) -> Dict[str, Any]:
+        return TokenData(**payload)
+
+    async def exchange_code_for_tokens(self, code: str, redirect_uri: str) -> dict[str, Any]:
         """Exchange authorization code for tokens."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -152,9 +158,9 @@ class KeycloakService:
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             response.raise_for_status()
-            return response.json()
+            return cast("dict[str, Any]", response.json())
 
-    async def refresh_token(self, refresh_token: str) -> Dict[str, Any]:
+    async def refresh_token(self, refresh_token: str) -> dict[str, Any]:
         """Refresh access token."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -168,7 +174,7 @@ class KeycloakService:
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             response.raise_for_status()
-            return response.json()
+            return cast("dict[str, Any]", response.json())
 
     async def logout(self, refresh_token: Optional[str] = None) -> None:
         """Logout from Keycloak."""
@@ -199,10 +205,9 @@ class KeycloakService:
         if state:
             params["state"] = state
 
-        from urllib.parse import urlencode
         return f"{self.config.auth_endpoint}?{urlencode(params)}"
 
-    async def get_userinfo(self, access_token: str) -> Dict[str, Any]:
+    async def get_userinfo(self, access_token: str) -> dict[str, Any]:
         """Get user info from Keycloak."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -210,13 +215,13 @@ class KeycloakService:
                 headers={"Authorization": f"Bearer {access_token}"},
             )
             response.raise_for_status()
-            return response.json()
+            return cast("dict[str, Any]", response.json())
 
 
 class SessionManager:
     """Session management using Redis."""
 
-    def __init__(self, redis_client):
+    def __init__(self, redis_client: Any) -> None:
         self.redis = redis_client
 
     async def create_session(
@@ -230,6 +235,7 @@ class SessionManager:
     ) -> str:
         """Create a new session."""
         import uuid
+
         session_id = str(uuid.uuid4())
 
         session_data = {
@@ -252,11 +258,11 @@ class SessionManager:
 
         return session_id
 
-    async def get_session(self, session_id: str) -> Optional[Dict]:
+    async def get_session(self, session_id: str) -> Optional[dict]:
         """Get session data."""
         data = await self.redis.get(f"session:{session_id}")
         if data:
-            return json.loads(data)
+            return cast("dict[Any, Any]", json.loads(data))
         return None
 
     async def delete_session(self, session_id: str) -> None:

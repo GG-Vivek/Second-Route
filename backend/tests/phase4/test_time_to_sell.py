@@ -24,7 +24,12 @@ from secondroute.identity.models import SKU
 from secondroute.intake.models import Inspection, OrderChannel, ReturnReasonCode, Unit
 
 
-def _observation(duration: int, event: bool, channel: str = "RESELL_OPEN_BOX", grade: str = "A"):
+def _observation(
+    duration: int,
+    event: bool,
+    channel: str = "RESELL_OPEN_BOX",
+    grade: str = "A",
+) -> Observation:
     """Build one observation."""
     return Observation(
         duration_days=duration,

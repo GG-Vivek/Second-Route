@@ -2,6 +2,8 @@
 Tests for outcome logging (Phase 4 - F4.2).
 """
 
+from typing import Any
+
 import pytest
 from datetime import datetime
 from uuid import uuid4
@@ -82,7 +84,7 @@ async def _make_unit_with_decision(
     return unit, decision
 
 
-def _outcome_body(**overrides) -> dict:
+def _outcome_body(**overrides: Any) -> dict[str, Any]:
     """Build a valid outcome request body."""
     body = {
         "channel_taken": "RESELL_OPEN_BOX",
@@ -104,6 +106,7 @@ class TestCreateOutcome:
     async def test_create_outcome(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """Test recording an outcome."""
         unit, decision = await _make_unit_with_decision(db_session)
+        assert decision is not None
 
         response = await client.post(
             f"/api/v1/units/{unit.id}/outcome",
@@ -142,6 +145,7 @@ class TestCreateOutcome:
     ) -> None:
         """Test recording an outcome with an explicit decision."""
         unit, decision = await _make_unit_with_decision(db_session)
+        assert decision is not None
 
         response = await client.post(
             f"/api/v1/units/{unit.id}/outcome",
@@ -172,6 +176,7 @@ class TestCreateOutcome:
         """Test that a decision from a different unit is rejected."""
         unit_a, _ = await _make_unit_with_decision(db_session, suffix="A")
         _, decision_b = await _make_unit_with_decision(db_session, suffix="B")
+        assert decision_b is not None
 
         response = await client.post(
             f"/api/v1/units/{unit_a.id}/outcome",
@@ -186,6 +191,7 @@ class TestCreateOutcome:
     ) -> None:
         """Test that a second outcome is appended, not an overwrite."""
         unit, decision = await _make_unit_with_decision(db_session)
+        assert decision is not None
 
         first = await client.post(
             f"/api/v1/units/{unit.id}/outcome",
@@ -282,6 +288,7 @@ class TestListOutcomes:
     ) -> None:
         """Test listing the outcomes linked to a decision."""
         unit, decision = await _make_unit_with_decision(db_session)
+        assert decision is not None
 
         await client.post(f"/api/v1/units/{unit.id}/outcome", json=_outcome_body())
 

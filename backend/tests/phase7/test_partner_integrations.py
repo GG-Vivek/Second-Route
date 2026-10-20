@@ -19,6 +19,7 @@ from secondroute.integrations.adapter import (
     run_contract_tests,
     IntegrationResult as IntegrationResultV2,
 )
+from typing import Any
 
 
 class SimulatedPartnerError(Exception):
@@ -31,11 +32,11 @@ class MockPartnerAdapter(PartnerAdapter):
     def __init__(self, config: PartnerConfig):
         super().__init__(config)
         self._health = True
-        self._decisions = {}
-        self._outcomes = {}
-        self._units = {}
+        self._decisions: dict[str, Any] = {}
+        self._outcomes: dict[str, Any] = {}
+        self._units: dict[str, Any] = {}
         self._should_fail = False
-        self._fail_operation = None
+        self._fail_operation: str | None = None
 
     @property
     def partner_id(self) -> str:
@@ -270,7 +271,9 @@ class TestPartnerIntegration:
         return PartnerIntegration(adapter, contract)
 
     @pytest.mark.asyncio
-    async def test_activate_integration(self, integration: PartnerIntegration, adapter) -> None:
+    async def test_activate_integration(
+        self, integration: PartnerIntegration, adapter: Any
+    ) -> None:
         """Test activating an integration."""
         adapter._health = True
         result = await integration.activate()
@@ -280,7 +283,7 @@ class TestPartnerIntegration:
 
     @pytest.mark.asyncio
     async def test_activate_unhealthy_integration(
-        self, integration: PartnerIntegration, adapter
+        self, integration: PartnerIntegration, adapter: Any
     ) -> None:
         """Test activating an unhealthy integration."""
         adapter._health = False
@@ -297,7 +300,7 @@ class TestPartnerIntegration:
         assert integration.last_error == "Testing deactivation"
 
     @pytest.mark.asyncio
-    async def test_health_check(self, integration: PartnerIntegration, adapter) -> None:
+    async def test_health_check(self, integration: PartnerIntegration, adapter: Any) -> None:
         """Test health check."""
         adapter._health = True
         healthy = await integration.health_check()
@@ -306,7 +309,7 @@ class TestPartnerIntegration:
 
     @pytest.mark.asyncio
     async def test_execute_operation_success(
-        self, integration: PartnerIntegration, adapter
+        self, integration: PartnerIntegration, adapter: Any
     ) -> None:
         """Test successful operation execution."""
         test_decision_id = uuid4()
@@ -324,12 +327,13 @@ class TestPartnerIntegration:
         """Test executing non-existent operation."""
         result = await integration.execute_operation("nonexistent_operation")
         assert result.success is False
+        assert result.error_message is not None
         assert "not supported" in result.error_message.lower()
         assert result.status_code == 400
 
     @pytest.mark.asyncio
     async def test_execute_operation_failure(
-        self, integration: PartnerIntegration, adapter
+        self, integration: PartnerIntegration, adapter: Any
     ) -> None:
         """Test operation failure handling."""
         adapter._should_fail = True
@@ -377,7 +381,7 @@ class TestValidateIntegrationContract:
         # For testing: force the adapter to miss the operation
         adapter._should_fail = True
         adapter._fail_operation = "post_decision"
-        adapter.post_decision = None  # Explicitly set to None for the test
+        adapter.post_decision = None  # type: ignore[method-assign, assignment]
 
         errors = validate_integration_contract(adapter, contract)
         assert len(errors) > 0
@@ -398,7 +402,7 @@ class TestValidateIntegrationContract:
             operations={"health_check": {}, "get_decision": {}},
         )
         # Simulate a missing required method (e.g. list_units not implemented)
-        adapter.list_units = None  # type: ignore[method-assign]
+        adapter.list_units = None  # type: ignore[method-assign, assignment]
 
         errors = validate_integration_contract(adapter, contract)
         assert len(errors) > 0

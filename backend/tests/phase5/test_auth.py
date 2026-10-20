@@ -11,11 +11,19 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from secondroute.identity.organizations import Organization, User, ROLE_INSPECTOR, ROLE_MANAGER, ROLE_ADMIN, ROLE_ANALYST
+from secondroute.identity.organizations import (
+    Organization,
+    User,
+    ROLE_INSPECTOR,
+    ROLE_MANAGER,
+    ROLE_ADMIN,
+    ROLE_ANALYST,
+)
+from typing import Any
 
 
 @pytest.fixture
-async def test_org(db_session: AsyncSession):
+async def test_org(db_session: AsyncSession) -> Organization:
     """Create a test organization."""
     org = Organization(name="Test Org", risk_profile="balanced")
     db_session.add(org)
@@ -25,7 +33,7 @@ async def test_org(db_session: AsyncSession):
 
 
 @pytest.fixture
-async def test_user(db_session: AsyncSession, test_org):
+async def test_user(db_session: AsyncSession, test_org: Organization) -> User:
     """Create a test user."""
     user = User(
         org_id=test_org.id,
@@ -84,7 +92,7 @@ class TestUserManagement:
         assert "id" in data
 
     @pytest.mark.asyncio
-    async def test_get_organization(self, client: AsyncClient, test_org) -> None:
+    async def test_get_organization(self, client: AsyncClient, test_org: Organization) -> None:
         """Test getting an organization by ID."""
         response = await client.get(f"/api/v1/orgs/{test_org.id}")
         assert response.status_code == 200
@@ -93,7 +101,7 @@ class TestUserManagement:
         assert data["name"] == test_org.name
 
     @pytest.mark.asyncio
-    async def test_list_organizations(self, client: AsyncClient, test_org) -> None:
+    async def test_list_organizations(self, client: AsyncClient, test_org: Organization) -> None:
         """Test listing organizations."""
         response = await client.get("/api/v1/orgs")
         assert response.status_code == 200
@@ -103,7 +111,7 @@ class TestUserManagement:
 
     @pytest.mark.asyncio
     async def test_update_organization_risk_profile(
-        self, client: AsyncClient, test_org
+        self, client: AsyncClient, test_org: Organization
     ) -> None:
         """Test updating organization risk profile."""
         response = await client.patch(
@@ -116,7 +124,7 @@ class TestUserManagement:
 
     @pytest.mark.asyncio
     async def test_create_user_in_organization(
-        self, client: AsyncClient, test_org
+        self, client: AsyncClient, test_org: Organization
     ) -> None:
         """Test creating a user in an organization."""
         response = await client.post(
@@ -131,7 +139,7 @@ class TestUserManagement:
 
     @pytest.mark.asyncio
     async def test_create_user_invalid_role_returns_422(
-        self, client: AsyncClient, test_org
+        self, client: AsyncClient, test_org: Organization
     ) -> None:
         """Test that creating a user with invalid role returns 422."""
         response = await client.post(
@@ -142,7 +150,7 @@ class TestUserManagement:
 
     @pytest.mark.asyncio
     async def test_create_duplicate_email_returns_409(
-        self, client: AsyncClient, test_org
+        self, client: AsyncClient, test_org: Organization
     ) -> None:
         """Test that creating a user with duplicate email returns 409."""
         await client.post(
@@ -157,7 +165,7 @@ class TestUserManagement:
 
     @pytest.mark.asyncio
     async def test_list_users_in_organization(
-        self, client: AsyncClient, test_org, test_user
+        self, client: AsyncClient, test_org: Organization, test_user: Any
     ) -> None:
         """Test listing users in an organization."""
         response = await client.get(f"/api/v1/orgs/{test_org.id}/users")
@@ -167,7 +175,7 @@ class TestUserManagement:
         assert any(u["id"] == str(test_user.id) for u in data)
 
     @pytest.mark.asyncio
-    async def test_get_user(self, client: AsyncClient, test_user) -> None:
+    async def test_get_user(self, client: AsyncClient, test_user: Any) -> None:
         """Test getting a user by ID."""
         response = await client.get(f"/api/v1/users/{test_user.id}")
         assert response.status_code == 200
@@ -177,7 +185,7 @@ class TestUserManagement:
 
     @pytest.mark.asyncio
     async def test_update_user_role(
-        self, client: AsyncClient, test_user, test_org
+        self, client: AsyncClient, test_user: Any, test_org: Organization
     ) -> None:
         """Test updating a user's role."""
         response = await client.patch(
@@ -190,7 +198,7 @@ class TestUserManagement:
 
     @pytest.mark.asyncio
     async def test_delete_user(
-        self, client: AsyncClient, test_user, test_org
+        self, client: AsyncClient, test_user: Any, test_org: Organization
     ) -> None:
         """Test deleting a user."""
         response = await client.delete(f"/api/v1/orgs/{test_org.id}/users/{test_user.id}")
@@ -206,7 +214,7 @@ class TestRoleBasedAccessControl:
 
     @pytest.mark.asyncio
     async def test_inspector_cannot_access_admin_endpoints(
-        self, client: AsyncClient, test_user
+        self, client: AsyncClient, test_user: Any
     ) -> None:
         """Test that inspector cannot access admin endpoints."""
         # This requires authentication - would need to set up auth headers
@@ -214,14 +222,14 @@ class TestRoleBasedAccessControl:
 
     @pytest.mark.asyncio
     async def test_admin_can_access_all_endpoints(
-        self, client: AsyncClient, test_org
+        self, client: AsyncClient, test_org: Organization
     ) -> None:
         """Test that admin can access all endpoints."""
         pass
 
     @pytest.mark.asyncio
     async def test_cross_org_access_denied(
-        self, client: AsyncClient, test_org, test_user
+        self, client: AsyncClient, test_org: Organization, test_user: Any
     ) -> None:
         """Test that users cannot access other organizations' data."""
         pass

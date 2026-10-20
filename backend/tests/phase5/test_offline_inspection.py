@@ -16,10 +16,11 @@ from secondroute.identity.organizations import Organization, User
 from secondroute.identity.models import SKU
 from secondroute.intake.models import Unit, Inspection, ReturnReasonCode, OrderChannel
 from secondroute.feedback.models import AuditAction, AuditLog
+from typing import Any
 
 
 @pytest.fixture
-async def test_org(db_session) -> Organization:
+async def test_org(db_session: AsyncSession) -> Organization:
     """Create a test organization."""
     org = Organization(name="Test Org", risk_profile="balanced")
     db_session.add(org)
@@ -29,7 +30,7 @@ async def test_org(db_session) -> Organization:
 
 
 @pytest.fixture
-async def test_user(db_session, test_org) -> User:
+async def test_user(db_session: AsyncSession, test_org: Organization) -> User:
     """Create a test user."""
     user = User(org_id=test_org.id, email="inspector@test.com", role="inspector")
     db_session.add(user)
@@ -39,7 +40,7 @@ async def test_user(db_session, test_org) -> User:
 
 
 @pytest.fixture
-async def shared_sku(db_session) -> SKU:
+async def shared_sku(db_session: AsyncSession) -> SKU:
     """Create a shared SKU."""
     sku = SKU(
         family="MacBook Pro",
@@ -59,7 +60,7 @@ async def shared_sku(db_session) -> SKU:
     return sku
 
 
-async def make_unit(db_session, sku, org_id):
+async def make_unit(db_session: AsyncSession, sku: SKU, org_id: Any) -> Unit:
     """Create a minimal unit row."""
     unit = Unit(
         sku_id=sku.id,
@@ -73,7 +74,12 @@ async def make_unit(db_session, sku, org_id):
     return unit
 
 
-async def make_inspection(db_session, unit_id, inspector_id, offline=False):
+async def make_inspection(
+    db_session: AsyncSession,
+    unit_id: Any,
+    inspector_id: Any,
+    offline: bool = False,
+) -> Inspection:
     """Create an inspection."""
     inspection = Inspection(
         unit_id=unit_id,
@@ -98,8 +104,13 @@ class TestOfflineInspection:
 
     @pytest.mark.asyncio
     async def test_create_inspection_offline(
-        self, client: AsyncClient, db_session, test_org, test_user, shared_sku
-    ):
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_org: Organization,
+        test_user: Any,
+        shared_sku: SKU,
+    ) -> None:
         """Create an inspection while offline (flag set)."""
         unit = await make_unit(db_session, shared_sku, test_org.id)
 
@@ -126,8 +137,13 @@ class TestOfflineInspection:
 
     @pytest.mark.asyncio
     async def test_create_inspection_online(
-        self, client: AsyncClient, db_session, test_org, test_user, shared_sku
-    ):
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_org: Organization,
+        test_user: Any,
+        shared_sku: SKU,
+    ) -> None:
         """Create an inspection while online (flag false)."""
         unit = await make_unit(db_session, shared_sku, test_org.id)
 
@@ -152,8 +168,13 @@ class TestOfflineInspection:
 
     @pytest.mark.asyncio
     async def test_offline_inspection_appears_in_list(
-        self, client: AsyncClient, db_session, test_org, test_user, shared_sku
-    ):
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_org: Organization,
+        test_user: Any,
+        shared_sku: SKU,
+    ) -> None:
         """Offline inspections should appear in the inspection list."""
         unit = await make_unit(db_session, shared_sku, test_org.id)
 
@@ -186,8 +207,13 @@ class TestOfflineSync:
 
     @pytest.mark.asyncio
     async def test_offline_inspection_sync_on_reconnect(
-        self, client: AsyncClient, db_session, test_org, test_user, shared_sku
-    ):
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_org: Organization,
+        test_user: Any,
+        shared_sku: SKU,
+    ) -> None:
         """Test that offline inspections sync when reconnected."""
         unit = await make_unit(db_session, shared_sku, test_org.id)
 
@@ -209,13 +235,13 @@ class TestOfflineSync:
         await db_session.refresh(inspection)
 
         # Verify it's marked as offline
-        assert inspection.offline_created is True
+        assert bool(inspection.offline_created) is True
 
         # The sync mechanism would be triggered on reconnect
         # For now, verify it can be queried
         result = await db_session.execute(select(Inspection).where(Inspection.id == inspection.id))
         fetched = result.scalar_one()
-        assert fetched.offline_created is True
+        assert bool(fetched.offline_created) is True
 
 
 class TestOfflineConflictResolution:
@@ -223,8 +249,13 @@ class TestOfflineConflictResolution:
 
     @pytest.mark.asyncio
     async def test_conflict_resolution_last_write_wins(
-        self, client: AsyncClient, db_session, test_org, test_user, shared_sku
-    ):
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        test_org: Organization,
+        test_user: Any,
+        shared_sku: SKU,
+    ) -> None:
         """Test that last write wins with both versions in audit log."""
         unit = await make_unit(db_session, shared_sku, test_org.id)
 
@@ -287,8 +318,8 @@ class TestOfflineAuditOrg:
 
     @pytest.mark.asyncio
     async def test_inspection_audit_log_carries_the_unit_org(
-        self, db_session, test_org, test_user, shared_sku
-    ):
+        self, db_session: AsyncSession, test_org: Organization, test_user: Any, shared_sku: SKU
+    ) -> None:
         """The audit row for an inspection inherits the unit's org."""
         unit = await make_unit(db_session, shared_sku, test_org.id)
         inspection = await make_inspection(db_session, unit.id, test_user.id, offline=True)
@@ -306,8 +337,8 @@ class TestOfflineAuditOrg:
 
     @pytest.mark.asyncio
     async def test_update_audit_log_carries_the_unit_org(
-        self, db_session, test_org, test_user, shared_sku
-    ):
+        self, db_session: AsyncSession, test_org: Organization, test_user: Any, shared_sku: SKU
+    ) -> None:
         """An update to an inspection is audited against the unit's org."""
         unit = await make_unit(db_session, shared_sku, test_org.id)
         inspection = await make_inspection(db_session, unit.id, test_user.id, offline=True)
@@ -328,7 +359,9 @@ class TestOfflineAuditOrg:
         assert logs[0].org_id == test_org.id
 
     @pytest.mark.asyncio
-    async def test_unit_audit_log_carries_its_own_org(self, db_session, test_org, shared_sku):
+    async def test_unit_audit_log_carries_its_own_org(
+        self, db_session: AsyncSession, test_org: Organization, shared_sku: SKU
+    ) -> None:
         """A unit carries its own org, and the audit row uses it directly."""
         unit = await make_unit(db_session, shared_sku, test_org.id)
 

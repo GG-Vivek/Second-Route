@@ -183,7 +183,7 @@ class TestExpertReviewLabels:
         assert label is not None
         assert label.decision_id == decision_id
         assert label.reviewer_id == "expert@example.com"
-        assert label.agreement is True
+        assert bool(label.agreement) is True
         assert label.reason == "Looks correct"
 
     @pytest.mark.asyncio
@@ -202,7 +202,7 @@ class TestExpertReviewLabels:
         )
 
         assert label is not None
-        assert label.agreement is False
+        assert bool(label.agreement) is False
         assert label.reason == "Wrong channel"
         assert label.suggested_channel == "RESELL_REFURB"
 

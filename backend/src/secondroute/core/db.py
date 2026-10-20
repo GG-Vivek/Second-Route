@@ -6,10 +6,15 @@ Provides async SQLAlchemy engine, session factory, and utilities.
 
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
-from typing import AsyncGenerator, AsyncContextManager
+from typing import Any, AsyncGenerator, AsyncContextManager, cast
 
-from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy import create_engine, Select
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase, declared_attr
 from sqlalchemy.pool import NullPool
 
@@ -73,15 +78,18 @@ async def check_db_connection() -> bool:
     try:
         async with engine.connect() as conn:
             from sqlalchemy import text
+
             await conn.execute(text("SELECT 1"))
-        return True
     except Exception:
         return False
+    else:
+        return True
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Get a database session."""
-    async with async_session_maker() as session:
+    maker = _require_session_maker()
+    async with maker() as session:
         try:
             yield session
             await session.commit()
@@ -90,13 +98,23 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
-def async_session_factory() -> async_sessionmaker:
-    """Get the async session factory."""
+def _require_session_maker() -> async_sessionmaker:
+    """Return the session factory, or fail loudly when it is not set up.
+
+    Returns:
+        The session factory.
+
+    Raises:
+        RuntimeError: When ``init_db`` has not run yet.
+    """
+    if async_session_maker is None:
+        raise RuntimeError("The database is not initialised. Call init_db() first.")
     return async_session_maker
 
 
-# Context variable for current org_id (for RLS emulation in SQLite)
-current_org_id: ContextVar[str | None] = ContextVar("current_org_id", default=None)
+def async_session_factory() -> async_sessionmaker:
+    """Get the async session factory."""
+    return _require_session_maker()
 
 
 def get_current_org_id() -> str | None:
@@ -111,12 +129,17 @@ def set_current_org_id(org_id: str | None) -> None:
 
 def get_session_context() -> AsyncContextManager[AsyncSession]:
     """Get a session context manager."""
-    return session_scope()
+    maker = _require_session_maker()
+    return cast("AsyncContextManager[AsyncSession]", maker())
 
 
-def with_org_filter(query, model_class, org_id: str | None = None):
+def with_org_filter(
+    query: Select[Any],
+    model_class: type[Any],
+    org_id: str | None = None,
+) -> Select[Any]:
     """Apply org_id filter to query if model has org_id column.
-    
+
     If org_id is None (no org context set), returns a query that matches no rows
     for strict tenant isolation.
     """
@@ -125,11 +148,14 @@ def with_org_filter(query, model_class, org_id: str | None = None):
     if hasattr(model_class, "org_id"):
         from sqlalchemy.orm import InstrumentedAttribute
         import uuid
+
         if isinstance(getattr(model_class, "org_id", None), InstrumentedAttribute):
             if org_id is not None:
                 # Convert string to UUID for comparison
                 query = query.where(model_class.org_id == uuid.UUID(org_id))
             else:
                 # Strict mode: no org context = no access
-                query = query.where(model_class.org_id == uuid.UUID('00000000-0000-0000-0000-000000000000'))
+                query = query.where(
+                    model_class.org_id == uuid.UUID("00000000-0000-0000-0000-000000000000")
+                )
     return query

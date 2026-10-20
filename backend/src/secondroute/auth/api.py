@@ -16,7 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from secondroute.core.config import settings
 from secondroute.core.db import get_session
-from secondroute.identity.organizations import Organization, User, ROLE_INSPECTOR, ROLE_MANAGER, ROLE_ADMIN, ROLE_ANALYST, ROLES
+from secondroute.identity.organizations import (
+    Organization,
+    User,
+)
 from secondroute.auth.schemas import (
     OrganizationCreate,
     OrganizationUpdate,
@@ -63,12 +66,10 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token: {e}",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from e
 
     # Get user from database
-    result = await session.execute(
-        select(User).where(User.email == token_data.email)
-    )
+    result = await session.execute(select(User).where(User.email == token_data.email))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(
@@ -90,9 +91,7 @@ async def get_current_user_optional(
 
     try:
         token_data = keycloak.verify_token(credentials.credentials)
-        result = await session.execute(
-            select(User).where(User.email == token_data.email)
-        )
+        result = await session.execute(select(User).where(User.email == token_data.email))
         return result.scalar_one_or_none()
     except Exception:
         return None
@@ -101,6 +100,7 @@ async def get_current_user_optional(
 # ========================================================================
 # Keycloak OIDC Endpoints
 # ========================================================================
+
 
 @router.get(
     "/login",
@@ -146,7 +146,7 @@ async def callback(
     tokens = await keycloak.exchange_code_for_tokens(code, redirect_uri)
 
     # Get user info
-    userinfo = await keycloak.get_userinfo(tokens["access_token"])
+    _userinfo = await keycloak.get_userinfo(tokens["access_token"])
 
     # Create or get user in database (would need DB session here)
     # For now, just set cookies and redirect to frontend
@@ -273,14 +273,14 @@ async def get_organization(
 
 @org_router.get(
     "",
-    response_model=List[OrganizationRead],
+    response_model=list[OrganizationRead],
     summary="List organizations",
 )
 async def list_organizations(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-) -> List[OrganizationRead]:
+) -> list[OrganizationRead]:
     """List all organizations."""
     result = await session.execute(
         select(Organization).order_by(Organization.created_at.desc()).limit(limit).offset(offset)
@@ -345,7 +345,7 @@ async def get_user(
 
 @user_router.get(
     "",
-    response_model=List[UserRead],
+    response_model=list[UserRead],
     summary="List users",
 )
 async def list_users(
@@ -353,7 +353,7 @@ async def list_users(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-) -> List[UserRead]:
+) -> list[UserRead]:
     """List users, optionally filtered by organization."""
     query = select(User).order_by(User.created_at.desc()).limit(limit).offset(offset)
     if org_id:
@@ -396,9 +396,7 @@ async def create_user(
         )
 
     # Check for duplicate email
-    result = await session.execute(
-        select(User).where(User.email == user_data.email)
-    )
+    result = await session.execute(select(User).where(User.email == user_data.email))
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -418,7 +416,7 @@ async def create_user(
 
 @org_user_router.get(
     "",
-    response_model=List[UserRead],
+    response_model=list[UserRead],
     summary="List users in organization",
 )
 async def list_org_users(
@@ -426,7 +424,7 @@ async def list_org_users(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-) -> List[UserRead]:
+) -> list[UserRead]:
     """List users in an organization."""
     # Verify org exists
     org = await session.get(Organization, org_id)
@@ -483,9 +481,7 @@ async def update_org_user(
 
     # Check for duplicate email if changing
     if user_data.email and user_data.email != user.email:
-        result = await session.execute(
-            select(User).where(User.email == user_data.email)
-        )
+        result = await session.execute(select(User).where(User.email == user_data.email))
         if result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

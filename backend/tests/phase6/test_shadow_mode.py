@@ -83,7 +83,7 @@ class TestShadowModeService:
         assert prediction.active_model_version == "decision-v1"
         assert prediction.shadow_recommended_channel == "RESELL_REFURB"
         assert prediction.active_recommended_channel == "RESELL_OPEN_BOX"
-        assert prediction.channel_match is False
+        assert bool(prediction.channel_match) is False
         assert prediction.confidence_delta == pytest.approx(0.05)
 
     @pytest.mark.asyncio
