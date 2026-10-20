@@ -9,6 +9,7 @@ import type {
   OutcomeList,
   Override,
   OverrideList,
+  PredictedVsRealizedList,
   ReproducibilityResult,
 } from '@/types/decision'
 
@@ -30,6 +31,9 @@ export type {
   OutcomeList,
   Override,
   OverrideList,
+  PredictedVsRealized,
+  PredictedVsRealizedList,
+  PredictedVsRealizedSummary,
   Reason,
   ReproducibilityResult,
   RiskProfile,
@@ -127,4 +131,23 @@ export async function listDecisionOutcomes(
   if (params?.offset) search.set('offset', String(params.offset))
   const query = search.toString()
   return api.get<OutcomeList>(`/decisions/${decisionId}/outcomes${query ? `?${query}` : ''}`)
+}
+
+/** Compare the predicted net against the realized net for one unit. */
+export async function getUnitPredictedVsRealized(
+  unitId: string
+): Promise<PredictedVsRealizedList> {
+  return api.get<PredictedVsRealizedList>(
+    `/analytics/units/${unitId}/predicted-vs-realized`
+  )
+}
+
+/** Compare the predicted net against the realized net across all units. */
+export async function getPredictedVsRealized(
+  params?: { limit?: number }
+): Promise<PredictedVsRealizedList> {
+  const search = new URLSearchParams()
+  if (params?.limit) search.set('limit', String(params.limit))
+  const query = search.toString()
+  return api.get<PredictedVsRealizedList>(`/analytics/predicted-vs-realized${query ? `?${query}` : ''}`)
 }

@@ -164,6 +164,7 @@ from secondroute.feedback.overrides import router as overrides_router
 from secondroute.feedback.outcomes import router as outcomes_router
 from secondroute.ingest.api import component_router
 from secondroute.ingest.api import router as ingest_router
+from secondroute.analytics.api import router as analytics_router
 # from secondroute.api import condition, admin
 
 app.include_router(identity_router, prefix=API_PREFIX)
@@ -181,6 +182,7 @@ app.include_router(org_router, prefix=API_PREFIX)
 app.include_router(user_router, prefix=API_PREFIX)
 app.include_router(org_user_router, prefix=API_PREFIX)
 app.include_router(backtest_router, prefix=API_PREFIX)
+app.include_router(analytics_router, prefix=API_PREFIX)
 # ...
 
 

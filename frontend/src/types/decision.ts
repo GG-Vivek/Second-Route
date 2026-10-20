@@ -182,6 +182,49 @@ export interface CreateOutcomeRequest {
   decision_id?: string
 }
 
+export interface ChannelPrediction {
+  channel: string
+  p10: number
+  p50: number
+  p90: number
+  mean: number
+}
+
+export interface PredictedVsRealized {
+  unit_id: string
+  decision_id: string
+  outcome_id: string
+  channel: string
+  recommended_channel: string
+  used_recommended: boolean
+  predicted: ChannelPrediction
+  realized_net: number
+  residual: number
+  absolute_residual: number
+  in_range: boolean
+  within_p10_p90: boolean
+  below_p10: boolean
+  above_p90: boolean
+  recorded_at: string
+}
+
+export interface PredictedVsRealizedSummary {
+  total: number
+  in_range_count: number
+  in_range_rate: number
+  below_p10_count: number
+  above_p90_count: number
+  used_recommended_count: number
+  mean_residual: number
+  mean_absolute_residual: number
+}
+
+export interface PredictedVsRealizedList {
+  items: PredictedVsRealized[]
+  total: number
+  summary: PredictedVsRealizedSummary
+}
+
 export const CHANNEL_LABELS: Record<string, string> = {
   RESELL_OPEN_BOX: 'Resell as open-box',
   RESELL_REFURB: 'Refurbish and resell',

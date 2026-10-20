@@ -4,10 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 import { AlertCircle, Loader2, Play, ClipboardCheck } from 'lucide-react'
 import { DecisionCard } from '@/components/decision/DecisionCard'
 import { OutcomeDialog } from '@/components/OutcomeDialog'
+import { PredictedVsRealizedPanel } from '@/components/decision/PredictedVsRealizedPanel'
 import {
   createDecision,
   getDecision,
   listUnitDecisions,
+  getUnitPredictedVsRealized,
 } from '@/api/decision'
 import { Button } from '@/components/ui/button'
 import type { RiskProfile } from '@/types/decision'
@@ -33,6 +35,11 @@ export function DecisionPage() {
     enabled: Boolean(activeDecisionId),
   })
 
+  const predictedVsRealizedQuery = useQuery({
+    queryKey: ['predicted-vs-realized', unitId],
+    queryFn: () => getUnitPredictedVsRealized(unitId ?? ''),
+    enabled: Boolean(unitId),
+  })
 
   const latestId = decisionsQuery.data?.items?.[0]?.id ?? null
   const shownId = activeDecisionId ?? latestId
@@ -181,6 +188,12 @@ export function DecisionPage() {
         </section>
       )}
 
+      {predictedVsRealizedQuery.data && (
+        <PredictedVsRealizedPanel
+          comparisons={predictedVsRealizedQuery.data.items}
+          summary={predictedVsRealizedQuery.data.summary}
+        />
+      )}
     </div>
   )
 }
