@@ -11,6 +11,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
@@ -33,8 +34,11 @@ from secondroute.decision.schemas import (
     DecisionListRead,
     DecisionRead,
     DecisionSummaryRead,
+    ExplanationRead,
     ReproducibilityRead,
 )
+from secondroute.instructions.explainer import ExplainerService, decision_payload
+from secondroute.instructions.models import DecisionExplanation
 from secondroute.pricing.composite import FallbackPriceSource
 from secondroute.pricing.protocols import PriceSource
 from secondroute.pricing.sources import DatabasePriceSource, SyntheticPriceSource
@@ -127,6 +131,111 @@ async def get_decision(decision_id: UUID, session: SessionDep) -> DecisionRead:
             detail="Decision not found",
         )
     return _to_read(decision)
+
+
+@router.post(
+    "/decisions/{decision_id}/explanation",
+    response_model=ExplanationRead,
+    summary="Explain a decision in words",
+)
+async def explain_decision(
+    decision_id: UUID,
+    session: SessionDep,
+    refresh: Annotated[
+        bool,
+        Query(description="Write a new explanation even if one is already stored"),
+    ] = False,
+) -> ExplanationRead:
+    """Explain a decision, in words an operator can read.
+
+    The model is given the decision as structured JSON and it writes
+    nothing but the words. Every number it produces is checked against
+    the numbers the decision actually contains, and text that mentions a
+    number the decision does not have is thrown away in favour of the
+    Phase 2 template. The response says which of the two happened.
+
+    The explanation is stored, so the model is only asked once. Pass
+    ``refresh=true`` to write a new one.
+
+    Args:
+        decision_id: The decision to explain.
+        session: Database session.
+        refresh: Whether to write a new explanation.
+
+    Returns:
+        The explanation.
+
+    Raises:
+        HTTPException: 404 when the decision does not exist.
+    """
+    decision = await session.get(Decision, decision_id)
+    if decision is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Decision not found",
+        )
+
+    if not refresh:
+        stored = await _latest_explanation(session, decision_id)
+        if stored is not None:
+            return ExplanationRead(
+                id=stored.id,
+                decision_id=stored.decision_id,
+                text=stored.text,
+                source=stored.source,
+                reason=stored.reason,
+                model=stored.model,
+                unseen_numbers=json.loads(stored.unseen_numbers or "[]"),
+                created_at=stored.created_at,
+            )
+
+    explanation = await ExplainerService().explain(decision_payload(decision))
+
+    row = DecisionExplanation(
+        decision_id=decision.id,
+        text=explanation.text,
+        source=explanation.source,
+        reason=explanation.reason,
+        model=explanation.model,
+        unseen_numbers=json.dumps(list(explanation.unseen_numbers)),
+        is_synthetic=bool(decision.data_freshness.get("is_synthetic", False)),
+    )
+    session.add(row)
+    await session.commit()
+    await session.refresh(row)
+
+    return ExplanationRead(
+        id=row.id,
+        decision_id=row.decision_id,
+        text=row.text,
+        source=row.source,
+        reason=row.reason,
+        model=row.model,
+        unseen_numbers=json.loads(row.unseen_numbers or "[]"),
+        created_at=row.created_at,
+    )
+
+
+async def _latest_explanation(
+    session: AsyncSession,
+    decision_id: UUID,
+) -> DecisionExplanation | None:
+    """Return the most recent stored explanation of a decision.
+
+    Args:
+        session: Database session.
+        decision_id: The decision.
+
+    Returns:
+        The explanation, or None when there is none.
+    """
+    result = await session.execute(
+        select(DecisionExplanation)
+        .where(DecisionExplanation.decision_id == decision_id)
+        .order_by(DecisionExplanation.created_at.desc())
+        .limit(1)
+    )
+    return result.scalars().first()
 
 
 @router.get(

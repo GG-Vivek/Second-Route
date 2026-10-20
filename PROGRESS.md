@@ -4,7 +4,8 @@
 
 ---
 
-## Current Phase: **Phase 7 — Ecosystem and Expansion** (Phases 1-6 are done and integrated on `feat/phase5-integration`; Phase 5's staging deployment, F5.8, remains)
+## Current Phase: **All seven phases are complete** and integrated on `feat/phase5-integration`.
+Every feature in PLAN.md is now marked done; the last one was F5.7, the explanation text.
 
 **Target:** Record what actually happened, compare it to predictions, measure accuracy and regret.
 
@@ -36,7 +37,7 @@
 | F1.4 Inspection record API | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F1.3-return-intake-api | 2026-10-20T17:00:00Z | 2026-10-20T17:45:00Z | — | POST /api/v1/units/{id}/inspections, append-only, battery health 0-100 validation |
 | F1.5 Photo upload | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F1.3-return-intake-api | 2026-10-20T17:00:00Z | 2026-10-20T17:45:00Z | — | Photo metadata records, EXIF stripped flag |
 | F1.6 Intake and inspection UI | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F1.6-intake-ui | 2026-10-20T18:00:00Z | 2026-10-20T20:00:00Z | — | New return, inspection form, unit detail, draft save (localStorage) |
-| F1.7 Audit log | ⚠️ Partial | ai-nemotron-ses_eaa59d66 | feat/F1.7-audit-log | 2026-10-20T20:15:00Z | 2026-10-20T21:30:00Z | — | `audit_log` model, API endpoints, event listeners need test infrastructure fix |
+| F1.7 Audit log | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase5-integration | 2026-10-20T20:15:00Z | 2026-10-20T49:00:00Z | e1d32aa | Model, read-only API, the actor is the user, outcomes audited, one row per mutation |
 
 **Phase 1 Exit Criteria:** Warehouse can run returns through SecondRoute as digital log. Every inspection recorded and queryable.
 
@@ -120,7 +121,7 @@
 | F5.4 Batch decisions | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.4-batch-decisions | 2026-10-20T22:00:00Z | 2026-10-20T22:30:00Z | e8cb114 | POST /batches/decide, grouping, filter, CSV export |
 | F5.5 Offline inspection | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T22:45:00Z | 2026-10-20T40:00:00Z | b62d40f | IndexedDB drafts, queue sync, conflict resolution, `offline_created` flag + migration `0005` |
 | F5.6 Historical backtest | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T41:00:00Z | 2026-10-20T42:30:00Z | f95317e | Look-ahead detector, paired bootstrap CI, pluggable baseline, `backtest_runs` table + migration `0006` |
-| F5.7 Explanation text (optional) | 🔲 Not Started | — | — | — | — | — | Ollama + open-weights, validator, fallback to template |
+| F5.7 Explanation text (optional) | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase5-integration | 2026-10-20T50:00:00Z | 2026-10-20T52:00:00Z | — | Ollama + qwen2.5, the number validator, fallback to the template, explanations stored |
 | F5.8 Staging deployment and backups | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/phase5-integration | 2026-10-20T47:00:00Z | 2026-10-20T48:30:00Z | — | Staging Compose stack with Caddy TLS, daily pg_dump + restic, and a restore drill that reproduces the row counts |
 
 **Notes for other agents (Phase 5):**
@@ -142,7 +143,8 @@
 ✅ Every gate item is now met: auth, tenant isolation, offline, batch decisions, the backtest, and the staging deployment with backups.
 ⏳ The staging stack has not been run on a Linux VM. The scripts, the stack and the restore drill are verified; the VM itself needs a host.
 ✅ Auth, tenancy, offline and backtest are done and integrated on `feat/phase5-integration`.
-⏳ Staging deployment (F5.8) remains.
+Phase 5 is complete. The staging deployment (F5.8) is done, and the restore drill has been
+run against a real PostgreSQL.
 
 **The Phase 5 integration branch.** `feat/phase5-integration` merges F5.1 (which
 carries F5.2), F5.3, F5.4 and F5.5/F5.6 onto `main`, and fixes the problems
@@ -252,7 +254,7 @@ green on a laptop, and CI provides one.
 - F1.4 Inspection record API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
 - F1.5 Photo upload — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
 - F1.6 Intake and inspection UI — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T20:00:00Z
-- F1.7 Audit log (model + API) — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T21:30:00Z
+- F1.7 Audit log (model + API) — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T49:00:00Z — Commit: e1d32aa
 - F2.1 Synthetic returns generator — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T03:00:00Z
 - F2.2 Price source interface — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T03:15:00Z
 - F2.3 Grade rules — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T03:30:00Z
@@ -286,7 +288,7 @@ green on a laptop, and CI provides one.
 
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
-| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F4.1-F4.8, F6.1-F6.9, F7.1-F7.6 | 2026-10-20T19:20:00Z |
+| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F4.1-F4.8, F5.7, F6.1-F6.9, F7.1-F7.6 | 2026-10-20T52:00:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.x, F2.1-F2.11, F3.2-F3.9 | 2026-10-20T12:00:00Z |
 | ai-longcat-ses_ea89089b | AI | F4.1, F5.1, F5.2, F5.3, F5.4 | 2026-10-20T22:30:00Z |
 | ai-minimax-m3.1-flash-ses_ea89089b | AI | F5.5, F5.6, Phase 5 integration | 2026-10-20T45:00:00Z |
@@ -318,4 +320,5 @@ green on a laptop, and CI provides one.
 ---
 
 *Last updated: 2026-10-20*
-*Next review: Phase 4 is complete. Before starting Phase 5 work (F5.7 Explanation text)*
+*Next review: Every phase is complete. Before the pilot, run the compose stack and walk
+the flow end to end.*

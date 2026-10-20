@@ -5,6 +5,7 @@ import type {
   CreateOverrideRequest,
   Decision,
   DecisionList,
+  Explanation,
   Outcome,
   OutcomeList,
   Override,
@@ -22,6 +23,7 @@ import type {
 
 export type {
   ActionStep,
+  Explanation,
   Candidate,
   CostBreakdown,
   CreateDecisionRequest,
@@ -229,4 +231,9 @@ export async function getOverrideRate(): Promise<OverrideRateReport> {
 /** The URL of a CSV export. */
 export function exportUrl(entity: 'decisions' | 'overrides' | 'outcomes'): string {
   return `/api/v1/export/${entity}`
+}
+
+/** Ask for an explanation of a decision, in words. */
+export async function explainDecision(decisionId: string): Promise<Explanation> {
+  return api.post<Explanation>(`/decisions/${decisionId}/explanation`)
 }

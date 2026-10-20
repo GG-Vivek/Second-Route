@@ -111,6 +111,26 @@ class DecisionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ExplanationRead(BaseModel):
+    """One explanation of a decision.
+
+    The source says who wrote it: ``model`` or ``template``. The reason
+    says why: it passed the validator, it was refused for a number the
+    decision does not contain, the model could not be reached.
+    """
+
+    id: UUID
+    decision_id: UUID
+    text: str
+    source: str
+    reason: str
+    model: Optional[str] = None
+    unseen_numbers: list[str] = Field(default_factory=list)
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class DecisionCreate(BaseModel):
     """Request body for running a decision."""
 

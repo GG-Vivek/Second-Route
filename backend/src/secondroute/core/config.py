@@ -218,13 +218,36 @@ class Settings(BaseSettings):
     MLFLOW_EXPERIMENT_NAME: str = "secondroute-pricing"
 
     # Ollama (for explanation text)
+    #
+    # The model only writes words; it never makes a decision. Every number
+    # it produces is checked against the decision it was given, and output
+    # that mentions a number the decision does not contain is thrown away
+    # in favour of the template.
     OLLAMA_BASE_URL: str = Field(
         default="http://localhost:11434",
         description="Ollama API base URL",
     )
     OLLAMA_MODEL: str = Field(
-        default="llama3.1:8b",
-        description="Ollama model for explanation generation",
+        default="qwen2.5:14b",
+        description=(
+            "Ollama model for explanation generation. The licence has to "
+            "permit commercial use; qwen2.5 is Apache-2.0."
+        ),
+    )
+    OLLAMA_TIMEOUT_SECONDS: float = Field(
+        default=45.0,
+        gt=0.0,
+        description=(
+            "How long to wait for the model before falling back to the "
+            "template. A 14B model on a CPU takes a while."
+        ),
+    )
+    OLLAMA_ENABLED: bool = Field(
+        default=True,
+        description=(
+            "Set to false to keep the template everywhere, which is what a "
+            "deployment without a model should do."
+        ),
     )
 
     # OIDC/Keycloak

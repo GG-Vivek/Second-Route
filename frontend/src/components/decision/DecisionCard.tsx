@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { AlertTriangle, Check, ChevronDown, ChevronUp, FlaskConical, Pencil } from 'lucide-react'
 import { ConfidenceBar } from '@/components/decision/ConfidenceBar'
+import { ExplanationPanel } from '@/components/decision/ExplanationPanel'
 import { NetRange } from '@/components/decision/NetRange'
 import { OverrideDialog } from '@/components/OverrideDialog'
 import { cn } from '@/utils/cn'
@@ -284,6 +285,9 @@ export function DecisionCard({ decision, onAccept, className }: DecisionCardProp
           ))}
         </ol>
       </section>
+
+      {/* Explanation */}
+      <ExplanationPanel decisionId={decision.id} />
 
       {/* Accept */}
       <div className="flex flex-wrap items-center gap-3 border-t pt-6">

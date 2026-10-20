@@ -60,6 +60,17 @@ export interface FlipCondition {
   target_channel: string | null
 }
 
+export interface Explanation {
+  id: string
+  decision_id: string
+  text: string
+  source: 'model' | 'template'
+  reason: string
+  model: string | null
+  unseen_numbers: string[]
+  created_at: string
+}
+
 export interface ActionStep {
   order: number
   title: string
