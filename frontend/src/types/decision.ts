@@ -225,6 +225,36 @@ export interface PredictedVsRealizedList {
   summary: PredictedVsRealizedSummary
 }
 
+export interface SurvivalCurve {
+  times: number[]
+  survival: number[]
+  at_risk: number[]
+  events: number[]
+  censored: number[]
+}
+
+export interface TimeToSellCell {
+  channel: string
+  grade: string
+  sample_size: number
+  used_fallback: boolean
+  median_days: number | null
+  p25_days: number | null
+  p75_days: number | null
+  expected_days: number | null
+  source: string
+  as_of: string | null
+  curve: SurvivalCurve
+}
+
+export interface TimeToSellReport {
+  min_sample: number
+  items: TimeToSellCell[]
+  total: number
+  fallback_count: number
+  prior_source: string
+}
+
 export const CHANNEL_LABELS: Record<string, string> = {
   RESELL_OPEN_BOX: 'Resell as open-box',
   RESELL_REFURB: 'Refurbish and resell',

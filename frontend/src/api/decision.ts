@@ -11,6 +11,7 @@ import type {
   OverrideList,
   PredictedVsRealizedList,
   ReproducibilityResult,
+  TimeToSellReport,
 } from '@/types/decision'
 
 export type {
@@ -37,6 +38,7 @@ export type {
   Reason,
   ReproducibilityResult,
   RiskProfile,
+  TimeToSellReport,
 } from '@/types/decision'
 
 /** Run the decision engine for a unit and store the result. */
@@ -150,4 +152,16 @@ export async function getPredictedVsRealized(
   if (params?.limit) search.set('limit', String(params.limit))
   const query = search.toString()
   return api.get<PredictedVsRealizedList>(`/analytics/predicted-vs-realized${query ? `?${query}` : ''}`)
+}
+
+/** Fetch the Kaplan-Meier time-to-sell curves by channel and grade. */
+export async function getTimeToSell(
+  params?: { channel?: string; grade?: string; min_sample?: number }
+): Promise<TimeToSellReport> {
+  const search = new URLSearchParams()
+  if (params?.channel) search.set('channel', params.channel)
+  if (params?.grade) search.set('grade', params.grade)
+  if (params?.min_sample) search.set('min_sample', String(params.min_sample))
+  const query = search.toString()
+  return api.get<TimeToSellReport>(`/analytics/time-to-sell${query ? `?${query}` : ''}`)
 }

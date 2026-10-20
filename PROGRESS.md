@@ -100,7 +100,7 @@
 | F4.1 Override with reason | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T10:00:00Z | 2026-10-20T17:57:00Z | 9b217b0 | POST /decisions/{id}/override, required reason, UI dialog |
 | F4.2 Outcome logging | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T17:52:00Z | 2026-10-20T17:58:00Z | 7711b82 | POST /units/{id}/outcome, append-only, linked to decision |
 | F4.3 Predicted vs realized view | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T17:53:00Z | 2026-10-20T17:59:00Z | 8617b55 | Residual, in-range flag per unit |
-| F4.4 Time-to-sell model | 🔲 Not Started | — | — | — | — | — | Kaplan-Meier by channel/grade, fallback to prior |
+| F4.4 Time-to-sell model | 🟡 In Progress | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:05:00Z | — | — | Kaplan-Meier by channel/grade, fallback to prior |
 | F4.5 Regret calculation | 🔲 Not Started | — | — | — | — | — | Observed + estimated (labeled), never summed silently |
 | F4.6 Calibration | 🔲 Not Started | — | — | — | — | — | Reliability curve, ECE, isotonic recalibration (versioned) |
 | F4.7 Analytics page | 🔲 Not Started | — | — | — | — | — | North star, regret over time, calibration, override rate |

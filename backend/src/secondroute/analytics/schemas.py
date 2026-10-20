@@ -4,7 +4,7 @@ Pydantic schemas for the analytics module (Phase 4 - F4.3).
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Optional
 from uuid import UUID
 
@@ -51,3 +51,43 @@ class PredictedVsRealizedListRead(BaseModel):
     items: list[PredictedVsRealizedRead] = Field(default_factory=list)
     total: int = 0
     summary: dict[str, Any] = Field(default_factory=dict)
+
+
+class SurvivalCurveRead(BaseModel):
+    """A Kaplan-Meier survival curve."""
+
+    times: list[int] = Field(default_factory=list)
+    survival: list[float] = Field(default_factory=list)
+    at_risk: list[int] = Field(default_factory=list)
+    events: list[int] = Field(default_factory=list)
+    censored: list[int] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TimeToSellCellRead(BaseModel):
+    """The time-to-sell estimate for one channel and grade."""
+
+    channel: str
+    grade: str
+    sample_size: int
+    used_fallback: bool
+    median_days: Optional[int] = None
+    p25_days: Optional[int] = None
+    p75_days: Optional[int] = None
+    expected_days: Optional[float] = None
+    source: str
+    as_of: Optional[date] = None
+    curve: SurvivalCurveRead = Field(default_factory=SurvivalCurveRead)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TimeToSellRead(BaseModel):
+    """The time-to-sell curves for every channel and grade."""
+
+    min_sample: int
+    items: list[TimeToSellCellRead] = Field(default_factory=list)
+    total: int = 0
+    fallback_count: int = 0
+    prior_source: str = "cost_tables:expected_days_to_sell"
