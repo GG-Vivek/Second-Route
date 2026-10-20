@@ -16,9 +16,10 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import uuid
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 
 import pytest
 from sqlalchemy import text
@@ -46,6 +47,35 @@ def _postgres_url() -> str | None:
     """Return the PostgreSQL URL to drill against, if one was given."""
     url = os.environ.get(POSTGRES_URL_ENV, "")
     return url or None
+
+
+def _parsed(url: str) -> ParseResult:
+    """Return the parts of a connection URL."""
+    return urlparse(url.replace("postgresql+asyncpg://", "postgresql://"))
+
+
+def _without_database(url: str) -> str:
+    """Return the URL without its database name."""
+    parsed = _parsed(url)
+    return f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port}"
+
+
+def _database_of(url: str) -> str:
+    """Return the database name of a connection URL."""
+    return _parsed(url).path.lstrip("/")
+
+
+def _libpq_environment(url: str) -> dict[str, str]:
+    """Return the environment the libpq tools need to reach a database."""
+    parsed = _parsed(url)
+    return {
+        **os.environ,
+        "PGHOST": parsed.hostname or "localhost",
+        "PGPORT": str(parsed.port or 5432),
+        "PGUSER": parsed.username or "postgres",
+        "PGPASSWORD": parsed.password or "",
+        "PGDATABASE": _database_of(url),
+    }
 
 
 pytestmark = pytest.mark.skipif(
@@ -122,6 +152,21 @@ async def _seed(url: str) -> None:
             ),
             {"id": uuid.uuid4(), "model": f"Drill {variant}"},
         )
+        # A unit as well, because the units table is one of the tables the
+        # tenant-isolation policies cover. A drill that only seeded the
+        # catalogue would compare zero against zero for every table that
+        # holds tenant data, and would pass even if the restore had lost
+        # every unit.
+        await session.execute(
+            text(
+                "INSERT INTO units (id, org_id, sku_id, serial, received_at, "
+                "return_reason_code, order_channel, status) "
+                "VALUES (:id, (SELECT id FROM organizations LIMIT 1), "
+                "(SELECT id FROM skus LIMIT 1), :serial, now(), "
+                "'BUYER_REMORSE', 'ONLINE', 'RECEIVED')"
+            ),
+            {"id": uuid.uuid4(), "serial": f"DRILL-{variant}"},
+        )
         await session.commit()
     await engine.dispose()
 
@@ -138,7 +183,10 @@ class TestRestoreDrill:
         This is the acceptance criterion for F5.8: the restore reproduces
         the row counts and the application runs against the result.
         """
-        await _seed(postgres_url)
+        # The seed runs as the backup role: the tenant-isolation policies
+        # would refuse the insert, and the unit is exactly the row the
+        # comparison has to be able to see.
+        await _seed(backup_url)
 
         environment = {
             **os.environ,
@@ -166,3 +214,133 @@ class TestRestoreDrill:
         assert "DRILL PASSED" in output
         # The row counts have to have been compared, not skipped.
         assert "tables match" in output
+
+    @pytest.mark.asyncio
+    async def test_a_lossy_restore_is_caught(
+        self, postgres_url: str, backup_url: str, restic_repository: str, tmp_path: Path
+    ) -> None:
+        """A restore that loses a row has to be noticed.
+
+        The row counts are read with a role that bypasses the tenant
+        isolation policies, because the application's role reads no rows at
+        all from the tables that hold tenant data when there is no
+        organisation in context. Comparing the counts the application's
+        role sees would compare zero against zero and pass even if the
+        restore had lost every unit.
+
+        This is the test that the drill's own comparison is worth having:
+        it takes a backup, restores it, throws a unit away, and insists
+        that the comparison notices.
+        """
+        # The seed runs as the backup role: the tenant-isolation policies
+        # would refuse the insert, and the unit is exactly the row the
+        # comparison has to be able to see.
+        await _seed(backup_url)
+
+        lossy_database = f"secondroute_drill_lossy_{uuid.uuid4().hex[:8]}"
+        environment = {
+            **os.environ,
+            "DATABASE_URL": postgres_url,
+            "BACKUP_DATABASE_URL": backup_url,
+            "RESTIC_REPOSITORY": restic_repository,
+            "RESTIC_PASSWORD": "drill-only-password",
+            "DRILL_DATABASE": f"secondroute_drill_{uuid.uuid4().hex[:8]}",
+        }
+
+        # Take the backup the lossy copy is made from.
+        backup = subprocess.run(
+            ["bash", str(SCRIPTS / "backup.sh")],
+            env=environment,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+        assert backup.returncode == 0, f"The backup failed:\n{backup.stdout}{backup.stderr}"
+
+        # Restore it into a fresh database, then lose a unit.
+        created = subprocess.run(
+            ["createdb", "--maintenance-db", _database_of(postgres_url), lossy_database],
+            env=_libpq_environment(postgres_url),
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        assert created.returncode == 0, f"Could not create the database:\n{created.stderr}"
+
+        lossy_url = f"{_without_database(postgres_url)}/{lossy_database}"
+        restored = subprocess.run(
+            ["bash", str(SCRIPTS / "restore.sh")],
+            env={
+                **environment,
+                "DATABASE_URL": lossy_url,
+                "BACKUP_DATABASE_URL": f"{_without_database(backup_url)}/{lossy_database}",
+            },
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+        assert restored.returncode == 0, f"The restore failed:\n{restored.stdout}{restored.stderr}"
+
+        # The unit is there before it is thrown away.
+        counted = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "row_counts.py"),
+                "--source",
+                backup_url,
+                "--target",
+                f"{_without_database(backup_url)}/{lossy_database}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+        assert counted.returncode == 0, (
+            f"The counts did not match:\n{counted.stdout}{counted.stderr}"
+        )
+
+        thrown_away = subprocess.run(
+            [
+                "psql",
+                "--dbname",
+                f"{_without_database(backup_url)}/{lossy_database}",
+                "--command",
+                "DELETE FROM units",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        assert thrown_away.returncode == 0, f"Could not delete the unit:\n{thrown_away.stderr}"
+
+        # Now the comparison has to notice.
+        after = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPTS / "row_counts.py"),
+                "--source",
+                backup_url,
+                "--target",
+                f"{_without_database(backup_url)}/{lossy_database}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+        assert after.returncode != 0, "The comparison did not notice the lost unit"
+        assert "units" in after.stdout + after.stderr
+
+        subprocess.run(
+            ["dropdb", "--if-exists", "--force", lossy_database],
+            env=_libpq_environment(postgres_url),
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
