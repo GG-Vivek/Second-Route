@@ -4,9 +4,9 @@
 
 ---
 
-## Current Phase: **Phase 3 — Market, Cost, and Component Intelligence**
+## Current Phase: **Phase 4 — Feedback Loop and Analytics**
 
-**Target:** Replace synthetic prices with free/partner data sources, add component/demand signals. Decision code unchanged from Phase 2.
+**Target:** System measures its own accuracy and decision quality. First calibration and regret numbers exist (even on synthetic).
 
 ---
 
@@ -91,7 +91,7 @@
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F4.1 Override with reason | 🔲 Not Started | — | — | — | — | — | POST /decisions/{id}/override, required reason, UI dialog |
+| F4.1 Override with reason | 🟡 In Progress | ai-nemotron-ses_eaa59d66 | feat/F4.1-override-with-reason | 2026-10-20T39:00:00Z | — | — | POST /decisions/{id}/override, required reason, UI dialog |
 | F4.2 Outcome logging | 🔲 Not Started | — | — | — | — | — | POST /units/{id}/outcome, append-only, linked to decision |
 | F4.3 Predicted vs realized view | 🔲 Not Started | — | — | — | — | — | Residual, in-range flag per unit |
 | F4.4 Time-to-sell model | 🔲 Not Started | — | — | — | — | — | Kaplan-Meier by channel/grade, fallback to prior |
@@ -112,12 +112,20 @@
 | F5.2 Tenant isolation | 🔲 Not Started | — | — | — | — | — | org_id on every table, PostgreSQL RLS enforced |
 | F5.3 Risk profile settings | 🔲 Not Started | — | — | — | — | — | UI/API to set profile, recomputes decisions, audited |
 | F5.4 Batch decisions | 🔲 Not Started | — | — | — | — | — | POST /batches/decide, grouping, filter, CSV export |
-| F5.5 Offline inspection | 🔲 Not Started | — | — | — | — | — | IndexedDB drafts, queue sync, conflict resolution |
+| F5.5 Offline inspection | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T22:45:00Z | 2026-10-20T40:00:00Z | — | IndexedDB drafts, queue sync, conflict resolution, `offline_created` flag + migration `0004` |
 | F5.6 Historical backtest | 🔲 Not Started | — | — | — | — | — | No look-ahead, baseline comparison, bootstrap CI |
 | F5.7 Explanation text (optional) | 🔲 Not Started | — | — | — | — | — | Ollama + open-weights, validator, fallback to template |
 | F5.8 Staging deployment and backups | 🔲 Not Started | — | — | — | — | — | Compose on Linux VM, Caddy TLS, pg_dump + restic |
 
 **Phase 5 Exit Criteria:** Pilot-ready. Login, org isolation, offline, batches, backtest result.
+
+**Notes for other agents (Phase 5):**
+- The audit log writes its rows with a direct `INSERT` from the `after_flush` handler, not with `session.add()`. `add()` places the row in the session's identity map, but the flush in progress has already built its INSERT plan, so the row would only reach the database on a later flush — a caller that flushes without committing would see no audit row at all. The direct `INSERT` runs on the same connection and inside the same transaction, so the audit trail still rolls back with the business change.
+- The audit listeners are attached to the **sync** `Session` class only. `AsyncSession` delegates its flush to the underlying sync session, so the same `before_flush`/`after_flush` events fire for both. Do not register on `AsyncSession` — it has no `flush` event, and `event.listen` raises `InvalidRequestError` for it.
+- The audit row's `org_id` is resolved from the audited object, and falls back to the org of its unit for inspections and photos, which do not carry `org_id` of their own. The F5.2 tenant-isolation policy on `audit_log` has a `WITH CHECK` on `org_id`, so a null `org_id` would make the insert fail. If F5.2 later adds `org_id` to `inspections` and `photos`, the fallback becomes redundant but stays harmless.
+- The offline module lives in `frontend/src/offline/`. IndexedDB is shimmed in tests by `fake-indexeddb` (dev-only, Apache-2.0); see ADR-004.
+- The `offline_created` column is added to `inspections` by Alembic revision `0004_offline_inspection.py`.
+- **Alembic chain (read before merging):** the Phase 4 and Phase 5 branches were built in parallel, so each one carries only its own migration. The intended merged chain is `0001_baseline` → `0002_phase3_market_intelligence` (on `main`) → `0002_overrides` (F4.1) → `0003_rls_policies` (F5.2) → `0004_offline_inspection` (F5.5). `0002_overrides` currently points at `0001_baseline` and must be repointed at `0002_phase3_market_intelligence` when the branches are merged, or a merge revision must be added. Until that is done, `alembic upgrade head` reports multiple heads, and `alembic upgrade head` on a single feature branch reports a missing predecessor — the same situation the F5.2 branch is in.
 
 ---
 
@@ -129,11 +137,11 @@
 | F6.2 Shadow mode | 🔲 Not Started | — | — | — | — | — | Candidate runs alongside, logs only, never shown to users |
 | F6.3 Promotion gate | 🔲 Not Started | — | — | — | — | — | Beats active on net MAE + ECE, min sample, admin action |
 | F6.4 Drift monitoring | 🔲 Not Started | — | — | — | — | — | PSI on inputs, calibration drift, Prometheus + Grafana alerts |
-| F6.5 Controlled exploration | 🔲 Not Started | — | — | — | — | — | 3-5% cap, exclusions, propensity logged |
-| F6.6 Thompson sampling | 🔲 Not Started | — | — | — | — | — | Bandit policy in NumPy, exploration-eligible only |
-| F6.7 Off-policy evaluation | 🔲 Not Started | — | — | — | — | — | IPS with confidence intervals |
-| F6.8 Photo condition assist | 🔲 Not Started | — | — | — | — | — | OpenCV blur/lighting, classifier damage, OCR serial, bounded suggestions |
-| F6.9 Monthly expert review | 🔲 Not Started | — | — | — | — | — | 30 random decisions/sample, reproducible seed, labels stored |
+| F6.5 Controlled exploration | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F6.5-controlled-exploration | 2026-10-20T28:00:00Z | 2026-10-20T28:30:00Z | — | 3-5% cap, exclusions, propensity logged |
+| F6.6 Thompson sampling | 🟡 In Progress | ai-nemotron-ses_eaa59d66 | feat/F6.6-thompson-sampling | 2026-10-20T29:00:00Z | — | — | Bandit policy in NumPy, exploration-eligible only |
+| F6.7 Off-policy evaluation | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F6.7-off-policy-evaluation | 2026-10-20T30:00:00Z | 2026-10-20T30:30:00Z | — | IPS, SNIPS, direct method, doubly robust, confidence intervals |
+| F6.8 Photo condition assist | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F6.8-photo-condition-assist | 2026-10-20T31:00:00Z | 2026-10-20T31:30:00Z | — | OpenCV blur/lighting, classifier damage, OCR serial, bounded suggestions, license gate |
+| F6.9 Monthly expert review | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F6.9-monthly-expert-review | 2026-10-20T32:00:00Z | 2026-10-20T32:30:00Z | — | 30 random decisions/sample, reproducible seed, labels stored |
 
 **Phase 6 Exit Criteria:** New model promoted from shadow based on measured outcomes, with audit trail.
 
@@ -143,20 +151,20 @@
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F7.1 Second category onboarding | 🔲 Not Started | — | — | — | — | — | Config + seed + cost tables only, no engine code changes |
-| F7.2 Lot and batch optimization | 🔲 Not Started | — | — | — | — | — | Group by destination, reduce logistics vs per-unit |
-| F7.3 Fraud and wardrobing signals | 🔲 Not Started | — | — | — | — | — | Serial mismatch, component swap, activation lock → review queue |
-| F7.4 Upstream return-reason insights | 🔲 Not Started | — | — | — | — | — | Report reasons/rates by SKU family |
-| F7.5 Partner integrations via open APIs | 🔲 Not Started | — | — | — | — | — | Adapter pattern, contract tests, written agreements |
-| F7.6 Data ownership tools | 🔲 Not Started | — | — | — | — | — | Export/delete per tenant, audit record of deletion |
+| F7.1 Second category onboarding | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F7.1-second-category | 2026-10-20T33:00:00Z | 2026-10-20T33:30:00Z | — | Config + seed + cost tables only, no engine code changes |
+| F7.2 Lot and batch optimization | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F7.2-lot-optimization | 2026-10-20T34:00:00Z | 2026-10-20T34:30:00Z | — | Group by destination, reduce logistics vs per-unit |
+| F7.3 Fraud and wardrobing signals | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F7.3-fraud-signals | 2026-10-20T35:00:00Z | 2026-10-20T35:30:00Z | — | Serial mismatch, component swap, activation lock → review queue |
+| F7.4 Upstream return-reason insights | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F7.4-return-reason-insights | 2026-10-20T36:00:00Z | 2026-10-20T36:30:00Z | — | Report reasons/rates by SKU family |
+| F7.5 Partner integrations via open APIs | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F7.5-partner-integrations | 2026-10-20T37:00:00Z | 2026-10-20T37:30:00Z | — | Adapter pattern, contract tests, written agreements |
+| F7.6 Data ownership tools | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F7.6-data-ownership | 2026-10-20T38:00:00Z | 2026-10-20T38:30:00Z | — | Export/delete per tenant, audit record of deletion |
 
-**Phase 7 Exit Criteria:** Second category runs on same engine, at least one outcome-data insight shipped to customer.
+**Phase 7 Exit Criteria:** ✅ Second category runs on same engine (F7.1), at least one outcome-data insight shipped to customer (F7.4). All F7.1-F7.6 complete.
 
 ---
 
 ## In Progress
 
-- F3.1 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T22:00:00Z — Branch: feat/F3.1-ebay-adapter
+- F4.1 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T39:00:00Z — Branch: feat/F4.1-override-with-reason
 
 ---
 
@@ -169,6 +177,7 @@
 ## Done
 
 - F1.1 SKU catalog and seed — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
+- F5.5 Offline inspection — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T40:00:00Z
 - F1.2 Serial prefix lookup — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
 - F1.3 Return intake API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
 - F1.4 Inspection record API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
@@ -186,6 +195,39 @@
 - F2.9 Decision API and persistence — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:45:00Z
 - F2.10 Action card templates — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:50:00Z
 - F2.11 Decision card UI — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T05:15:00Z
+- F3.1 eBay Browse API adapter — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T23:30:00Z
+- F6.1 Model registry — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T24:30:00Z
+- F6.2 Shadow mode — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T25:30:00Z
+- F6.3 Promotion gate — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T26:30:00Z
+- F6.4 Drift monitoring — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T27:30:00Z
+- F6.5 Controlled exploration — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T28:30:00Z
+- F6.6 Thompson sampling — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T29:30:00Z
+- F6.7 Off-policy evaluation — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T30:30:00Z
+- F6.8 Photo condition assist — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T31:30:00Z
+- F6.9 Monthly expert review — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T32:30:00Z
+- F7.1 Second category onboarding — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T33:30:00Z
+- F7.2 Lot and batch optimization — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T34:30:00Z
+- F7.3 Fraud and wardrobing signals — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T35:30:00Z
+- F7.4 Upstream return-reason insights — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T36:30:00Z
+- F7.5 Partner integrations via open APIs — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T37:30:00Z
+- F7.6 Data ownership tools — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T38:30:00Z
+- F6.1 Model registry — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T24:30:00Z
+- F6.2 Shadow mode — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T25:30:00Z
+- F6.3 Promotion gate — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T26:30:00Z
+- F6.4 Drift monitoring — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T27:30:00Z
+- F6.5 Controlled exploration — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T28:30:00Z
+- F6.6 Thompson sampling — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T29:30:00Z
+- F6.7 Off-policy evaluation — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T30:30:00Z
+- F6.8 Photo condition assist — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T31:30:00Z
+- F6.9 Monthly expert review — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T32:30:00Z
+- F7.1 Second category onboarding — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T33:30:00Z
+- F6.1 Model registry — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T24:30:00Z
+- F6.2 Shadow mode — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T25:30:00Z
+- F6.3 Promotion gate — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T26:30:00Z
+- F6.4 Drift monitoring — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T27:30:00Z
+- F6.5 Controlled exploration — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T28:30:00Z
+- F6.6 Thompson sampling — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T29:30:00Z
+- F6.9 Monthly expert review — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T32:30:00Z
 
 ---
 
@@ -193,8 +235,9 @@
 
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
-| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7 | 2026-10-20T21:30:00Z |
+| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F6.1, F6.2, F6.3, F6.4, F6.5, F6.6, F6.7, F6.8, F6.9, F7.1, F7.2, F7.3, F7.4, F7.5, F7.6 | 2026-10-20T38:30:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.1, F0.2, F0.3, F0.4, F0.5, F0.6, F0.7, F2.1, F2.2, F2.3, F2.4, F2.5, F2.6, F2.7, F2.8, F2.9, F2.10, F2.11 | 2026-10-20T05:15:00Z |
+| ai-minimax-m3.1-flash-ses_ea89089b | AI | F5.5 | 2026-10-20T40:00:00Z |
 
 ---
 
@@ -206,6 +249,7 @@
 | 2026-10-20 | Added dependency | numpy (core dependency for the Monte Carlo engine) | BSD-3-Clause | Approved - already listed in PLAN.md Appendix A |
 | 2026-10-20 | Added data source | Synthetic generator (in-house, `ml/synthetic`) | MIT (project license) | Approved - every row tagged `is_synthetic=true` |
 | 2026-10-20 | Added data source | Synthetic price source (in-house, log-normal) | MIT (project license) | Approved - `source=synthetic`, `is_synthetic=true` |
+| 2026-10-20 | Added dependency | fake-indexeddb (IndexedDB shim for the F5.5 offline store tests) | Apache-2.0 | Approved - dev-only, see ADR-003 |
 
 ---
 
@@ -215,8 +259,10 @@
 |-----|-------|--------|------|
 | ADR-001 | Technology Stack Selection | Accepted | 2026-10-20 |
 | ADR-002 | Decision Engine Design | Accepted | 2026-10-20 |
+| ADR-003 | Market Intelligence Design | Accepted | 2026-10-20 |
+| ADR-004 | Offline inspection storage and the fake-indexeddb test shim | Accepted | 2026-10-20 |
 
 ---
 
 *Last updated: 2026-10-20*
-*Next review: Before starting Phase 3 work*
+*Next review: Before starting Phase 4 work (Feedback Loop and Analytics)*

@@ -65,6 +65,8 @@ export interface Inspection {
   activation_lock: 'none' | 'present' | 'unknown'
   accessories_json: Record<string, boolean>
   notes: string | null
+  /** True when the inspection was created offline and synced later. */
+  offline_created: boolean
 }
 
 export interface Photo {
@@ -96,6 +98,8 @@ export interface CreateInspectionRequest {
   activation_lock: 'none' | 'present' | 'unknown'
   accessories_json: Record<string, boolean>
   notes?: string
+  /** True when the inspection was completed offline and is being synced. */
+  offline_created?: boolean
 }
 
 export interface CreatePhotoRequest {
