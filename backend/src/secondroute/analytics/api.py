@@ -13,9 +13,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from secondroute.analytics.predicted_vs_realized import PredictedVsRealizedService
+from secondroute.analytics.regret import RegretService
 from secondroute.analytics.schemas import (
     PredictedVsRealizedListRead,
     PredictedVsRealizedRead,
+    RegretEstimateRead,
+    RegretMeasurementRead,
+    RegretReportRead,
+    StoredRegretRead,
     TimeToSellCellRead,
     TimeToSellRead,
 )
@@ -124,4 +129,83 @@ async def get_time_to_sell(
         items=[TimeToSellCellRead.model_validate(cell) for cell in cells],
         total=len(cells),
         fallback_count=sum(1 for cell in cells if cell.used_fallback),
+    )
+
+
+@router.get(
+    "/regret",
+    response_model=RegretReportRead,
+    summary="The regret of the recorded dispositions",
+)
+async def get_regret(
+    session: SessionDep,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> RegretReportRead:
+    """Return the regret of the recorded dispositions.
+
+    The regret is computed live from the outcomes and the decisions, so a
+    report never goes stale. Observed and estimated figures are reported
+    separately, and the combined total says what it is made of.
+
+    Args:
+        session: Database session.
+        limit: Maximum number of outcomes to consider.
+
+    Returns:
+        The regret of every outcome, newest first, with the summary.
+    """
+    service = RegretService()
+    estimates = await service.measure_all(session, limit=limit)
+
+    return RegretReportRead(
+        items=[RegretEstimateRead.model_validate(estimate) for estimate in estimates],
+        total=len(estimates),
+        summary=service.summarize(estimates).to_dict(),
+    )
+
+
+@router.post(
+    "/units/{unit_id}/regret",
+    response_model=StoredRegretRead,
+    summary="Record the regret of a unit's dispositions",
+)
+async def record_unit_regret(
+    unit_id: UUID,
+    session: SessionDep,
+) -> StoredRegretRead:
+    """Compute and store the regret of a unit's recorded dispositions.
+
+    The rows are append-only: recording the same unit twice adds a second
+    set of rows rather than changing the first.
+
+    Args:
+        unit_id: The unit.
+        session: Database session.
+
+    Returns:
+        The stored measurements, with the observed and the estimated
+        figures kept apart.
+    """
+    from typing import cast
+
+    from secondroute.intake.models import Unit
+
+    service = RegretService()
+    estimates = await service.measure_unit(session, unit_id)
+    if not estimates:
+        return StoredRegretRead(items=[], total=0, summary=service.summarize([]).to_dict())
+
+    unit = await session.get(Unit, unit_id)
+    org_id = cast("UUID | None", unit.org_id) if unit is not None else None
+
+    measurements = [estimate.as_measurement(org_id=org_id) for estimate in estimates]
+    session.add_all(measurements)
+    await session.commit()
+    for measurement in measurements:
+        await session.refresh(measurement)
+
+    return StoredRegretRead(
+        items=[RegretMeasurementRead.model_validate(m) for m in measurements],
+        total=len(measurements),
+        summary=service.summarize_measurements(measurements).to_dict(),
     )

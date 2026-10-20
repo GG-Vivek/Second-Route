@@ -255,6 +255,43 @@ export interface TimeToSellReport {
   prior_source: string
 }
 
+export interface RegretEstimate {
+  unit_id: string
+  outcome_id: string
+  decision_id: string
+  channel_taken: string
+  best_channel: string
+  realized_net: number
+  best_net: number
+  regret: number
+  regret_kind: 'observed' | 'estimated'
+  method: string
+}
+
+export interface RegretSummary {
+  observed: {
+    count: number
+    total_regret: number
+    mean_regret: number
+  }
+  estimated: {
+    count: number
+    total_regret: number
+    mean_regret: number
+  }
+  combined: {
+    total_regret: number
+    is_mixed: boolean
+    label: string
+  }
+}
+
+export interface RegretReport {
+  items: RegretEstimate[]
+  total: number
+  summary: RegretSummary
+}
+
 export const CHANNEL_LABELS: Record<string, string> = {
   RESELL_OPEN_BOX: 'Resell as open-box',
   RESELL_REFURB: 'Refurbish and resell',

@@ -1,7 +1,7 @@
 """add RLS policies for tenant isolation
 
 Revision ID: 0003_rls_policies
-Revises: 0002_overrides
+Revises: 0003_feedback_tables
 Create Date: 2026-10-20
 
 Phase 5 (F5.2): PostgreSQL Row-Level Security policies for tenant isolation.
@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0003_rls_policies"
-down_revision: Union[str, None] = "0002_overrides"
+down_revision: Union[str, None] = "0003_feedback_tables"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -42,17 +42,19 @@ def _drop_policies(table: str) -> None:
     op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")
 
 
-# Tables with org_id that need RLS
+# Tables that carry org_id directly, so their policy is a plain comparison.
 RLS_TABLES = [
     "units",
     "decisions",
     "audit_log",
     "cost_tables",
     "price_observations",
-    "outcomes",
-    "overrides",
-    "cost_tables",
 ]
+
+# Tables that reach org_id through another table, so their policy needs a
+# join. The overrides and outcomes tables were written in Phase 4, before
+# every table carried org_id.
+RLS_JOIN_TABLES = ["overrides", "outcomes"]
 
 
 def upgrade() -> None:
@@ -62,15 +64,7 @@ def upgrade() -> None:
     # Current org_id is set via: SET LOCAL app.current_org_id = '<uuid>'
     # We use current_setting('app.current_org_id')::uuid to get it
 
-    for table in [
-        "units",
-        "decisions",
-        "audit_log",
-        "cost_tables",
-        "price_observations",
-        "outcomes",
-        "overrides",
-    ]:
+    for table in RLS_TABLES:
         # Enable RLS
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
 
@@ -83,6 +77,9 @@ def upgrade() -> None:
             WITH CHECK (org_id = current_setting('app.current_org_id')::uuid)
             """
         )
+
+    for table in RLS_JOIN_TABLES:
+        op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
 
     # Special case: overrides table has org_id through decision
     # The overrides table has decision_id, and decisions have org_id
@@ -124,14 +121,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Drop RLS policies."""
-    for table in [
-        "units",
-        "decisions",
-        "audit_log",
-        "cost_tables",
-        "price_observations",
-        "outcomes",
-        "overrides",
-    ]:
+    for table in RLS_TABLES + RLS_JOIN_TABLES:
         op.execute(f"DROP POLICY IF EXISTS tenant_isolation ON {table}")
         op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY")

@@ -91,3 +91,50 @@ class TimeToSellRead(BaseModel):
     total: int = 0
     fallback_count: int = 0
     prior_source: str = "cost_tables:expected_days_to_sell"
+
+
+class RegretEstimateRead(BaseModel):
+    """The regret of one disposition, computed live."""
+
+    unit_id: UUID
+    outcome_id: UUID
+    decision_id: UUID
+    channel_taken: str
+    best_channel: str
+    realized_net: float
+    best_net: float
+    regret: float
+    regret_kind: str
+    method: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RegretMeasurementRead(RegretEstimateRead):
+    """One stored regret measurement."""
+
+    id: UUID
+    is_synthetic: bool = False
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RegretReportRead(BaseModel):
+    """The regret report.
+
+    The observed and the estimated figures are kept apart, and the combined
+    total always says what it is made of.
+    """
+
+    items: list[RegretEstimateRead] = Field(default_factory=list)
+    total: int = 0
+    summary: dict[str, Any] = Field(default_factory=dict)
+
+
+class StoredRegretRead(BaseModel):
+    """The regret measurements stored for one unit."""
+
+    items: list[RegretMeasurementRead] = Field(default_factory=list)
+    total: int = 0
+    summary: dict[str, Any] = Field(default_factory=dict)

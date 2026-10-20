@@ -11,6 +11,7 @@ import type {
   OverrideList,
   PredictedVsRealizedList,
   ReproducibilityResult,
+  RegretReport,
   TimeToSellReport,
 } from '@/types/decision'
 
@@ -37,6 +38,7 @@ export type {
   PredictedVsRealizedSummary,
   Reason,
   ReproducibilityResult,
+  RegretReport,
   RiskProfile,
   TimeToSellReport,
 } from '@/types/decision'
@@ -164,4 +166,12 @@ export async function getTimeToSell(
   if (params?.min_sample) search.set('min_sample', String(params.min_sample))
   const query = search.toString()
   return api.get<TimeToSellReport>(`/analytics/time-to-sell${query ? `?${query}` : ''}`)
+}
+
+/** Fetch the regret of the recorded dispositions. */
+export async function getRegret(params?: { limit?: number }): Promise<RegretReport> {
+  const search = new URLSearchParams()
+  if (params?.limit) search.set('limit', String(params.limit))
+  const query = search.toString()
+  return api.get<RegretReport>(`/analytics/regret${query ? `?${query}` : ''}`)
 }
