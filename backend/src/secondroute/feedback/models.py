@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, JSON, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -129,7 +129,7 @@ class Outcome(Base):
     fees_actual: Mapped[float] = mapped_column(Float, nullable=False)
     repair_cost_actual: Mapped[float] = mapped_column(Float, nullable=False)
     logistics_actual: Mapped[float] = mapped_column(Float, nullable=False)
-    days_to_disposition: Mapped[int] = mapped_column(Float, nullable=False)
+    days_to_disposition: Mapped[int] = mapped_column(Integer, nullable=False)
     final_status: Mapped[str] = mapped_column(String(30), nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 

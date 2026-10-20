@@ -83,3 +83,80 @@ class OverrideListRead(BaseModel):
     total: int = 0
     limit: int = 50
     offset: int = 0
+
+
+class OutcomeCreate(BaseModel):
+    """Request body for recording the outcome of a dispositioned unit.
+
+    The realized numbers are what actually happened, not what the engine
+    predicted. They feed the regret and calibration analysis.
+    """
+
+    channel_taken: str = Field(
+        ...,
+        min_length=1,
+        max_length=40,
+        description="The channel the unit actually went to.",
+    )
+    sale_price: float = Field(..., ge=0, description="Realized sale price.")
+    fees_actual: float = Field(..., ge=0, description="Realized platform fees.")
+    repair_cost_actual: float = Field(..., ge=0, description="Realized repair cost.")
+    logistics_actual: float = Field(..., ge=0, description="Realized logistics cost.")
+    days_to_disposition: int = Field(..., ge=0, description="Days from intake to disposition.")
+    final_status: str = Field(
+        ...,
+        min_length=1,
+        max_length=30,
+        description="Final status of the unit (e.g. 'sold', 'recycled').",
+    )
+    decision_id: Optional[UUID] = Field(
+        default=None,
+        description=(
+            "The decision this outcome belongs to. Defaults to the unit's most "
+            "recent decision. A unit with no decision cannot have an outcome."
+        ),
+    )
+
+    @field_validator("channel_taken")
+    @classmethod
+    def validate_channel_not_blank(cls, v: str) -> str:
+        """Reject a blank channel."""
+        if not v.strip():
+            raise ValueError("A channel is required to record an outcome")
+        return v.strip()
+
+    @field_validator("final_status")
+    @classmethod
+    def validate_status_not_blank(cls, v: str) -> str:
+        """Reject a blank final status."""
+        if not v.strip():
+            raise ValueError("A final status is required to record an outcome")
+        return v.strip()
+
+
+class OutcomeRead(BaseModel):
+    """Schema for reading an outcome."""
+
+    id: UUID
+    unit_id: UUID
+    decision_id: UUID
+    channel_taken: str
+    sale_price: float
+    fees_actual: float
+    repair_cost_actual: float
+    logistics_actual: float
+    days_to_disposition: int
+    final_status: str
+    recorded_at: datetime
+    net: float = 0.0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OutcomeListRead(BaseModel):
+    """A page of outcomes."""
+
+    items: list[OutcomeRead] = Field(default_factory=list)
+    total: int = 0
+    limit: int = 50
+    offset: int = 0

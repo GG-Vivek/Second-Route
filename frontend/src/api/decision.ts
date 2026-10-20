@@ -1,9 +1,12 @@
 import { api } from '@/api/client'
 import type {
   CreateDecisionRequest,
+  CreateOutcomeRequest,
   CreateOverrideRequest,
   Decision,
   DecisionList,
+  Outcome,
+  OutcomeList,
   Override,
   OverrideList,
   ReproducibilityResult,
@@ -14,6 +17,7 @@ export type {
   Candidate,
   CostBreakdown,
   CreateDecisionRequest,
+  CreateOutcomeRequest,
   CreateOverrideRequest,
   DataFreshness,
   Decision,
@@ -22,6 +26,8 @@ export type {
   DispositionChannel,
   FlipCondition,
   Grade,
+  Outcome,
+  OutcomeList,
   Override,
   OverrideList,
   Reason,
@@ -89,4 +95,36 @@ export async function listUnitOverrides(
   if (params?.offset) search.set('offset', String(params.offset))
   const query = search.toString()
   return api.get<OverrideList>(`/units/${unitId}/overrides${query ? `?${query}` : ''}`)
+}
+
+/** Record the realized outcome of a dispositioned unit. */
+export async function createOutcome(
+  unitId: string,
+  data: CreateOutcomeRequest
+): Promise<Outcome> {
+  return api.post<Outcome>(`/units/${unitId}/outcome`, data)
+}
+
+/** List the outcomes recorded for a unit, newest first. */
+export async function listUnitOutcomes(
+  unitId: string,
+  params?: { limit?: number; offset?: number }
+): Promise<OutcomeList> {
+  const search = new URLSearchParams()
+  if (params?.limit) search.set('limit', String(params.limit))
+  if (params?.offset) search.set('offset', String(params.offset))
+  const query = search.toString()
+  return api.get<OutcomeList>(`/units/${unitId}/outcomes${query ? `?${query}` : ''}`)
+}
+
+/** List the outcomes linked to a decision, newest first. */
+export async function listDecisionOutcomes(
+  decisionId: string,
+  params?: { limit?: number; offset?: number }
+): Promise<OutcomeList> {
+  const search = new URLSearchParams()
+  if (params?.limit) search.set('limit', String(params.limit))
+  if (params?.offset) search.set('offset', String(params.offset))
+  const query = search.toString()
+  return api.get<OutcomeList>(`/decisions/${decisionId}/outcomes${query ? `?${query}` : ''}`)
 }

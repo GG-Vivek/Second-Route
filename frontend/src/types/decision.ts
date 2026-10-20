@@ -149,6 +149,39 @@ export interface CreateOverrideRequest {
   reason_text: string
 }
 
+export interface Outcome {
+  id: string
+  unit_id: string
+  decision_id: string
+  channel_taken: string
+  sale_price: number
+  fees_actual: number
+  repair_cost_actual: number
+  logistics_actual: number
+  days_to_disposition: number
+  final_status: string
+  recorded_at: string
+  net: number
+}
+
+export interface OutcomeList {
+  items: Outcome[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface CreateOutcomeRequest {
+  channel_taken: string
+  sale_price: number
+  fees_actual: number
+  repair_cost_actual: number
+  logistics_actual: number
+  days_to_disposition: number
+  final_status: string
+  decision_id?: string
+}
+
 export const CHANNEL_LABELS: Record<string, string> = {
   RESELL_OPEN_BOX: 'Resell as open-box',
   RESELL_REFURB: 'Refurbish and resell',
