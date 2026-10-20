@@ -1,9 +1,16 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, Loader2, Play } from 'lucide-react'
+import { AlertCircle, Loader2, Play, ClipboardCheck } from 'lucide-react'
 import { DecisionCard } from '@/components/decision/DecisionCard'
-import { createDecision, getDecision, listUnitDecisions } from '@/api/decision'
+import { OutcomeDialog } from '@/components/OutcomeDialog'
+import { PredictedVsRealizedPanel } from '@/components/decision/PredictedVsRealizedPanel'
+import {
+  createDecision,
+  getDecision,
+  listUnitDecisions,
+  getUnitPredictedVsRealized,
+} from '@/api/decision'
 import { Button } from '@/components/ui/button'
 import type { RiskProfile } from '@/types/decision'
 
@@ -13,6 +20,8 @@ export function DecisionPage() {
   const { id: unitId } = useParams<{ id: string }>()
   const [riskProfile, setRiskProfile] = useState<RiskProfile>('balanced')
   const [activeDecisionId, setActiveDecisionId] = useState<string | null>(null)
+  const [outcomeOpen, setOutcomeOpen] = useState(false)
+  const [outcomeMessage, setOutcomeMessage] = useState<string | null>(null)
 
   const decisionsQuery = useQuery({
     queryKey: ['unit-decisions', unitId],
@@ -24,6 +33,12 @@ export function DecisionPage() {
     queryKey: ['decision', activeDecisionId],
     queryFn: () => getDecision(activeDecisionId as string),
     enabled: Boolean(activeDecisionId),
+  })
+
+  const predictedVsRealizedQuery = useQuery({
+    queryKey: ['predicted-vs-realized', unitId],
+    queryFn: () => getUnitPredictedVsRealized(unitId ?? ''),
+    enabled: Boolean(unitId),
   })
 
   const latestId = decisionsQuery.data?.items?.[0]?.id ?? null
@@ -110,7 +125,34 @@ export function DecisionPage() {
       )}
 
       {!showSpinner && decisionQuery.data && (
-        <DecisionCard decision={decisionQuery.data} />
+        <>
+          <DecisionCard decision={decisionQuery.data} />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setOutcomeOpen(true)}
+              data-testid="record-outcome"
+            >
+              <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+              Record outcome
+            </Button>
+            {outcomeMessage && (
+              <p className="text-sm text-muted-foreground">{outcomeMessage}</p>
+            )}
+          </div>
+          <OutcomeDialog
+            unitId={unitId}
+            decisionId={decisionQuery.data.id}
+            recommendedChannel={decisionQuery.data.recommended_channel}
+            availableChannels={decisionQuery.data.candidates
+              .filter((candidate) => candidate.eligible)
+              .map((candidate) => candidate.channel)}
+            open={outcomeOpen}
+            onClose={() => setOutcomeOpen(false)}
+            onSuccess={setOutcomeMessage}
+          />
+        </>
       )}
 
       {!showSpinner && !decisionQuery.data && decisionsQuery.data?.total === 0 && (
@@ -144,6 +186,13 @@ export function DecisionPage() {
             ))}
           </ul>
         </section>
+      )}
+
+      {predictedVsRealizedQuery.data && (
+        <PredictedVsRealizedPanel
+          comparisons={predictedVsRealizedQuery.data.items}
+          summary={predictedVsRealizedQuery.data.summary}
+        />
       )}
     </div>
   )

@@ -2,6 +2,8 @@
 Tests for drift monitoring (Phase 6 - F6.4).
 """
 
+from collections.abc import Sequence
+
 import pytest
 import numpy as np
 from datetime import datetime, timezone, UTC
@@ -81,13 +83,13 @@ class TestPSI:
         """Test that an injected input shift triggers an alert."""
         monitor = DriftMonitor()
         # Reference distribution
-        reference = {
+        reference: dict[str, Sequence[float]] = {
             "battery_health": [90.0, 95.0, 88.0, 92.0, 91.0] * 100,
             "price": [1000.0, 1100.0, 950.0, 1050.0, 1000.0] * 100,
         }
 
         # Inject a significant shift in battery_health
-        current = {
+        current: dict[str, Sequence[float]] = {
             "battery_health": [50.0, 55.0, 48.0, 52.0, 51.0] * 100,  # Major shift!
             "price": [1000.0, 1100.0, 950.0, 1050.0, 1000.0] * 100,
         }
@@ -109,7 +111,18 @@ class TestCalibrationDrift:
         """Test with well-calibrated predictions."""
         monitor = DriftMonitor()
         predicted = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95] * 10
-        observed = [False, False, False, False, True, False, True, True, True, True] * 10
+        observed: list[bool] = [
+            False,
+            False,
+            False,
+            False,
+            True,
+            False,
+            True,
+            True,
+            True,
+            True,
+        ] * 10
 
         result = monitor.compute_calibration_drift(predicted, observed)
 
@@ -131,7 +144,7 @@ class TestCalibrationDrift:
         monitor = DriftMonitor(calibration_threshold=0.05)
         # Predictions are overconfident
         predicted = [0.9] * 100
-        observed = [False] * 100  # All negative
+        observed: list[bool] = [False] * 100  # All negative
 
         result = monitor.compute_calibration_drift(predicted, observed)
 

@@ -19,10 +19,11 @@ from secondroute.decision.models import Decision, hash_snapshot
 from secondroute.feedback.models import AuditLog
 from secondroute.costs.models import CostTable
 from secondroute.core.db import set_current_org_id, with_org_filter
+from typing import Any
 
 
 @pytest.fixture
-async def org_a(db_session) -> Organization:
+async def org_a(db_session: AsyncSession) -> Organization:
     """Create organization A."""
     org = Organization(name="Org A", risk_profile="balanced")
     db_session.add(org)
@@ -32,7 +33,7 @@ async def org_a(db_session) -> Organization:
 
 
 @pytest.fixture
-async def org_b(db_session) -> Organization:
+async def org_b(db_session: AsyncSession) -> Organization:
     """Create organization B."""
     org = Organization(name="Org B", risk_profile="aggressive")
     db_session.add(org)
@@ -42,7 +43,7 @@ async def org_b(db_session) -> Organization:
 
 
 @pytest.fixture
-async def user_a(db_session, org_a) -> User:
+async def user_a(db_session: AsyncSession, org_a: Organization) -> User:
     """Create user in org A."""
     user = User(org_id=org_a.id, email="user_a@org_a.com", role="inspector")
     db_session.add(user)
@@ -52,7 +53,7 @@ async def user_a(db_session, org_a) -> User:
 
 
 @pytest.fixture
-async def user_b(db_session, org_b) -> User:
+async def user_b(db_session: AsyncSession, org_b: Organization) -> User:
     """Create user in org B."""
     user = User(org_id=org_b.id, email="user_b@org_b.com", role="inspector")
     db_session.add(user)
@@ -62,7 +63,7 @@ async def user_b(db_session, org_b) -> User:
 
 
 @pytest.fixture
-async def shared_sku(db_session) -> SKU:
+async def shared_sku(db_session: AsyncSession) -> SKU:
     """Create a shared SKU."""
     sku = SKU(
         family="MacBook Pro",
@@ -82,8 +83,9 @@ async def shared_sku(db_session) -> SKU:
     return sku
 
 
-async def make_unit(db_session, sku, org_id):
+async def make_unit(db_session: AsyncSession, sku: SKU, org_id: Any) -> Unit:
     """Create a unit for an org."""
+
     unit = Unit(
         sku_id=sku.id,
         org_id=org_id,
@@ -96,7 +98,7 @@ async def make_unit(db_session, sku, org_id):
     return unit
 
 
-async def make_decision(db_session, unit_id, org_id):
+async def make_decision(db_session: AsyncSession, unit_id: Any, org_id: Any) -> Decision:
     """Create a decision for a unit."""
     from secondroute.decision.models import hash_snapshot
 
@@ -118,8 +120,16 @@ class TestTenantIsolation:
     """Tests for tenant isolation via RLS."""
 
     @pytest.mark.asyncio
-    async def test_org_a_cannot_see_org_b_units(self, client, db_session, org_a, org_b, shared_sku):
+    async def test_org_a_cannot_see_org_b_units(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        org_a: Organization,
+        org_b: Organization,
+        shared_sku: SKU,
+    ) -> None:
         """Org A should not see Org B's units."""
+
         unit_a = await make_unit(db_session, shared_sku, org_a.id)
         unit_b = await make_unit(db_session, shared_sku, org_b.id)
 
@@ -135,8 +145,16 @@ class TestTenantIsolation:
         assert unit_b.id not in unit_ids
 
     @pytest.mark.asyncio
-    async def test_org_b_cannot_see_org_a_units(self, client, db_session, org_a, org_b, shared_sku):
+    async def test_org_b_cannot_see_org_a_units(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        org_a: Organization,
+        org_b: Organization,
+        shared_sku: SKU,
+    ) -> None:
         """Org B should not see Org A's units."""
+
         unit_a = await make_unit(db_session, shared_sku, org_a.id)
         unit_b = await make_unit(db_session, shared_sku, org_b.id)
 
@@ -153,8 +171,13 @@ class TestTenantIsolation:
 
     @pytest.mark.asyncio
     async def test_org_a_cannot_see_org_b_decisions(
-        self, client, db_session, org_a, org_b, shared_sku
-    ):
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        org_a: Organization,
+        org_b: Organization,
+        shared_sku: SKU,
+    ) -> None:
         """Org A should not see Org B's decisions."""
         from secondroute.decision.models import Decision
 
@@ -181,12 +204,16 @@ class TestTenantIsolation:
 
     @pytest.mark.asyncio
     async def test_org_a_cannot_see_org_b_audit_logs(
-        self, client, db_session, org_a, org_b, shared_sku
-    ):
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        org_a: Organization,
+        org_b: Organization,
+        shared_sku: SKU,
+    ) -> None:
         """Org A should not see Org B's audit logs."""
         from secondroute.core.db import set_current_org_id, with_org_filter
 
-        # The units are created for their audit rows, not for their values.
         await make_unit(db_session, shared_sku, org_a.id)
         await make_unit(db_session, shared_sku, org_b.id)
 
@@ -203,8 +230,15 @@ class TestTenantIsolation:
                 assert log.org_id == org_a.id
 
     @pytest.mark.asyncio
-    async def test_org_a_cannot_see_org_b_cost_tables(self, client, db_session, org_a, org_b):
+    async def test_org_a_cannot_see_org_b_cost_tables(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        org_a: Organization,
+        org_b: Organization,
+    ) -> None:
         """Org A should not see Org B's cost tables."""
+
         cost_a = CostTable(
             org_id=org_a.id,
             kind="fee",
@@ -241,8 +275,16 @@ class TestRLSWithNoOrgContext:
     """Tests when no org context is set."""
 
     @pytest.mark.asyncio
-    async def test_no_org_context_sees_nothing(self, client, db_session, org_a, org_b, shared_sku):
+    async def test_no_org_context_sees_nothing(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        org_a: Organization,
+        org_b: Organization,
+        shared_sku: SKU,
+    ) -> None:
         """When no org context is set, queries should return no rows (strict isolation)."""
+
         await make_unit(db_session, shared_sku, org_a.id)
         await make_unit(db_session, shared_sku, org_b.id)
 
@@ -259,9 +301,15 @@ class TestCrossOrgForeignKeyConstraints:
 
     @pytest.mark.asyncio
     async def test_cannot_create_unit_with_wrong_org_sku(
-        self, client, db_session, org_a, org_b, shared_sku
-    ):
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        org_a: Organization,
+        org_b: Organization,
+        shared_sku: SKU,
+    ) -> None:
         """Cannot create unit in org A with SKU that belongs to org B (SKUs are global, so this should work)."""
+
         # SKUs are global, so this should work
         unit = Unit(
             sku_id=shared_sku.id,
@@ -276,8 +324,13 @@ class TestCrossOrgForeignKeyConstraints:
 
     @pytest.mark.asyncio
     async def test_cannot_create_decision_for_wrong_org_unit(
-        self, client, db_session, org_a, org_b, shared_sku
-    ):
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        org_a: Organization,
+        org_b: Organization,
+        shared_sku: SKU,
+    ) -> None:
         """Cannot create decision for unit in different org."""
         from secondroute.decision.models import Decision
 

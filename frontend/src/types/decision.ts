@@ -128,6 +128,170 @@ export interface ReproducibilityResult {
   details: Record<string, unknown>
 }
 
+export interface Override {
+  id: string
+  decision_id: string
+  user_id: string | null
+  chosen_channel: string
+  reason_text: string
+  created_at: string
+}
+
+export interface OverrideList {
+  items: Override[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface CreateOverrideRequest {
+  chosen_channel: string
+  reason_text: string
+}
+
+export interface Outcome {
+  id: string
+  unit_id: string
+  decision_id: string
+  channel_taken: string
+  sale_price: number
+  fees_actual: number
+  repair_cost_actual: number
+  logistics_actual: number
+  days_to_disposition: number
+  final_status: string
+  recorded_at: string
+  net: number
+}
+
+export interface OutcomeList {
+  items: Outcome[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface CreateOutcomeRequest {
+  channel_taken: string
+  sale_price: number
+  fees_actual: number
+  repair_cost_actual: number
+  logistics_actual: number
+  days_to_disposition: number
+  final_status: string
+  decision_id?: string
+}
+
+export interface ChannelPrediction {
+  channel: string
+  p10: number
+  p50: number
+  p90: number
+  mean: number
+}
+
+export interface PredictedVsRealized {
+  unit_id: string
+  decision_id: string
+  outcome_id: string
+  channel: string
+  recommended_channel: string
+  used_recommended: boolean
+  predicted: ChannelPrediction
+  realized_net: number
+  residual: number
+  absolute_residual: number
+  in_range: boolean
+  within_p10_p90: boolean
+  below_p10: boolean
+  above_p90: boolean
+  recorded_at: string
+}
+
+export interface PredictedVsRealizedSummary {
+  total: number
+  in_range_count: number
+  in_range_rate: number
+  below_p10_count: number
+  above_p90_count: number
+  used_recommended_count: number
+  mean_residual: number
+  mean_absolute_residual: number
+}
+
+export interface PredictedVsRealizedList {
+  items: PredictedVsRealized[]
+  total: number
+  summary: PredictedVsRealizedSummary
+}
+
+export interface SurvivalCurve {
+  times: number[]
+  survival: number[]
+  at_risk: number[]
+  events: number[]
+  censored: number[]
+}
+
+export interface TimeToSellCell {
+  channel: string
+  grade: string
+  sample_size: number
+  used_fallback: boolean
+  median_days: number | null
+  p25_days: number | null
+  p75_days: number | null
+  expected_days: number | null
+  source: string
+  as_of: string | null
+  curve: SurvivalCurve
+}
+
+export interface TimeToSellReport {
+  min_sample: number
+  items: TimeToSellCell[]
+  total: number
+  fallback_count: number
+  prior_source: string
+}
+
+export interface RegretEstimate {
+  unit_id: string
+  outcome_id: string
+  decision_id: string
+  channel_taken: string
+  best_channel: string
+  realized_net: number
+  best_net: number
+  regret: number
+  regret_kind: 'observed' | 'estimated'
+  method: string
+}
+
+export interface RegretSummary {
+  observed: {
+    count: number
+    total_regret: number
+    mean_regret: number
+  }
+  estimated: {
+    count: number
+    total_regret: number
+    mean_regret: number
+  }
+  combined: {
+    total_regret: number
+    is_mixed: boolean
+    label: string
+  }
+}
+
+export interface RegretReport {
+  items: RegretEstimate[]
+  total: number
+  summary: RegretSummary
+}
+
 export const CHANNEL_LABELS: Record<string, string> = {
   RESELL_OPEN_BOX: 'Resell as open-box',
   RESELL_REFURB: 'Refurbish and resell',

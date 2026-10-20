@@ -189,7 +189,7 @@ class TestPromotionGateRecord:
         assert record is not None
         assert record.candidate_model_version == "decision-v2"
         assert record.active_model_version == "decision-v1"
-        assert record.promoted is True
+        assert bool(record.promoted) is True
         assert record.promoted_by == "admin@example.com"
         assert record.sample_size == 100
         assert record.net_mae_candidate == 0.10
@@ -216,7 +216,7 @@ class TestPromotionGateRecord:
         )
 
         assert record is not None
-        assert record.promoted is False
+        assert bool(record.promoted) is False
         assert "Net MAE not improved" in record.reason
 
     @pytest.mark.asyncio
@@ -279,4 +279,4 @@ class TestPromotionGateRecord:
         db_record = db_result.scalar_one_or_none()
         assert db_record is not None
         assert db_record.candidate_model_version == "decision-v2"
-        assert db_record.promoted is True
+        assert bool(db_record.promoted) is True

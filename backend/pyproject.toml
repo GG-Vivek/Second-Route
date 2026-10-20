@@ -168,6 +168,12 @@ ignore = [
 "src/secondroute/ingest/*.py" = ["PLR0913", "PLR0917", "TRY301", "PLR0915"]
 "src/secondroute/admin/*.py" = ["PLR0913", "PLR0917", "TRY301"]
 "tests/phase5/*" = ["PLR0913", "PLR0917"]
+# The session manager takes the user, the organisation, the role and the
+# tokens as explicit arguments so the call sites stay readable.
+"src/secondroute/auth/service.py" = ["PLR0913", "PLR0917"]
+# The database module keeps the engine and the session factory in module
+# level globals so the application can share one pool.
+"src/secondroute/core/db.py" = ["PLW0603"]
 
 [tool.ruff.format]
 quote-style = "double"

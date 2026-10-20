@@ -1,7 +1,7 @@
 """add RLS policies for tenant isolation
 
-Revision ID: 0005_rls_policies
-Revises: 0004_outcomes
+Revision ID: 0004_rls_policies
+Revises: 0003_feedback_tables
 Create Date: 2026-10-20
 
 Phase 5 (F5.2): PostgreSQL Row-Level Security policies for tenant isolation.
@@ -33,8 +33,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0005_rls_policies"
-down_revision: Union[str, None] = "0004_outcomes"
+revision: str = "0004_rls_policies"
+down_revision: Union[str, None] = "0003_feedback_tables"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

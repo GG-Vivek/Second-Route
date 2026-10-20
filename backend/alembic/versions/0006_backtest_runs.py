@@ -1,7 +1,7 @@
 """add backtest_runs
 
-Revision ID: 0007_backtest_runs
-Revises: 0006_offline_inspection
+Revision ID: 0006_backtest_runs
+Revises: 0005_offline_inspection
 Create Date: 2026-10-20
 
 Phase 5 (F5.6): Store the backtest reports so the result can be shown and
@@ -14,8 +14,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0007_backtest_runs"
-down_revision: Union[str, None] = "0006_offline_inspection"
+revision: str = "0006_backtest_runs"
+down_revision: Union[str, None] = "0005_offline_inspection"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

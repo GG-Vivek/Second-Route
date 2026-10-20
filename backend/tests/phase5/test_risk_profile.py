@@ -17,10 +17,11 @@ from secondroute.identity.models import SKU
 from secondroute.intake.models import Unit, ReturnReasonCode, OrderChannel
 from secondroute.decision.models import Decision, hash_snapshot
 from secondroute.feedback.models import AuditLog, AuditAction
+from typing import Any
 
 
 @pytest.fixture
-async def test_org(db_session: AsyncSession):
+async def test_org(db_session: AsyncSession) -> Organization:
     """Create a test organization."""
     org = Organization(name="Test Org", risk_profile="balanced")
     db_session.add(org)
@@ -30,7 +31,7 @@ async def test_org(db_session: AsyncSession):
 
 
 @pytest.fixture
-async def test_user(db_session: AsyncSession, test_org):
+async def test_user(db_session: AsyncSession, test_org: Organization) -> User:
     """Create a test user."""
     user = User(org_id=test_org.id, email="admin@test.com", role="admin")
     db_session.add(user)
@@ -40,7 +41,7 @@ async def test_user(db_session: AsyncSession, test_org):
 
 
 @pytest.fixture
-async def shared_sku(db_session: AsyncSession):
+async def shared_sku(db_session: AsyncSession) -> SKU:
     """Create a shared SKU."""
     sku = SKU(
         family="MacBook Pro",
@@ -60,7 +61,7 @@ async def shared_sku(db_session: AsyncSession):
     return sku
 
 
-async def make_unit(db_session: AsyncSession, sku, org_id):
+async def make_unit(db_session: AsyncSession, sku: SKU, org_id: Any) -> Unit:
     """Create a minimal unit row."""
     unit = Unit(
         sku_id=sku.id,
@@ -74,7 +75,12 @@ async def make_unit(db_session: AsyncSession, sku, org_id):
     return unit
 
 
-async def make_decision(db_session: AsyncSession, unit_id, org_id, risk_profile="balanced"):
+async def make_decision(
+    db_session: AsyncSession,
+    unit_id: Any,
+    org_id: Any,
+    risk_profile: str,
+) -> Decision:
     """Insert a stored decision with specific p10/p50/p90 predictions."""
     decision = Decision(
         unit_id=unit_id,
@@ -96,7 +102,7 @@ class TestRiskProfileSettings:
     @pytest.mark.asyncio
     async def test_update_organization_risk_profile(
         self, client: AsyncClient, db_session: AsyncSession
-    ):
+    ) -> None:
         """Test updating organization risk profile."""
         # Create org
         response = await client.post(
@@ -116,7 +122,9 @@ class TestRiskProfileSettings:
         assert data["risk_profile"] == "conservative"
 
     @pytest.mark.asyncio
-    async def test_update_risk_profile_audited(self, client: AsyncClient, db_session: AsyncSession):
+    async def test_update_risk_profile_audited(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test that risk profile changes are audited."""
         # Create org
         response = await client.post(
@@ -153,7 +161,9 @@ class TestRiskProfileSettings:
         assert found_risk_profile_change
 
     @pytest.mark.asyncio
-    async def test_invalid_risk_profile_returns_422(self, client: AsyncClient, db_session):
+    async def test_invalid_risk_profile_returns_422(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test that invalid risk profile returns 422."""
         # Create org
         response = await client.post(
@@ -171,7 +181,9 @@ class TestRiskProfileSettings:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_risk_profile_recomputes_decisions(self, client: AsyncClient, db_session):
+    async def test_risk_profile_recomputes_decisions(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test that changing risk profile triggers decision recomputation."""
         # Create org with balanced profile
         response = await client.post(
@@ -192,7 +204,7 @@ class TestRiskProfileSettings:
         assert response.json()["risk_profile"] == "conservative"
 
     @pytest.mark.asyncio
-    async def test_valid_risk_profiles(self, client: AsyncClient, db_session):
+    async def test_valid_risk_profiles(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """Test that all valid risk profiles are accepted."""
         valid_profiles = ["conservative", "balanced", "aggressive"]
 
@@ -209,7 +221,9 @@ class TestRiskProfileRecomputation:
     """Tests for decision recomputation when risk profile changes."""
 
     @pytest.mark.asyncio
-    async def test_recompute_decisions_on_profile_change(self, client: AsyncClient, db_session):
+    async def test_recompute_decisions_on_profile_change(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test that decisions are recomputed when risk profile changes."""
         # This test would verify that a background job or immediate
         # recomputation happens when risk profile changes

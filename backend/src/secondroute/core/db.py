@@ -129,13 +129,24 @@ async def check_db_connection() -> bool:
         return True
 
 
+def _require_session_maker() -> async_sessionmaker:
+    """Return the session factory, or fail loudly when it is not set up.
+
+    Returns:
+        The session factory.
+
+    Raises:
+        RuntimeError: When ``init_db`` has not run yet.
+    """
+    if async_session_maker is None:
+        raise RuntimeError("The database is not initialised. Call init_db() first.")
+    return async_session_maker
+
+
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Get a database session."""
-    if async_session_maker is None:
-        raise RuntimeError(
-            "The database has not been initialized. Call init_db() before using the session."
-        )
-    async with async_session_maker() as session:
+    maker = _require_session_maker()
+    async with maker() as session:
         try:
             yield session
             await session.commit()
@@ -151,11 +162,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 
 def async_session_factory() -> async_sessionmaker:
     """Get the async session factory."""
-    if async_session_maker is None:
-        raise RuntimeError(
-            "The database has not been initialized. Call init_db() before using the session."
-        )
-    return async_session_maker
+    return _require_session_maker()
 
 
 def get_current_org_id() -> str | None:
