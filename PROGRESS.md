@@ -104,11 +104,11 @@
 
 ---
 
-## Phase 5: Pilot Readiness
+## Phase 5: Pilot Readiness (F5.1 complete, F5.2–F5.8 not started)
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F5.1 Authentication | 🔲 Not Started | — | — | — | — | — | Keycloak, OIDC, roles: inspector/manager/admin/analyst |
+| F5.1 Authentication | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.1-authentication | 2026-10-20T18:15:00Z | 2026-10-20T19:30:00Z | — | Keycloak, OIDC, roles: inspector/manager/admin/analyst |
 | F5.2 Tenant isolation | 🔲 Not Started | — | — | — | — | — | org_id on every table, PostgreSQL RLS enforced |
 | F5.3 Risk profile settings | 🔲 Not Started | — | — | — | — | — | UI/API to set profile, recomputes decisions, audited |
 | F5.4 Batch decisions | 🔲 Not Started | — | — | — | — | — | POST /batches/decide, grouping, filter, CSV export |
