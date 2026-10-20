@@ -159,6 +159,7 @@ ignore = [
 "src/secondroute/condition/grades.py" = ["PLR0913"]
 "src/secondroute/pricing/protocols.py" = ["PLR0913"]
 "src/secondroute/feedback/*.py" = ["PLR0913", "PLR0917"]
+"src/secondroute/auth/*.py" = ["PLR0913", "PLR0917"]
 # The backtest takes the replay window, the baseline and the interval
 # settings as explicit keyword arguments so the call sites stay readable.
 "src/secondroute/backtest/*.py" = ["PLR0913", "PLR0917"]
@@ -196,6 +197,23 @@ exclude = [
     ".ruff_cache",
     "alembic/versions",
 ]
+
+# python-jose and psycopg2 ship no type information and have no stub
+# package in the lock file, so their imports are treated as untyped.
+[[tool.mypy.overrides]]
+module = ["jose.*", "psycopg2.*"]
+ignore_missing_imports = true
+follow_untyped_imports = true
+
+# Test files are not annotated as strictly as the source. A test's job is
+# to exercise behaviour, and a fixture's type is usually evident from its
+# name. This mirrors the ruff configuration, which relaxes the argument
+# rules for tests as well.
+[[tool.mypy.overrides]]
+module = ["tests.*", "scripts.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -1,7 +1,7 @@
 """add offline_created to inspections
 
-Revision ID: 0004_offline_inspection
-Revises: 0003_rls_policies
+Revision ID: 0006_offline_inspection
+Revises: 0005_rls_policies
 Create Date: 2026-10-20
 
 Phase 5 (F5.5): Add offline_created flag to inspections for offline support.
@@ -12,8 +12,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0004_offline_inspection"
-down_revision: Union[str, None] = "0003_rls_policies"
+revision: str = "0006_offline_inspection"
+down_revision: Union[str, None] = "0005_rls_policies"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

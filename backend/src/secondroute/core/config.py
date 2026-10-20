@@ -262,10 +262,19 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def database_url_sync(self) -> str:
-        """Get synchronous database URL for Alembic."""
+        """Get synchronous database URL for Alembic.
+
+        Alembic runs synchronously, so the async driver cannot be used. The
+        driver is named explicitly: a bare ``postgresql://`` URL is resolved
+        by SQLAlchemy to psycopg3, but this project installs psycopg2, so
+        leaving the driver off would fail at connection time with a
+        confusing "No module named 'psycopg'".
+        """
         url = str(self.DATABASE_URL)
         if url.startswith("postgresql+asyncpg://"):
-            return url.replace("postgresql+asyncpg://", "postgresql://")
+            return url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+psycopg2://", 1)
         if url.startswith("sqlite+aiosqlite://"):
             return url.replace("sqlite+aiosqlite://", "sqlite://")
         return url

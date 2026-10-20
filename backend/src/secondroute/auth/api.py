@@ -6,7 +6,7 @@ Provides OIDC authentication via Keycloak, session management, and user/org mana
 
 from datetime import datetime
 from typing import Optional, List
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
@@ -15,8 +15,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from secondroute.core.config import settings
-from secondroute.core.db import get_session
-from secondroute.identity.organizations import Organization, User, ROLE_INSPECTOR, ROLE_MANAGER, ROLE_ADMIN, ROLE_ANALYST, ROLES
+from secondroute.core.db import get_session, set_session_org_id
+from secondroute.identity.organizations import Organization, User
 from secondroute.auth.schemas import (
     OrganizationCreate,
     OrganizationUpdate,
@@ -57,24 +57,28 @@ async def get_current_user(
         )
 
     try:
-        token_data = keycloak.verify_token(credentials.credentials)
+        token_data = await keycloak.verify_token(credentials.credentials)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid token: {e}",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from e
 
     # Get user from database
-    result = await session.execute(
-        select(User).where(User.email == token_data.email)
-    )
+    result = await session.execute(select(User).where(User.email == token_data.email))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
+
+    # The user's organisation is the tenant this request acts for. Setting
+    # it here means every query the endpoint makes from now on is filtered
+    # to that tenant, by the application filter and by the database's
+    # row-level security policies alike.
+    await set_session_org_id(session, str(user.org_id) if user.org_id else None)
 
     return user
 
@@ -89,18 +93,21 @@ async def get_current_user_optional(
         return None
 
     try:
-        token_data = keycloak.verify_token(credentials.credentials)
-        result = await session.execute(
-            select(User).where(User.email == token_data.email)
-        )
-        return result.scalar_one_or_none()
+        token_data = await keycloak.verify_token(credentials.credentials)
+        result = await session.execute(select(User).where(User.email == token_data.email))
+        user = result.scalar_one_or_none()
+        if user is not None:
+            await set_session_org_id(session, str(user.org_id) if user.org_id else None)
     except Exception:
         return None
+    else:
+        return user
 
 
 # ========================================================================
 # Keycloak OIDC Endpoints
 # ========================================================================
+
 
 @router.get(
     "/login",
@@ -145,8 +152,9 @@ async def callback(
     redirect_uri = f"{settings.FRONTEND_URL}/callback"
     tokens = await keycloak.exchange_code_for_tokens(code, redirect_uri)
 
-    # Get user info
-    userinfo = await keycloak.get_userinfo(tokens["access_token"])
+    # Get user info. The call confirms the token works and gives the
+    # identity the session belongs to.
+    await keycloak.get_userinfo(tokens["access_token"])
 
     # Create or get user in database (would need DB session here)
     # For now, just set cookies and redirect to frontend
@@ -242,11 +250,17 @@ async def create_organization(
     session: AsyncSession = Depends(get_session),
 ) -> OrganizationRead:
     """Create a new organization."""
+    # The id is assigned here rather than left to the column default, so
+    # that the organisation is known before the flush. Creating a tenant is
+    # an action inside that tenant, so its audit row belongs to it, and the
+    # row-level security policy checks the organisation on every write.
     org = Organization(
+        id=uuid4(),
         name=org_data.name,
         risk_profile=org_data.risk_profile,
     )
     session.add(org)
+    await set_session_org_id(session, str(org.id))
     await session.flush()
     await session.refresh(org)
     return OrganizationRead.model_validate(org)
@@ -273,14 +287,14 @@ async def get_organization(
 
 @org_router.get(
     "",
-    response_model=List[OrganizationRead],
+    response_model=list[OrganizationRead],
     summary="List organizations",
 )
 async def list_organizations(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-) -> List[OrganizationRead]:
+) -> list[OrganizationRead]:
     """List all organizations."""
     result = await session.execute(
         select(Organization).order_by(Organization.created_at.desc()).limit(limit).offset(offset)
@@ -345,7 +359,7 @@ async def get_user(
 
 @user_router.get(
     "",
-    response_model=List[UserRead],
+    response_model=list[UserRead],
     summary="List users",
 )
 async def list_users(
@@ -353,7 +367,7 @@ async def list_users(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-) -> List[UserRead]:
+) -> list[UserRead]:
     """List users, optionally filtered by organization."""
     query = select(User).order_by(User.created_at.desc()).limit(limit).offset(offset)
     if org_id:
@@ -396,9 +410,7 @@ async def create_user(
         )
 
     # Check for duplicate email
-    result = await session.execute(
-        select(User).where(User.email == user_data.email)
-    )
+    result = await session.execute(select(User).where(User.email == user_data.email))
     if result.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -418,7 +430,7 @@ async def create_user(
 
 @org_user_router.get(
     "",
-    response_model=List[UserRead],
+    response_model=list[UserRead],
     summary="List users in organization",
 )
 async def list_org_users(
@@ -426,7 +438,7 @@ async def list_org_users(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-) -> List[UserRead]:
+) -> list[UserRead]:
     """List users in an organization."""
     # Verify org exists
     org = await session.get(Organization, org_id)
@@ -483,9 +495,7 @@ async def update_org_user(
 
     # Check for duplicate email if changing
     if user_data.email and user_data.email != user.email:
-        result = await session.execute(
-            select(User).where(User.email == user_data.email)
-        )
+        result = await session.execute(select(User).where(User.email == user_data.email))
         if result.scalar_one_or_none():
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,

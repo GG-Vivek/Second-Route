@@ -1,7 +1,7 @@
 """add backtest_runs
 
-Revision ID: 0005_backtest_runs
-Revises: 0004_offline_inspection
+Revision ID: 0007_backtest_runs
+Revises: 0006_offline_inspection
 Create Date: 2026-10-20
 
 Phase 5 (F5.6): Store the backtest reports so the result can be shown and
@@ -14,8 +14,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0005_backtest_runs"
-down_revision: Union[str, None] = "0004_offline_inspection"
+revision: str = "0007_backtest_runs"
+down_revision: Union[str, None] = "0006_offline_inspection"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -56,9 +56,26 @@ def upgrade() -> None:
         "ix_backtest_runs_org_created", "backtest_runs", ["org_id", "created_at"]
     )
 
+    # The backtest runs are tenant data: a run belongs to the organisation
+    # whose decisions it replayed. The RLS policies were created in an
+    # earlier revision, before this table existed, so the policy is created
+    # here.
+    op.execute("ALTER TABLE backtest_runs ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE backtest_runs FORCE ROW LEVEL SECURITY")
+    op.execute(
+        """
+        CREATE POLICY tenant_isolation ON backtest_runs
+        USING (org_id = NULLIF(current_setting('app.current_org_id', true), '')::uuid)
+        WITH CHECK (org_id = NULLIF(current_setting('app.current_org_id', true), '')::uuid)
+        """
+    )
+
 
 def downgrade() -> None:
     """Drop the backtest_runs table."""
+    op.execute("DROP POLICY IF EXISTS tenant_isolation ON backtest_runs")
+    op.execute("ALTER TABLE backtest_runs NO FORCE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE backtest_runs DISABLE ROW LEVEL SECURITY")
     op.drop_index("ix_backtest_runs_org_created", table_name="backtest_runs")
     op.drop_index("ix_backtest_runs_created_at", table_name="backtest_runs")
     op.drop_index("ix_backtest_runs_org_id", table_name="backtest_runs")

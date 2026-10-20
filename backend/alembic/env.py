@@ -17,22 +17,36 @@ sys.path.append(str(Path(__file__).parent.parent))
 from secondroute.core.config import settings
 from secondroute.core.db import Base
 
-# Import all models to ensure they're registered with Base.metadata
-# These will be imported as models are created in each phase
-# import secondroute.identity.models
-# import secondroute.intake.models
-# import secondroute.condition.models
-# import secondroute.pricing.models
-# import secondroute.costs.models
-# import secondroute.decision.models
-# import secondroute.feedback.models
-# import secondroute.analytics.models
+# Import all models so that they are registered with Base.metadata.
+#
+# Without these the target metadata is empty, and "alembic check" and
+# "alembic revision --autogenerate" would both believe the database holds
+# no tables at all.
+import secondroute.identity.models  # noqa: F401
+import secondroute.identity.organizations  # noqa: F401
+import secondroute.intake.models  # noqa: F401
+import secondroute.condition.models  # noqa: F401
+import secondroute.pricing.models  # noqa: F401
+import secondroute.costs.models  # noqa: F401
+import secondroute.decision.models  # noqa: F401
+import secondroute.feedback.models  # noqa: F401
+import secondroute.backtest.models  # noqa: F401
+import secondroute.ingest.models  # noqa: F401
+import secondroute.learning.registry  # noqa: F401
+import secondroute.learning.shadow  # noqa: F401
+import secondroute.learning.promotion  # noqa: F401
+import secondroute.learning.drift  # noqa: F401
+import secondroute.learning.exploration  # noqa: F401
 
 # Alembic Config object
 config = context.config
 
-# Override sqlalchemy.url with application settings
-config.set_main_option("sqlalchemy.url", settings.database_url_sync)
+# Override sqlalchemy.url with application settings, unless the caller
+# already chose one. A caller that wants to migrate a different database -
+# a test that migrates a throwaway PostgreSQL, for example - sets the URL
+# on the Alembic config, and that choice has to survive this line.
+if not config.get_main_option("sqlalchemy.url", None):
+    config.set_main_option("sqlalchemy.url", settings.database_url_sync)
 
 # Interpret the config file for Python logging
 if config.config_file_name is not None:

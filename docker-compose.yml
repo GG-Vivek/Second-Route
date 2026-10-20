@@ -8,9 +8,16 @@ services:
       POSTGRES_DB: secondroute
       POSTGRES_USER: secondroute
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      # The application connects as this role, not as the bootstrap
+      # superuser: PostgreSQL bypasses row-level security for superusers,
+      # so connecting as one would make the tenant-isolation policies
+      # decorative.
+      POSTGRES_APP_USER: secondroute_app
+      POSTGRES_APP_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/alembic:/alembic:ro
+      - ./docker/postgres:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -87,7 +94,7 @@ services:
       dockerfile: Dockerfile
     container_name: secondroute-backend
     environment:
-      - DATABASE_URL=postgresql+asyncpg://secondroute:${POSTGRES_PASSWORD:-changeme}@postgres:5432/secondroute
+      - DATABASE_URL=postgresql+asyncpg://secondroute_app:${POSTGRES_PASSWORD:-changeme}@postgres:5432/secondroute
       - REDIS_URL=redis://redis:6379/0
       - ENVIRONMENT=development
       - LOG_LEVEL=DEBUG

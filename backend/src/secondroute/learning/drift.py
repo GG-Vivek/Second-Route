@@ -10,7 +10,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, UTC
-from typing import Any, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any, Optional
 from uuid import UUID
 
 import numpy as np
@@ -145,8 +146,8 @@ class DriftMonitor:
 
     def compute_input_drift(
         self,
-        reference: dict[str, Sequence[float]],
-        current: dict[str, Sequence[float]],
+        reference: Mapping[str, Sequence[float]],
+        current: Mapping[str, Sequence[float]],
     ) -> dict[str, PSIRResult]:
         results = {}
         for feature_name, _ in reference.items():
@@ -167,30 +168,36 @@ class DriftMonitor:
 
         for feature_name, result in psi_results.items():
             if result.is_alert:
-                alerts.append({
-                    "type": "psi_alert",
-                    "feature": feature_name,
-                    "psi": result.psi,
-                    "threshold": self.psi_threshold_high,
-                    "message": f"PSI for {feature_name} is {result.psi:.4f}, exceeding threshold {self.psi_threshold_high}",
-                })
+                alerts.append(
+                    {
+                        "type": "psi_alert",
+                        "feature": feature_name,
+                        "psi": result.psi,
+                        "threshold": self.psi_threshold_high,
+                        "message": f"PSI for {feature_name} is {result.psi:.4f}, exceeding threshold {self.psi_threshold_high}",
+                    }
+                )
                 alert_triggered = True
             elif result.is_drift:
-                alerts.append({
-                    "type": "psi_drift",
-                    "feature": feature_name,
-                    "psi": result.psi,
-                    "threshold": self.psi_threshold_low,
-                    "message": f"PSI for {feature_name} is {result.psi:.4f}, exceeding threshold {self.psi_threshold_low}",
-                })
+                alerts.append(
+                    {
+                        "type": "psi_drift",
+                        "feature": feature_name,
+                        "psi": result.psi,
+                        "threshold": self.psi_threshold_low,
+                        "message": f"PSI for {feature_name} is {result.psi:.4f}, exceeding threshold {self.psi_threshold_low}",
+                    }
+                )
 
         if calibration_result and calibration_result.is_drift:
-            alerts.append({
-                "type": "calibration_drift",
-                "ece": calibration_result.ece,
-                "threshold": self.calibration_threshold,
-                "message": f"Calibration ECE is {calibration_result.ece:.4f}, exceeding threshold {self.calibration_threshold}",
-            })
+            alerts.append(
+                {
+                    "type": "calibration_drift",
+                    "ece": calibration_result.ece,
+                    "threshold": self.calibration_threshold,
+                    "message": f"Calibration ECE is {calibration_result.ece:.4f}, exceeding threshold {self.calibration_threshold}",
+                }
+            )
             alert_triggered = True
 
         return {
@@ -208,11 +215,13 @@ class DriftMonitor:
 
         for feature_name, result in psi_results.items():
             lines.append(f'drift_psi{{feature="{feature_name}"}} {result.psi:.6f}')
-            lines.append(f'drift_psi_alert{{feature="{feature_name}"}} {1 if result.is_alert else 0}')
+            lines.append(
+                f'drift_psi_alert{{feature="{feature_name}"}} {1 if result.is_alert else 0}'
+            )
 
         if calibration_result:
-            lines.append(f'drift_calibration_ece {calibration_result.ece:.6f}')
-            lines.append(f'drift_calibration_mce {calibration_result.mce:.6f}')
-            lines.append(f'drift_calibration_alert {1 if calibration_result.is_drift else 0}')
+            lines.append(f"drift_calibration_ece {calibration_result.ece:.6f}")
+            lines.append(f"drift_calibration_mce {calibration_result.mce:.6f}")
+            lines.append(f"drift_calibration_alert {1 if calibration_result.is_drift else 0}")
 
         return "\n".join(lines)

@@ -59,13 +59,18 @@ class TestSettings:
         assert settings.is_production is True
 
     def test_database_url_sync_property(self) -> None:
-        """Test database_url_sync computed field."""
+        """Test database_url_sync computed field.
+
+        The sync driver is named explicitly. A bare ``postgresql://`` URL
+        is resolved by SQLAlchemy to psycopg3, but this project installs
+        psycopg2, so leaving the driver off fails at connection time.
+        """
         settings = Settings(
             SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
             DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
             REDIS_URL="redis://localhost:6379/0",
         )
-        assert settings.database_url_sync == "postgresql://test:test@localhost:5432/test"
+        assert settings.database_url_sync == "postgresql+psycopg2://test:test@localhost:5432/test"
 
     def test_confidence_threshold_validation(self) -> None:
         """Test confidence threshold validation."""

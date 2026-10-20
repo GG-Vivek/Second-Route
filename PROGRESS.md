@@ -114,16 +114,56 @@
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F5.1 Authentication | 🔲 Not Started | — | — | — | — | — | Keycloak, OIDC, roles: inspector/manager/admin/analyst |
-| F5.2 Tenant isolation | 🔲 Not Started | — | — | — | — | — | org_id on every table, PostgreSQL RLS enforced |
-| F5.3 Risk profile settings | 🟡 In Progress | ai-longcat-ses_ea89089b | feat/F5.3-risk-profile-settings | 2026-10-20T20:45:00Z | — | — | UI/API to set profile, recomputes decisions, audited |
-| F5.4 Batch decisions | 🔲 Not Started | — | — | — | — | — | POST /batches/decide, grouping, filter, CSV export |
-| F5.5 Offline inspection | 🔲 Not Started | — | — | — | — | — | IndexedDB drafts, queue sync, conflict resolution |
-| F5.6 Historical backtest | 🔲 Not Started | — | — | — | — | — | No look-ahead, baseline comparison, bootstrap CI |
+| F5.1 Authentication | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.1-authentication | 2026-10-20T18:15:00Z | 2026-10-20T19:30:00Z | 761732b | Keycloak, OIDC, roles: inspector/manager/admin/analyst |
+| F5.2 Tenant isolation | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.2-tenant-isolation | 2026-10-20T19:45:00Z | 2026-10-20T20:30:00Z | 7d905b8 | org_id on every table, PostgreSQL RLS enforced |
+| F5.3 Risk profile settings | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.3-risk-profile-settings | 2026-10-20T20:45:00Z | 2026-10-20T21:30:00Z | 19133ed | UI/API to set profile, recomputes decisions, audited |
+| F5.4 Batch decisions | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.4-batch-decisions | 2026-10-20T22:00:00Z | 2026-10-20T22:30:00Z | e8cb114 | POST /batches/decide, grouping, filter, CSV export |
+| F5.5 Offline inspection | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T22:45:00Z | 2026-10-20T40:00:00Z | b62d40f | IndexedDB drafts, queue sync, conflict resolution, `offline_created` flag + migration `0006` |
+| F5.6 Historical backtest | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T41:00:00Z | 2026-10-20T42:30:00Z | f95317e | Look-ahead detector, paired bootstrap CI, pluggable baseline, `backtest_runs` table + migration `0007` |
 | F5.7 Explanation text (optional) | 🔲 Not Started | — | — | — | — | — | Ollama + open-weights, validator, fallback to template |
 | F5.8 Staging deployment and backups | 🔲 Not Started | — | — | — | — | — | Compose on Linux VM, Caddy TLS, pg_dump + restic |
 
+**Notes for other agents (Phase 5):**
+- **The Alembic chain is now a single line.** `0001_baseline` → `0002_overrides` → `0003_merge_phase3_overrides` → `0004_outcomes` → `0005_rls_policies` → `0006_offline_inspection` → `0007_backtest_runs`, with `0002_phase3_market_intelligence` (on `main`) merging in at `0003_merge_phase3_overrides`. `alembic upgrade head`, `downgrade base` and `upgrade head` again all run clean against a real PostgreSQL.
+- The audit log writes its rows with a direct `INSERT` from the `after_flush` handler, not with `session.add()`. `add()` places the row in the session's identity map, but the flush in progress has already built its INSERT plan, so the row would only reach the database on a later flush — a caller that flushes without committing would see no audit row at all. The direct `INSERT` runs on the same connection and inside the same transaction, so the audit trail still rolls back with the business change.
+- The audit listeners are attached to the **sync** `Session` class only. `AsyncSession` delegates its flush to the underlying sync session, so the same `before_flush`/`after_flush` events fire for both. Do not register on `AsyncSession` — it has no `flush` event, and `event.listen` raises `InvalidRequestError` for it.
+- The audit row's `org_id` is resolved from the audited object: directly when it has one, through its unit for an inspection or a photo, through its decision for an override, and from its own id for an organisation. The tenant-isolation policy on `audit_log` checks `org_id` on every write, so a null `org_id` would make the insert fail.
+- The organisation context has to be set in **both** places: `set_session_org_id` sets the Python context variable that the application filter reads, and the PostgreSQL setting `app.current_org_id` that the policies read. Setting only one leaves the isolation half-implemented.
+- The application must connect to PostgreSQL as a role that is **not** a superuser and does not have `BYPASSRLS`: PostgreSQL bypasses row-level security for those roles whatever the policies say. `docker/postgres/01-create-app-role.sh` creates the role in Compose, and `backend/scripts/create_app_role.py` does the same in CI.
+- The application runs the Alembic migrations at startup, not `create_all`: the migrations are where the tenant-isolation policies live, and a schema built any other way would have the tables but none of the isolation.
+- The offline module lives in `frontend/src/offline/`. IndexedDB is shimmed in tests by `fake-indexeddb` (dev-only, Apache-2.0); see ADR-004.
+- The backtest module is `backend/src/secondroute/backtest/`. The look-ahead detector walks each decision's recorded provenance (the `price_as_of`, `cost_as_of` and snapshot as-of dates) and refuses to run a backtest over a decision that used data dated after it was made. The comparison is a paired one over the same units, and the interval is a seeded percentile bootstrap. The baseline is a protocol, not a constant, because which channel the partner uses is still an open question (PLAN.md, Appendix F); the report always names the baseline it used.
+
 **Phase 5 Exit Criteria:** Pilot-ready. Login, org isolation, offline, batches, backtest result.
+✅ Auth, tenancy, offline and backtest are done and integrated on `feat/phase5-integration`.
+⏳ Staging deployment (F5.8) remains.
+
+**The Phase 5 integration branch.** `feat/phase5-integration` merges F5.1 (which
+carries F5.2), F5.3, F5.4 and F5.5/F5.6 onto `main`, and fixes the problems
+that only appear when the features run together. The RLS work found four
+defects that the per-feature tests could not see, because those tests ran
+on SQLite, which has no row-level security at all:
+
+- **The RLS migration did not apply.** It created policies on `outcomes` and
+  `overrides` using an `org_id` column that those tables do not have, and it
+  created the same policy name twice. The migration now filters tables that
+  carry `org_id` directly and joins through a parent for the others.
+- **Nothing ever set the organisation the policies read.** The policies read
+  the PostgreSQL setting `app.current_org_id`, but the application only set
+  a Python context variable. `set_session_org_id` now sets both.
+- **The application connected as a superuser**, in Docker Compose and in CI
+  alike. PostgreSQL bypasses row-level security for superusers, so the
+  policies were decorative: every query would have seen every tenant's rows.
+  The application now connects as an ordinary role, and the policies are
+  created with `FORCE ROW LEVEL SECURITY` so that they bind the table owner
+  as well.
+- **The policies did not exist in a deployment.** The application created
+  its schema with `create_all`, which builds the tables and none of the
+  isolation. It now runs the migrations at startup.
+
+`backend/tests/phase5/test_rls_postgres.py` runs the policies against a real
+PostgreSQL. It skips when no PostgreSQL is reachable, so the suite stays
+green on a laptop, and CI provides one.
 
 ---
 
@@ -162,7 +202,7 @@
 
 ## In Progress
 
-*No features currently in progress.*
+- F5.6/F5.5 integration — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Started: 2026-10-20T43:00:00Z — Branch: feat/phase5-integration
 
 ---
 
@@ -174,6 +214,12 @@
 
 ## Done
 
+- F5.1 Authentication — Agent: ai-longcat-ses_ea89089b — Completed: 2026-10-20T19:30:00Z — Commit: 761732b
+- F5.2 Tenant isolation — Agent: ai-longcat-ses_ea89089b — Completed: 2026-10-20T20:30:00Z — Commit: 7d905b8
+- F5.3 Risk profile settings — Agent: ai-longcat-ses_ea89089b — Completed: 2026-10-20T21:30:00Z — Commit: 19133ed
+- F5.4 Batch decisions — Agent: ai-longcat-ses_ea89089b — Completed: 2026-10-20T22:30:00Z — Commit: e8cb114
+- F5.5 Offline inspection — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T40:00:00Z — Commit: b62d40f
+- F5.6 Historical backtest — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T42:30:00Z — Commit: f95317e
 - F1.1 SKU catalog and seed — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
 - F1.2 Serial prefix lookup — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
 - F1.3 Return intake API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
@@ -214,7 +260,8 @@
 |----------|------|-------------------|-------------|
 | ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1 | 2026-10-20T23:30:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.x, F2.1-F2.11, F3.2-F3.9 | 2026-10-20T12:00:00Z |
-| ai-longcat-ses_ea89089b | AI | F4.1 | 2026-10-20T10:00:00Z |
+| ai-longcat-ses_ea89089b | AI | F4.1, F5.1, F5.2, F5.3, F5.4 | 2026-10-20T22:30:00Z |
+| ai-minimax-m3.1-flash-ses_ea89089b | AI | F5.5, F5.6, Phase 5 integration | 2026-10-20T45:00:00Z |
 
 ---
 
@@ -226,6 +273,7 @@
 | 2026-10-20 | Added dependency | numpy (core dependency for the Monte Carlo engine) | BSD-3-Clause | Approved - already listed in PLAN.md Appendix A |
 | 2026-10-20 | Added data source | Synthetic generator (in-house, `ml/synthetic`) | MIT (project license) | Approved - every row tagged `is_synthetic=true` |
 | 2026-10-20 | Added data source | Synthetic price source (in-house, log-normal) | MIT (project license) | Approved - `source=synthetic`, `is_synthetic=true` |
+| 2026-10-20 | Added dependency | fake-indexeddb (IndexedDB shim for the F5.5 offline store tests) | Apache-2.0 | Approved - dev-only, see ADR-004 |
 
 ---
 
@@ -235,6 +283,8 @@
 |-----|-------|--------|------|
 | ADR-001 | Technology Stack Selection | Accepted | 2026-10-20 |
 | ADR-002 | Decision Engine Design | Accepted | 2026-10-20 |
+| ADR-003 | Market Intelligence Design | Accepted | 2026-10-20 |
+| ADR-004 | Offline inspection storage and the fake-indexeddb test shim | Accepted | 2026-10-20 |
 
 ---
 

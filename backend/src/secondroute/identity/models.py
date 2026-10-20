@@ -5,6 +5,8 @@ Models for SKU catalog and serial prefix lookup.
 """
 
 import uuid
+from datetime import date
+from typing import Any
 
 from sqlalchemy import (
     JSON,
@@ -16,27 +18,32 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from secondroute.core.db import Base
 
 
 class SKU(Base):
-    """SKU catalog model."""
+    """SKU catalog model.
+
+    The columns are declared with ``Mapped`` so that the attribute types
+    are known: with the older ``Column`` style, a type checker sees
+    ``Column[str]`` where the attribute is really a ``str``.
+    """
 
     __tablename__ = "skus"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    family = Column(String(100), nullable=False, index=True)
-    model_name = Column(String(200), nullable=False)
-    year = Column(String(10), nullable=False)  # e.g., "2023", "2024"
-    storage_gb = Column(String(50), nullable=False)  # e.g., "512", "1TB"
-    ram_gb = Column(String(50), nullable=False)  # e.g., "8", "16"
-    color = Column(String(50), nullable=False)
-    region = Column(String(10), nullable=False)  # e.g., "US", "EU", "JP"
-    specs_json = Column(JSON, nullable=False, default=dict)
-    source = Column(String(200), nullable=False)
-    as_of = Column(Date, nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    family: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    model_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    year: Mapped[str] = mapped_column(String(10), nullable=False)  # e.g., "2023", "2024"
+    storage_gb: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., "512", "1TB"
+    ram_gb: Mapped[str] = mapped_column(String(50), nullable=False)  # e.g., "8", "16"
+    color: Mapped[str] = mapped_column(String(50), nullable=False)
+    region: Mapped[str] = mapped_column(String(10), nullable=False)  # e.g., "US", "EU", "JP"
+    specs_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    source: Mapped[str] = mapped_column(String(200), nullable=False)
+    as_of: Mapped[date] = mapped_column(Date, nullable=False)
 
     # Relationships
     serial_prefixes = relationship(

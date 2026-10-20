@@ -327,19 +327,19 @@ async def fit_decay_params(
         result = await session.execute(
             select(DecayParam).where(DecayParam.sku_family == family, DecayParam.grade == grade)
         )
-        row = result.scalars().first()
-        if row is None:
-            row = DecayParam(
+        decay_row = result.scalars().first()
+        if decay_row is None:
+            decay_row = DecayParam(
                 sku_family=family,
                 grade=grade,
                 rate_per_day=rate,
                 model_version=model_version,
             )
-            session.add(row)
+            session.add(decay_row)
         else:
-            row.rate_per_day = rate
-            row.model_version = model_version
-            row.fitted_at = datetime.utcnow()
+            decay_row.rate_per_day = rate
+            decay_row.model_version = model_version
+            decay_row.fitted_at = datetime.utcnow()
         fitted += 1
 
     await session.flush()

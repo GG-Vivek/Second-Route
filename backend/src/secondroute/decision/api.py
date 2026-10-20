@@ -301,17 +301,20 @@ DEFAULT_CONFIDENCE_THRESHOLD = settings.CONFIDENCE_THRESHOLD
 
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from uuid import UUID
+
 
 class BatchDecideRequest(BaseModel):
     """Request for batch decision."""
-    unit_ids: List[UUID] = Field(default_factory=list, max_length=1000)
+
+    unit_ids: list[UUID] = Field(default_factory=list, max_length=1000)
     risk_profile: str = Field(default="balanced", pattern="^(conservative|balanced|aggressive)$")
     group_by: Optional[str] = Field(default=None, pattern="^(channel|grade|none)$")
     format: Optional[str] = Field(default="json", pattern="^(json|csv)$")
 
+
 class BatchDecideResult(BaseModel):
     """Result for a single unit in batch."""
+
     unit_id: UUID
     decision_id: Optional[UUID] = None
     recommended_channel: Optional[str] = None
@@ -319,9 +322,11 @@ class BatchDecideResult(BaseModel):
     fallback_used: Optional[bool] = None
     error: Optional[str] = None
 
+
 class BatchDecideResponse(BaseModel):
     """Response for batch decision."""
-    results: List[BatchDecideResult]
+
+    results: list[BatchDecideResult]
     total: int
     succeeded: int
     failed: int
@@ -347,7 +352,7 @@ async def batch_decide(
         Batch decision results with per-unit outcomes.
     """
     from secondroute.intake.models import Unit
-    
+
     # Validate risk profile
     if body.risk_profile not in ("conservative", "balanced", "aggressive"):
         raise HTTPException(
@@ -365,61 +370,65 @@ async def batch_decide(
         )
 
     # Fetch all units
-    result = await session.execute(
-        select(Unit).where(Unit.id.in_(body.unit_ids))
-    )
+    result = await session.execute(select(Unit).where(Unit.id.in_(body.unit_ids)))
     units = result.scalars().all()
-    
+
     # Check if all units exist
     if not units:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No units found",
         )
-    
+
     # Group units by org_id
     from collections import defaultdict
+
     units_by_org = defaultdict(list)
     for unit in units:
         units_by_org[unit.org_id].append(unit)
-    
+
     # For simplicity, process only the first org's units
     # In a real implementation, you might process all or require same org
     org_id = list(units_by_org.keys())[0]
     org_units = units_by_org[org_id]
-    
+
     results = []
     succeeded = 0
     failed = 0
-    
+
     for unit in org_units:
         try:
             decision = await decide_unit(
                 session,
                 unit.id,
-                _price_source(),
+                _price_source(session),
                 risk_profile=body.risk_profile,
                 as_of=datetime.utcnow(),
             )
-            results.append(BatchDecideResult(
-                unit_id=unit.id,
-                decision_id=decision.id,
-                recommended_channel=decision.recommended_channel,
-                confidence=decision.confidence,
-                fallback_used=decision.fallback_used,
-            ))
+            results.append(
+                BatchDecideResult(
+                    unit_id=unit.id,
+                    decision_id=decision.id,
+                    recommended_channel=decision.recommended_channel,
+                    confidence=decision.confidence,
+                    fallback_used=decision.fallback_used,
+                )
+            )
             succeeded += 1
         except Exception as exc:
-            results.append(BatchDecideResult(
-                unit_id=unit.id,
-                error=str(exc),
-            ))
+            results.append(
+                BatchDecideResult(
+                    unit_id=unit.id,
+                    error=str(exc),
+                )
+            )
             failed += 1
-    
+
     # Apply grouping if requested
     if body.group_by == "channel":
         # Group results by recommended channel
         from collections import defaultdict
+
         grouped = defaultdict(list)
         for r in results:
             if r.recommended_channel:
@@ -428,9 +437,9 @@ async def batch_decide(
                 grouped["unknown"].append(r)
         # Flatten grouped results
         results = []
-        for channel, items in grouped.items():
+        for items in grouped.values():
             results.extend(items)
-    
+
     return BatchDecideResponse(
         results=results,
         total=len(org_units),

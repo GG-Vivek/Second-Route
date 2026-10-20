@@ -105,16 +105,16 @@ class OIDCDiscoveryResponse(BaseModel):
     jwks_uri: str
     userinfo_endpoint: Optional[str] = None
     end_session_endpoint: Optional[str] = None
-    scopes_supported: List[str]
-    response_types_supported: List[str]
-    subject_types_supported: List[str]
-    id_token_signing_alg_values_supported: List[str]
+    scopes_supported: list[str]
+    response_types_supported: list[str]
+    subject_types_supported: list[str]
+    id_token_signing_alg_values_supported: list[str]
 
 
 class JWKSResponse(BaseModel):
     """JWKS response."""
 
-    keys: List[dict]
+    keys: list[dict]
 
 
 class LoginRequest(BaseModel):
@@ -137,13 +137,19 @@ class TokenRefreshRequest(BaseModel):
     grant_type: str = "refresh_token"
 
 
-# Role constants
-ROLE_INSPECTOR = "inspector"
-ROLE_MANAGER = "manager"
-ROLE_ADMIN = "admin"
-ROLE_ANALYST = "analyst"
-
-ROLES = (ROLE_INSPECTOR, ROLE_MANAGER, ROLE_ADMIN, ROLE_ANALYST)
+# Role constants.
+#
+# These are defined once, with the user model they belong to, and
+# re-exported here so that the auth module has a single place to import
+# them from. Two copies of the same constants is two places for a role
+# name to drift.
+from secondroute.identity.organizations import (  # noqa: F401
+    ROLE_ADMIN,
+    ROLE_ANALYST,
+    ROLE_INSPECTOR,
+    ROLE_MANAGER,
+    ROLES,
+)
 
 ROLE_HIERARCHY = {
     ROLE_INSPECTOR: 1,

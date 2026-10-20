@@ -116,9 +116,7 @@ class TestRiskProfileSettings:
         assert data["risk_profile"] == "conservative"
 
     @pytest.mark.asyncio
-    async def test_update_risk_profile_audited(
-        self, client: AsyncClient, db_session: AsyncSession
-    ):
+    async def test_update_risk_profile_audited(self, client: AsyncClient, db_session: AsyncSession):
         """Test that risk profile changes are audited."""
         # Create org
         response = await client.post(
@@ -143,9 +141,6 @@ class TestRiskProfileSettings:
             )
         )
         logs = result.scalars().all()
-        print(f"DEBUG: Found {len(logs)} audit logs", flush=True)
-        for log in logs:
-            print(f"DEBUG: Log payload: {log.payload_json}", flush=True)
         assert len(logs) >= 1
         found_risk_profile_change = False
         for log in logs:
@@ -158,9 +153,7 @@ class TestRiskProfileSettings:
         assert found_risk_profile_change
 
     @pytest.mark.asyncio
-    async def test_invalid_risk_profile_returns_422(
-        self, client: AsyncClient, db_session
-    ):
+    async def test_invalid_risk_profile_returns_422(self, client: AsyncClient, db_session):
         """Test that invalid risk profile returns 422."""
         # Create org
         response = await client.post(
@@ -178,9 +171,7 @@ class TestRiskProfileSettings:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_risk_profile_recomputes_decisions(
-        self, client: AsyncClient, db_session
-    ):
+    async def test_risk_profile_recomputes_decisions(self, client: AsyncClient, db_session):
         """Test that changing risk profile triggers decision recomputation."""
         # Create org with balanced profile
         response = await client.post(
@@ -201,12 +192,10 @@ class TestRiskProfileSettings:
         assert response.json()["risk_profile"] == "conservative"
 
     @pytest.mark.asyncio
-    async def test_valid_risk_profiles(
-        self, client: AsyncClient, db_session
-    ):
+    async def test_valid_risk_profiles(self, client: AsyncClient, db_session):
         """Test that all valid risk profiles are accepted."""
         valid_profiles = ["conservative", "balanced", "aggressive"]
-        
+
         for profile in valid_profiles:
             response = await client.post(
                 "/api/v1/orgs",
@@ -220,9 +209,7 @@ class TestRiskProfileRecomputation:
     """Tests for decision recomputation when risk profile changes."""
 
     @pytest.mark.asyncio
-    async def test_recompute_decisions_on_profile_change(
-        self, client: AsyncClient, db_session
-    ):
+    async def test_recompute_decisions_on_profile_change(self, client: AsyncClient, db_session):
         """Test that decisions are recomputed when risk profile changes."""
         # This test would verify that a background job or immediate
         # recomputation happens when risk profile changes

@@ -109,7 +109,7 @@ class TestCalibrationDrift:
         """Test with well-calibrated predictions."""
         monitor = DriftMonitor()
         predicted = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95] * 10
-        observed = [0, 0, 0, 0, 1, 0, 1, 1, 1, 1] * 10
+        observed = [False, False, False, False, True, False, True, True, True, True] * 10
 
         result = monitor.compute_calibration_drift(predicted, observed)
 
@@ -131,7 +131,7 @@ class TestCalibrationDrift:
         monitor = DriftMonitor(calibration_threshold=0.05)
         # Predictions are overconfident
         predicted = [0.9] * 100
-        observed = [0] * 100  # All negative
+        observed = [False] * 100  # All negative
 
         result = monitor.compute_calibration_drift(predicted, observed)
 
@@ -184,7 +184,7 @@ class TestAlerts:
     def test_calibration_alert(self) -> None:
         """Test calibration drift alert."""
         monitor = DriftMonitor()
-        psi_results = {}
+        psi_results: dict[str, PSIRResult] = {}
         calibration_result = CalibrationDriftResult(
             ece=0.15,
             mce=0.20,
@@ -210,13 +210,13 @@ class TestPrometheusExport:
 
         metrics = monitor.export_prometheus_metrics(psi_results)
 
-        assert "drift_psi{feature=\"battery_health\"} 0.150000" in metrics
-        assert "drift_psi_alert{feature=\"battery_health\"} 0" in metrics
+        assert 'drift_psi{feature="battery_health"} 0.150000' in metrics
+        assert 'drift_psi_alert{feature="battery_health"} 0' in metrics
 
     def test_export_calibration_metrics(self) -> None:
         """Test exporting calibration metrics."""
         monitor = DriftMonitor()
-        psi_results = {}
+        psi_results: dict[str, PSIRResult] = {}
         calibration_result = CalibrationDriftResult(
             ece=0.12,
             mce=0.18,

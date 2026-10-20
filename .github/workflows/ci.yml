@@ -88,9 +88,21 @@ jobs:
           pip install uv
           uv sync --frozen --all-extras
 
+      - name: Create the application database role
+        # The application must not connect as the superuser: PostgreSQL
+        # bypasses row-level security for superusers, so the
+        # tenant-isolation policies would not apply.
+        run: |
+          uv run python scripts/create_app_role.py \
+            --admin-url postgresql://test:test@localhost:5432/secondroute_test \
+            --app-user secondroute_app \
+            --app-password test \
+            --database secondroute_test
+
       - name: Run tests
         env:
-          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/secondroute_test
+          DATABASE_URL: postgresql+asyncpg://secondroute_app:test@localhost:5432/secondroute_test
+          TEST_POSTGRES_URL: postgresql+asyncpg://secondroute_app:test@localhost:5432/secondroute_test
           REDIS_URL: redis://localhost:6379/0
           ENVIRONMENT: test
           DEBUG: "true"
@@ -235,19 +247,30 @@ jobs:
           pip install uv
           uv sync --frozen --all-extras
 
+      - name: Create the application database role
+        # The migrations run as the application role, not as the superuser,
+        # because that is who runs them in production. It also proves the
+        # role can own the tables the policies are attached to.
+        run: |
+          uv run python scripts/create_app_role.py \
+            --admin-url postgresql://test:test@localhost:5432/secondroute_test \
+            --app-user secondroute_app \
+            --app-password test \
+            --database secondroute_test
+
       - name: Run alembic upgrade head
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/secondroute_test
+          DATABASE_URL: postgresql+psycopg2://secondroute_app:test@localhost:5432/secondroute_test
         run: uv run alembic upgrade head
 
       - name: Run alembic downgrade base
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/secondroute_test
+          DATABASE_URL: postgresql+psycopg2://secondroute_app:test@localhost:5432/secondroute_test
         run: uv run alembic downgrade base
 
       - name: Run alembic upgrade head again
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/secondroute_test
+          DATABASE_URL: postgresql+psycopg2://secondroute_app:test@localhost:5432/secondroute_test
         run: uv run alembic upgrade head
 
   # Build verification

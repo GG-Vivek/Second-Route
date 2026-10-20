@@ -32,6 +32,7 @@ from sqlalchemy import (
     Integer,
 )
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -63,7 +64,9 @@ class PromotionRecord(Base):
     id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     candidate_model_version = Column(String(60), nullable=False, index=True)
     active_model_version = Column(String(60), nullable=False)
-    promoted = Column(Boolean, nullable=False, default=False)
+    # Declared with Mapped so that the attribute type is known: with the
+    # older Column style a type checker sees Column[bool] here.
+    promoted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     reason = Column(Text, nullable=False)
     net_mae_candidate = Column(Float, nullable=True)
     net_mae_active = Column(Float, nullable=True)

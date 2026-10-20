@@ -51,7 +51,7 @@ async def shared_sku(db_session) -> SKU:
 
 async def make_unit(db_session, sku, org_id):
     """Create a minimal unit row."""
-    from secondroute.intake.models import Unit, ReturnReasonCode, OrderChannel
+
     unit = Unit(
         sku_id=sku.id,
         org_id=org_id,
@@ -84,13 +84,11 @@ class TestBatchDecisions:
     """Tests for batch decisions endpoint (F5.4)."""
 
     @pytest.mark.asyncio
-    async def test_batch_decide_multiple_units(
-        self, client, db_session, test_org, shared_sku
-    ):
+    async def test_batch_decide_multiple_units(self, client, db_session, test_org, shared_sku):
         """Run batch decision on multiple units."""
         # Create multiple units
         units = []
-        for i in range(5):
+        for _i in range(5):
             unit = await make_unit(db_session, shared_sku, test_org.id)
             units.append(unit)
 
@@ -102,10 +100,10 @@ class TestBatchDecisions:
         )
         assert response.status_code == 200
         data = response.json()
-        
+
         assert "results" in data
         assert len(data["results"]) == 5
-        
+
         for result in data["results"]:
             assert "unit_id" in result
             assert "decision_id" in result
@@ -113,12 +111,10 @@ class TestBatchDecisions:
             assert "confidence" in result
 
     @pytest.mark.asyncio
-    async def test_batch_decide_with_risk_profile(
-        self, client, db_session, test_org, shared_sku
-    ):
+    async def test_batch_decide_with_risk_profile(self, client, db_session, test_org, shared_sku):
         """Batch decision with specific risk profile."""
         units = []
-        for i in range(3):
+        for _i in range(3):
             unit = await make_unit(db_session, shared_sku, test_org.id)
             units.append(unit)
 
@@ -130,16 +126,14 @@ class TestBatchDecisions:
         )
         assert response.status_code == 200
         data = response.json()
-        
+
         assert len(data["results"]) == 3
         for result in data["results"]:
             assert "unit_id" in result
             assert "decision_id" in result
 
     @pytest.mark.asyncio
-    async def test_batch_decide_empty_list(
-        self, client, db_session, test_org
-    ):
+    async def test_batch_decide_empty_list(self, client, db_session, test_org):
         """Empty unit_ids list should return empty results."""
         response = await client.post(
             "/api/v1/batches/decide",
@@ -150,13 +144,12 @@ class TestBatchDecisions:
         assert data["results"] == []
 
     @pytest.mark.asyncio
-    async def test_batch_decide_invalid_unit_returns_404(
-        self, client, db_session, test_org
-    ):
+    async def test_batch_decide_invalid_unit_returns_404(self, client, db_session, test_org):
         """Invalid unit ID should return 404 or error in results."""
         import uuid
+
         fake_id = str(uuid.uuid4())
-        
+
         response = await client.post(
             "/api/v1/batches/decide",
             json={"unit_ids": [fake_id], "risk_profile": "balanced"},
@@ -171,17 +164,18 @@ class TestBatchDecisions:
         """Units from different orgs should be rejected or filtered."""
         # Create unit in org A
         unit_a = await make_unit(db_session, shared_sku, test_org.id)
-        
+
         # Create another org
         from secondroute.identity.organizations import Organization
+
         org_b = Organization(name="Org B", risk_profile="balanced")
         db_session.add(org_b)
         await db_session.flush()
         await db_session.refresh(org_b)
-        
+
         # Create unit in org B
         unit_b = await make_unit(db_session, shared_sku, org_b.id)
-        
+
         response = await client.post(
             "/api/v1/batches/decide",
             json={"unit_ids": [str(unit_a.id), str(unit_b.id)], "risk_profile": "balanced"},
@@ -194,12 +188,10 @@ class TestBatchDecisionsGrouping:
     """Tests for batch decision grouping functionality."""
 
     @pytest.mark.asyncio
-    async def test_batch_decide_group_by_channel(
-        self, client, db_session, test_org, shared_sku
-    ):
+    async def test_batch_decide_group_by_channel(self, client, db_session, test_org, shared_sku):
         """Batch results should be groupable by channel."""
         units = []
-        for i in range(6):
+        for _i in range(6):
             unit = await make_unit(db_session, shared_sku, test_org.id)
             units.append(unit)
 
@@ -211,25 +203,21 @@ class TestBatchDecisionsGrouping:
         )
         assert response.status_code == 200
         data = response.json()
-        
+
         # Check for grouped results
         assert "groups" in data or "results" in data
 
     @pytest.mark.asyncio
-    async def test_batch_decide_filter_by_value(
-        self, client, db_session, test_org, shared_sku
-    ):
+    async def test_batch_decide_filter_by_value(self, client, db_session, test_org, shared_sku):
         """Filter batch results by value range."""
         # This test depends on implementation - may not be in initial version
         pass
 
     @pytest.mark.asyncio
-    async def test_batch_decide_csv_export(
-        self, client, db_session, test_org, shared_sku
-    ):
+    async def test_batch_decide_csv_export(self, client, db_session, test_org, shared_sku):
         """CSV export of batch decisions."""
         units = []
-        for i in range(3):
+        for _i in range(3):
             unit = await make_unit(db_session, shared_sku, test_org.id)
             units.append(unit)
 
@@ -241,4 +229,6 @@ class TestBatchDecisionsGrouping:
         )
         assert response.status_code == 200
         # Check for CSV content
-        assert "text/csv" in response.headers.get("content-type", "") or "results" in response.json()
+        assert (
+            "text/csv" in response.headers.get("content-type", "") or "results" in response.json()
+        )

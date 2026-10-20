@@ -14,7 +14,8 @@ from sqlalchemy import event, insert, inspect
 from sqlalchemy.orm import Mapper, Session
 
 from secondroute.core.db import Base
-from secondroute.feedback.models import AuditLog, AuditAction
+from secondroute.decision.models import Decision
+from secondroute.feedback.models import AuditLog, AuditAction, Override
 from secondroute.identity.models import SKU, SerialPrefix
 from secondroute.identity.organizations import Organization
 from secondroute.intake.models import Unit, Inspection, Photo
@@ -30,6 +31,7 @@ AUDITED_MODELS: dict[type[Any], str] = {
     Unit: "units",
     Inspection: "inspections",
     Photo: "photos",
+    Override: "overrides",
     Organization: "organizations",
 }
 
@@ -324,11 +326,17 @@ def setup_audit_listeners() -> None:
 def _resolve_org_id(session: Session, instance: Any) -> Optional[uuid.UUID]:
     """The organisation an audited row belongs to.
 
-    Most audited models carry ``org_id`` directly. Inspections and photos
-    do not: they hang off a unit, and the unit carries the org. Resolving
-    the org through the unit keeps the audit row inside the tenant it
-    describes, which the tenant-isolation policies check on every write -
-    an audit row with a null ``org_id`` would be rejected outright.
+    Most audited models carry ``org_id`` directly. The rest have to be
+    reached through the record they belong to:
+
+    - an organisation *is* an organisation, so its own id is the answer;
+    - an inspection and a photo belong to a unit, and the unit carries the
+      org;
+    - an override belongs to a decision, and the decision carries the org.
+
+    Resolving the org matters because the tenant-isolation policies check
+    ``org_id`` on every write: an audit row with a null ``org_id`` would be
+    rejected outright.
 
     Args:
         session: The session the audited object belongs to.
@@ -341,18 +349,25 @@ def _resolve_org_id(session: Session, instance: Any) -> Optional[uuid.UUID]:
     if org_id is not None:
         return org_id
 
-    unit_id: Optional[uuid.UUID] = getattr(instance, "unit_id", None)
-    if unit_id is None:
-        return None
+    if isinstance(instance, Organization):
+        organization_id: Optional[uuid.UUID] = getattr(instance, "id", None)
+        return organization_id
 
-    # ``session.get`` answers from the identity map when the unit is
-    # already loaded, and issues a single indexed SELECT otherwise. The
-    # relationship is deliberately not used: touching it would trigger a
-    # lazy load, which cannot run inside a flush.
-    unit = session.get(Unit, unit_id)
-    if unit is None:
-        return None
-    return getattr(unit, "org_id", None)
+    unit_id: Optional[uuid.UUID] = getattr(instance, "unit_id", None)
+    if unit_id is not None:
+        # ``session.get`` answers from the identity map when the unit is
+        # already loaded, and issues a single indexed SELECT otherwise. The
+        # relationship is deliberately not used: touching it would trigger
+        # a lazy load, which cannot run inside a flush.
+        unit = session.get(Unit, unit_id)
+        return getattr(unit, "org_id", None) if unit is not None else None
+
+    decision_id: Optional[uuid.UUID] = getattr(instance, "decision_id", None)
+    if decision_id is not None:
+        decision = session.get(Decision, decision_id)
+        return getattr(decision, "org_id", None) if decision is not None else None
+
+    return None
 
 
 def _build_audit_values(item: PendingAudit, session: Session) -> Optional[dict[str, Any]]:

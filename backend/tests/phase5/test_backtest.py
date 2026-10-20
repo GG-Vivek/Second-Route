@@ -499,6 +499,7 @@ class TestBacktestRunner:
         )
 
         assert result.interval is not None
+        assert result.mean_difference is not None
         assert result.interval.n == 6
         assert result.interval.lower <= result.mean_difference <= result.interval.upper
         assert result.interval.seed == 11

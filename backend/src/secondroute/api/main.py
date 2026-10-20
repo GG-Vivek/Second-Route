@@ -168,7 +168,6 @@ from secondroute.ingest.api import router as ingest_router
 app.include_router(identity_router, prefix=API_PREFIX)
 app.include_router(intake_router, prefix=API_PREFIX)
 app.include_router(feedback_router, prefix=API_PREFIX)
-app.include_router(overrides_router, prefix=API_PREFIX)
 app.include_router(costs_router, prefix=API_PREFIX)
 app.include_router(decision_router, prefix=API_PREFIX)
 app.include_router(ingest_router, prefix=API_PREFIX)
