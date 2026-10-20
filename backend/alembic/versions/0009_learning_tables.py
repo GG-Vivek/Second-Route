@@ -1,7 +1,7 @@
 """add the learning loop tables
 
-Revision ID: 0008_learning_tables
-Revises: 0007_regret_measurements
+Revision ID: 0009_learning_tables
+Revises: 0008_calibration
 Create Date: 2026-10-20
 
 Phase 6 (F6.2, F6.3, F6.9): the tables the learning loop writes to.
@@ -24,8 +24,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0008_learning_tables"
-down_revision: Union[str, None] = "0007_regret_measurements"
+revision: str = "0009_learning_tables"
+down_revision: Union[str, None] = "0008_calibration"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

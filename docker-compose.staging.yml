@@ -1,0 +1,249 @@
+# The staging stack (Phase 5 - F5.8).
+#
+# A Compose stack for a Linux VM. It is a separate file rather than an
+# overlay of docker-compose.yml, so that what runs in staging can be read
+# in one place: the development stack and the staging stack are genuinely
+# different, and an overlay hides the differences.
+#
+# How it differs from the development stack:
+#
+# - The frontend is built once into static files and served by Caddy. The
+#   development stack runs the Vite dev server, which is not something to
+#   put in front of users.
+# - Caddy terminates TLS with a real certificate. The development Caddyfile
+#   uses a local certificate authority.
+# - Only Caddy publishes a port. The database, Redis, Keycloak and the API
+#   are on the internal network and are not reachable from outside the
+#   host.
+# - The application connects as an ordinary database role, so the
+#   tenant-isolation policies apply. The bootstrap superuser is only used
+#   to own the database.
+# - Secrets come from the environment, and the file that holds them is not
+#   in the repository.
+# - A backup service takes a daily pg_dump and sends it to the restic
+#   repository, which is expected to be somewhere else entirely.
+#
+# Before the first run, copy .env.staging.example to .env.staging, fill it
+# in, and keep it out of version control. Then:
+#
+#     docker compose --env-file .env.staging \
+#         -f docker-compose.staging.yml up -d --build
+#
+# The restore drill is documented in docs/runbooks/restore.md.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: secondroute-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-secondroute}
+      POSTGRES_USER: ${POSTGRES_USER:-secondroute}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      # The application connects as this role, not as the bootstrap
+      # superuser: PostgreSQL bypasses row-level security for superusers,
+      # so connecting as one would make the tenant-isolation policies
+      # decorative.
+      POSTGRES_APP_USER: ${POSTGRES_APP_USER:-secondroute_app}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?POSTGRES_APP_PASSWORD is required}
+      # The role the backups use. It can read every tenant's rows, which
+      # pg_dump needs: it refuses to dump a table whose rows the
+      # tenant-isolation policies would filter.
+      POSTGRES_BACKUP_USER: ${POSTGRES_BACKUP_USER:-secondroute_app_backup}
+      POSTGRES_BACKUP_PASSWORD: ${POSTGRES_BACKUP_PASSWORD:?POSTGRES_BACKUP_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Creates the application role, and gives it what it needs to own the
+      # tables the migrations create.
+      - ./docker/postgres:/docker-entrypoint-initdb.d:ro
+    # No published port: the database is not reachable from outside the
+    # host.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-secondroute} -d ${POSTGRES_DB:-secondroute}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - secondroute-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: secondroute-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    # Redis holds sessions and caches. It is not backed up: losing it costs
+    # a re-login, not data.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - secondroute-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: secondroute-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN is required}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://${POSTGRES_USER:-secondroute}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-secondroute}
+      KC_DB_USERNAME: ${POSTGRES_USER:-secondroute}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:?KEYCLOAK_HOSTNAME is required}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY: edge
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080 && echo -e 'GET /realms/secondroute HTTP/1.0\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q 200"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - secondroute-network
+
+  # Builds the frontend into a volume that Caddy serves. It runs once and
+  # exits, and Caddy waits for it.
+  frontend-build:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.staging
+    container_name: secondroute-frontend-build
+    environment:
+      - VITE_API_BASE_URL=/api/v1
+    volumes:
+      - frontend_static:/out
+    command: >
+      sh -c "npm run build && cp -r dist/. /out/ && touch /out/.build-complete"
+    restart: "no"
+    networks:
+      - secondroute-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: secondroute-backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_APP_USER:-secondroute_app}:${POSTGRES_APP_PASSWORD}@postgres:5432/${POSTGRES_DB:-secondroute}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:?SECRET_KEY is required}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - OIDC_BASE_URL=${KEYCLOAK_HOSTNAME}
+      - OIDC_REALM=${OIDC_REALM:-secondroute}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:?OIDC_CLIENT_ID is required}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:?OIDC_CLIENT_SECRET is required}
+      - FRONTEND_URL=https://${DOMAIN}
+    # The development stack mounts the source over the image so that a
+    # change is picked up without a rebuild. Staging runs the image as
+    # built.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - secondroute-network
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: secondroute-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # The built frontend, served as static files.
+      - frontend_static:/var/www/html:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - DOMAIN=${DOMAIN:?DOMAIN is required}
+      - EMAIL=${EMAIL:?EMAIL is required}
+    depends_on:
+      frontend-build:
+        condition: service_completed_successfully
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - secondroute-network
+
+  # Takes a daily backup and sends it to the restic repository.
+  backup:
+    build:
+      context: .
+      dockerfile: docker/backup/Dockerfile
+    container_name: secondroute-backup
+    environment:
+      # The backup role, not the application's role. It can read every
+      # tenant's rows, so the dump is complete.
+      - DATABASE_URL=postgresql://${POSTGRES_BACKUP_USER:-secondroute_app_backup}:${POSTGRES_BACKUP_PASSWORD}@postgres:5432/${POSTGRES_DB:-secondroute}
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:?RESTIC_REPOSITORY is required}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD:?RESTIC_PASSWORD is required}
+      - BACKUP_INTERVAL_SECONDS=${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes:
+      - ./scripts:/scripts:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - secondroute-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+  frontend_static:
+
+networks:
+  secondroute-network:
+    driver: bridge

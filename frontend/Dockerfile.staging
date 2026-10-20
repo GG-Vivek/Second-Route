@@ -1,0 +1,21 @@
+# Frontend image for the staging stack (Phase 5 - F5.8).
+#
+# The development image runs the Vite dev server, which recompiles on
+# every request and is not something to put in front of users. This one
+# builds the bundle once and leaves it in /out, where the stack's volume
+# picks it up and Caddy serves it as static files.
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+# The build output is copied to /out by the stack's command, so that the
+# volume is filled once the build has succeeded rather than while it is
+# still running.
+RUN npm run build
+
+CMD ["sh", "-c", "echo 'the stack copies dist/ into the shared volume'"]

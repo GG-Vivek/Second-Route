@@ -1,7 +1,7 @@
 """add the calibration versions and the decision calibration version
 
-Revision ID: 0007_calibration
-Revises: 0006_regret_measurements
+Revision ID: 0008_calibration
+Revises: 0007_regret_measurements
 Create Date: 2026-10-20
 
 Phase 4 (F4.6): Store the fitted recalibration versions, and record the
@@ -14,8 +14,8 @@ from typing import Sequence, Union
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0007_calibration"
-down_revision: Union[str, None] = "0006_regret_measurements"
+revision: str = "0008_calibration"
+down_revision: Union[str, None] = "0007_regret_measurements"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

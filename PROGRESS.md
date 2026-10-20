@@ -121,7 +121,7 @@
 | F5.5 Offline inspection | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T22:45:00Z | 2026-10-20T40:00:00Z | b62d40f | IndexedDB drafts, queue sync, conflict resolution, `offline_created` flag + migration `0005` |
 | F5.6 Historical backtest | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T41:00:00Z | 2026-10-20T42:30:00Z | f95317e | Look-ahead detector, paired bootstrap CI, pluggable baseline, `backtest_runs` table + migration `0006` |
 | F5.7 Explanation text (optional) | 🔲 Not Started | — | — | — | — | — | Ollama + open-weights, validator, fallback to template |
-| F5.8 Staging deployment and backups | 🔲 Not Started | — | — | — | — | — | Compose on Linux VM, Caddy TLS, pg_dump + restic |
+| F5.8 Staging deployment and backups | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/phase5-integration | 2026-10-20T47:00:00Z | 2026-10-20T48:30:00Z | — | Staging Compose stack with Caddy TLS, daily pg_dump + restic, and a restore drill that reproduces the row counts |
 
 **Notes for other agents (Phase 5):**
 - **The Alembic chain is a single line.** `0001_baseline` → `0002_phase3_market_intelligence` → `0003_feedback_tables` → `0004_rls_policies` → `0005_offline_inspection` → `0006_backtest_runs` → `0007_regret_measurements` → `0008_learning_tables`. `0003_feedback_tables` creates the `overrides` and `outcomes` tables together, which is what makes the chain linear without a merge revision. `alembic upgrade head`, `downgrade base` and `upgrade head` again all run clean against a real PostgreSQL.
@@ -134,9 +134,13 @@
 - The application must connect to PostgreSQL as a role that is **not** a superuser and does not have `BYPASSRLS`: PostgreSQL bypasses row-level security for those roles whatever the policies say. `docker/postgres/01-create-app-role.sh` creates the role in Compose, and `backend/scripts/create_app_role.py` does the same in CI.
 - The application runs the Alembic migrations at startup, not `create_all`: the migrations are where the tenant-isolation policies live, and a schema built any other way would have the tables but none of the isolation.
 - The offline module lives in `frontend/src/offline/`. IndexedDB is shimmed in tests by `fake-indexeddb` (dev-only, Apache-2.0); see ADR-004.
+- **The backups need a second database role.** `pg_dump` refuses to dump a table whose rows the tenant-isolation policies would filter, so a backup taken with the application's role fails outright. The staging stack therefore has a `secondroute_app_backup` role with `BYPASSRLS`, which is a member of the application role. The `BYPASSRLS` attribute is not inherited upwards, so the application keeps the policies. `docker/postgres/01-create-app-role.sh` creates both roles.
+- The restore drill is `scripts/verify_restore.sh`, and it runs as a test: `backend/tests/phase5/test_backup_restore.py`. It takes a backup, restores it into a fresh database, compares the row counts of every table and starts the application against the result. It skips when PostgreSQL, `pg_dump` or restic are not available. The runbook is `docs/runbooks/restore.md`.
 - The backtest module is `backend/src/secondroute/backtest/`. The look-ahead detector walks each decision's recorded provenance (the `price_as_of`, `cost_as_of` and snapshot as-of dates) and refuses to run a backtest over a decision that used data dated after it was made. The comparison is a paired one over the same units, and the interval is a seeded percentile bootstrap. The baseline is a protocol, not a constant, because which channel the partner uses is still an open question (PLAN.md, Appendix F); the report always names the baseline it used.
 
 **Phase 5 Exit Criteria:** Pilot-ready. Login, org isolation, offline, batches, backtest result.
+✅ Every gate item is now met: auth, tenant isolation, offline, batch decisions, the backtest, and the staging deployment with backups.
+⏳ The staging stack has not been run on a Linux VM. The scripts, the stack and the restore drill are verified; the VM itself needs a host.
 ✅ Auth, tenancy, offline and backtest are done and integrated on `feat/phase5-integration`.
 ⏳ Staging deployment (F5.8) remains.
 
