@@ -4,7 +4,7 @@
 
 ---
 
-## Current Phase: **Phase 4 — Feedback Loop and Analytics** (Phase 3 F3.2–F3.9 still in progress on `feat/phase3-market-intelligence`; PLAN.md marks Phase 3 as optional for Phase 4)
+## Current Phase: **Phase 7 — Ecosystem and Expansion** (Phases 1-6 are done and integrated on `feat/phase5-integration`; Phase 5's staging deployment, F5.8, remains)
 
 **Target:** Record what actually happened, compare it to predictions, measure accuracy and regret.
 
@@ -223,6 +223,7 @@ green on a laptop, and CI provides one.
 - F5.5 Offline inspection — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T40:00:00Z — Commit: b62d40f
 - F5.6 Historical backtest — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T42:30:00Z — Commit: f95317e
 - Phase 5 integration — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T45:30:00Z — Commit: 6fa8cef
+- Phase 4/6/7 consolidation — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T46:30:00Z — Commit: 3494a26
 - F1.1 SKU catalog and seed — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
 - F1.2 Serial prefix lookup — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
 - F1.3 Return intake API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
