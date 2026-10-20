@@ -155,10 +155,12 @@ from secondroute.identity import identity_router
 from secondroute.intake import intake_router
 from secondroute.feedback import feedback_router
 from secondroute.admin.api import router as admin_router
-from secondroute.costs.api import router as costs_router
-from secondroute.decision.api import router as decision_router
 from secondroute.auth import auth_router
 from secondroute.auth.api import org_router, user_router, org_user_router
+from secondroute.backtest.api import router as backtest_router
+from secondroute.costs.api import router as costs_router
+from secondroute.decision.api import router as decision_router
+from secondroute.feedback.overrides import router as overrides_router
 from secondroute.ingest.api import component_router
 from secondroute.ingest.api import router as ingest_router
 # from secondroute.api import condition, analytics, admin
@@ -166,6 +168,7 @@ from secondroute.ingest.api import router as ingest_router
 app.include_router(identity_router, prefix=API_PREFIX)
 app.include_router(intake_router, prefix=API_PREFIX)
 app.include_router(feedback_router, prefix=API_PREFIX)
+app.include_router(overrides_router, prefix=API_PREFIX)
 app.include_router(costs_router, prefix=API_PREFIX)
 app.include_router(decision_router, prefix=API_PREFIX)
 app.include_router(ingest_router, prefix=API_PREFIX)
@@ -175,6 +178,8 @@ app.include_router(auth_router, prefix=API_PREFIX)
 app.include_router(org_router, prefix=API_PREFIX)
 app.include_router(user_router, prefix=API_PREFIX)
 app.include_router(org_user_router, prefix=API_PREFIX)
+app.include_router(overrides_router, prefix=API_PREFIX)
+app.include_router(backtest_router, prefix=API_PREFIX)
 # ...
 
 

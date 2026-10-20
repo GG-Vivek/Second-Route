@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertCircle, CloudOff, WifiOff } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import {
-  createInspection,
   getUnit,
   type UnitDetail,
   type CreateInspectionRequest,
@@ -12,10 +11,15 @@ import {
   FUNCTIONAL_TESTS,
   ACCESSORIES,
 } from '@/api/intake'
+import { getDraft, saveDraft } from '@/offline/drafts'
+import { useOffline } from '@/offline/useOffline'
+import { submitInspection } from '@/offline/submit'
+import type { InspectionFormValues } from '@/offline/types'
 
 export function NewInspectionPage() {
   const { id: unitId } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { isOnline, pendingCount, refreshPendingCount } = useOffline()
 
   // Form state
   const [batteryHealth, setBatteryHealth] = useState('')
@@ -32,9 +36,18 @@ export function NewInspectionPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [queued, setQueued] = useState(false)
+  const [draftRestored, setDraftRestored] = useState(false)
+  // Set once the inspector changes any field, so the autosave does not
+  // write an empty draft for every unit that is merely opened.
+  const [touched, setTouched] = useState(false)
 
   // Validation
   const [batteryHealthError, setBatteryHealthError] = useState<string | null>(null)
+
+  // Tracks whether the form has been restored from a saved draft, so the
+  // autosave does not immediately overwrite it with empty values.
+  const restoredRef = useRef(false)
 
   // Load unit
   useEffect(() => {
@@ -74,6 +87,76 @@ export function NewInspectionPage() {
     setAccessories(initialAccessories)
   }, [])
 
+  // Restore a saved draft, if the inspector left one for this unit.
+  useEffect(() => {
+    if (!unitId) return
+    const unit = unitId
+    let cancelled = false
+
+    async function restore() {
+      try {
+        const draft = await getDraft(unit)
+        if (!draft || cancelled) return
+        setBatteryHealth(draft.values.battery_health_pct)
+        setBatteryCycles(draft.values.battery_cycles)
+        setCosmeticGrade(draft.values.cosmetic_grade)
+        setActivationLock(draft.values.activation_lock)
+        setFunctionalTests(draft.values.functional_tests_json)
+        setAccessories(draft.values.accessories_json)
+        setNotes(draft.values.notes)
+        setDraftRestored(true)
+        restoredRef.current = true
+      } catch {
+        // A storage failure must not block the form; the inspector can
+        // simply re-enter the values.
+      }
+    }
+    void restore()
+
+    return () => {
+      cancelled = true
+    }
+  }, [unitId])
+
+  // Autosave the form so a disconnect or crash never loses the work.
+  //
+  // The draft is only written once the inspector has actually changed
+  // something, so merely opening a unit does not leave an empty draft
+  // behind for every unit in the queue.
+  useEffect(() => {
+    if (!unitId) return
+    if (!touched && !restoredRef.current) return
+
+    const values: InspectionFormValues = {
+      battery_health_pct: batteryHealth,
+      battery_cycles: batteryCycles,
+      cosmetic_grade: cosmeticGrade,
+      functional_tests_json: functionalTests,
+      activation_lock: activationLock,
+      accessories_json: accessories,
+      notes,
+    }
+
+    const timer = setTimeout(() => {
+      void saveDraft(unitId, values).catch(() => {
+        // Autosave is best effort; a failure here must not interrupt the
+        // inspector.
+      })
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [
+    unitId,
+    touched,
+    batteryHealth,
+    batteryCycles,
+    cosmeticGrade,
+    functionalTests,
+    activationLock,
+    accessories,
+    notes,
+  ])
+
   // Validation
   const validateBatteryHealth = useCallback((value: string) => {
     const num = parseFloat(value)
@@ -94,6 +177,7 @@ export function NewInspectionPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitError(null)
+    setQueued(false)
 
     if (!unitId) return
 
@@ -121,25 +205,25 @@ export function NewInspectionPage() {
         activation_lock: activationLock,
         accessories_json: accessories,
         notes: notes || undefined,
+        // Mark the inspection as offline-created so the server can tell it
+        // apart from one entered live, and so conflicts are audited.
+        offline_created: !isOnline,
       }
 
-      await createInspection(unitId, inspectionData)
-      navigate(`/units/${unitId}`)
-    } catch (err: unknown) {
-      const error = err as { response?: { status: number; data?: { detail?: string } } }
-      if (error.response?.status === 422) {
-        const detail = error.response.data?.detail
-        if (Array.isArray(detail)) {
-          const msg = detail.find((d) => d.loc.includes('battery_health_pct'))
-          setSubmitError(msg?.msg ?? 'Invalid data. Please check your inputs.')
-        } else {
-          setSubmitError('Invalid data. Please check your inputs.')
-        }
-      } else if (error.response?.status === 404) {
-        setSubmitError('Unit not found')
-      } else {
-        setSubmitError('Failed to create inspection. Please try again.')
+      const outcome = await submitInspection(unitId, inspectionData, isOnline)
+
+      if (outcome.status === 'submitted') {
+        navigate(`/units/${unitId}`)
+        return
       }
+
+      if (outcome.status === 'queued') {
+        setQueued(true)
+        await refreshPendingCount()
+        return
+      }
+
+      setSubmitError(outcome.reason)
     } finally {
       setSubmitting(false)
     }
@@ -186,7 +270,42 @@ export function NewInspectionPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Offline status */}
+      {!isOnline && (
+        <div
+          role="status"
+          className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-start gap-3"
+        >
+          <WifiOff className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">You are offline</p>
+            <p className="text-sm">
+              Your work is saved on this device and will sync automatically when the connection
+              returns.
+              {pendingCount > 0 && ` ${pendingCount} inspection(s) are waiting to sync.`}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {draftRestored && (
+        <div
+          role="status"
+          className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-900 flex items-start gap-3"
+        >
+          <CloudOff className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Draft restored</p>
+            <p className="text-sm">A saved draft for this unit was restored.</p>
+          </div>
+        </div>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        onChange={() => setTouched(true)}
+        className="space-y-6"
+      >
         {/* Battery Health */}
         <div className="rounded-lg border bg-card p-6 shadow-sm space-y-4">
           <h2 className="text-lg font-semibold">Battery Information</h2>
@@ -362,10 +481,12 @@ export function NewInspectionPage() {
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
+                {isOnline ? 'Creating...' : 'Saving...'}
               </>
-            ) : (
+            ) : isOnline ? (
               'Create Inspection'
+            ) : (
+              'Save Offline'
             )}
           </button>
         </div>
@@ -374,6 +495,19 @@ export function NewInspectionPage() {
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 flex items-center gap-2">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <span>{submitError}</span>
+          </div>
+        )}
+
+        {queued && (
+          <div
+            role="status"
+            className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 flex items-center gap-2"
+          >
+            <CloudOff className="h-5 w-5 flex-shrink-0" />
+            <span>
+              Inspection saved on this device. It will be sent automatically when you are back
+              online.
+            </span>
           </div>
         )}
       </form>

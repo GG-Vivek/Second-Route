@@ -63,6 +63,9 @@ class InspectionBase(BaseModel):
         default_factory=dict, description="Accessories checklist"
     )
     notes: Optional[str] = Field(None, description="Inspector notes")
+    offline_created: bool = Field(
+        default=False, description="Whether inspection was created offline"
+    )
 
     @field_validator("battery_health_pct")
     @classmethod
@@ -92,6 +95,7 @@ class InspectionRead(InspectionBase):
     unit_id: UUID
     inspector_id: Optional[UUID] = None
     created_at: datetime
+    offline_created: bool
 
     @field_validator("functional_tests_json", "accessories_json", mode="before")
     @classmethod

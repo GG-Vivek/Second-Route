@@ -93,9 +93,7 @@ class Override(Base):
     # Relationships
     decision = relationship("Decision", backref="overrides")
 
-    __table_args__ = (
-        Index("ix_overrides_decision_created", "decision_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_overrides_decision_created", "decision_id", "created_at"),)
 
     def __repr__(self) -> str:
         return (
@@ -153,9 +151,4 @@ class Outcome(Base):
     @property
     def net(self) -> float:
         """Calculate realized net value."""
-        return (
-            self.sale_price
-            - self.fees_actual
-            - self.repair_cost_actual
-            - self.logistics_actual
-        )
+        return self.sale_price - self.fees_actual - self.repair_cost_actual - self.logistics_actual

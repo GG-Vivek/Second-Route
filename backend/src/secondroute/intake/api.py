@@ -248,6 +248,7 @@ async def create_inspection(
         activation_lock=inspection_data.activation_lock,
         accessories_json=json.dumps(inspection_data.accessories_json),
         notes=inspection_data.notes,
+        offline_created=inspection_data.offline_created,
     )
     session.add(inspection)
 

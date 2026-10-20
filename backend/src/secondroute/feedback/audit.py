@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Set
 
-from sqlalchemy import event, inspect
+from sqlalchemy import event, insert, inspect
 from sqlalchemy.orm import Mapper, Session
 
 from secondroute.core.db import Base
@@ -132,9 +132,10 @@ def create_audit_entry(
 
     entity_id_str = str(entity_id)
 
-    # Get org_id from instance if available
-    if org_id is None and hasattr(instance, "org_id"):
-        org_id = instance.org_id
+    # Fall back to the org the instance belongs to, which for inspections
+    # and photos is the org of their unit.
+    if org_id is None:
+        org_id = _resolve_org_id(session, instance)
 
     if action == AuditAction.UPDATE:
         changes = get_model_changes(model_class, instance, session)
@@ -262,12 +263,38 @@ def _capture_audits(session: Session, flush_context: Any, instances: Any) -> Non
 
 
 def _write_audits(session: Session, flush_context: Any) -> None:
-    """Write the audit rows once the primary keys are assigned."""
+    """Write the audit rows once the primary keys are assigned.
+
+    The rows are written with a direct ``INSERT`` rather than
+    ``session.add()``. ``add()`` would place the row in the session's
+    identity map, and the flush that is currently in progress has already
+    built its INSERT/UPDATE plan, so the row would only reach the database
+    on a *later* flush. A caller that flushes without committing would
+    therefore see no audit row at all, and a caller that commits would
+    trigger a second flush to persist it.
+
+    A direct ``INSERT`` issued from ``after_flush`` runs on the same
+    connection and inside the same transaction as the change it describes,
+    so the audit trail rolls back with the business change - which is the
+    only correct behaviour for an audit log.
+    """
     pending: list[PendingAudit] = session.info.pop(AUDIT_PENDING_KEY, [])
+    if not pending:
+        return
+
+    rows: list[dict[str, Any]] = []
     for item in pending:
-        entry = _build_audit_row(item)
-        if entry is not None:
-            session.add(entry)
+        values = _build_audit_values(item, session)
+        if values is not None:
+            rows.append(values)
+
+    if not rows:
+        return
+
+    # ``no_autoflush`` prevents the INSERT from re-entering the flush
+    # process, which would recurse forever.
+    with session.no_autoflush:
+        session.execute(insert(AuditLog), rows)
 
 
 def setup_audit_listeners() -> None:
@@ -294,29 +321,92 @@ def setup_audit_listeners() -> None:
         event.listen(Session, "after_flush", _write_audits)
 
 
-def _build_audit_row(item: PendingAudit) -> Optional[AuditLog]:
-    """Turn a captured audit entry into a persistable row.
+def _resolve_org_id(session: Session, instance: Any) -> Optional[uuid.UUID]:
+    """The organisation an audited row belongs to.
+
+    Most audited models carry ``org_id`` directly. Inspections and photos
+    do not: they hang off a unit, and the unit carries the org. Resolving
+    the org through the unit keeps the audit row inside the tenant it
+    describes, which the tenant-isolation policies check on every write -
+    an audit row with a null ``org_id`` would be rejected outright.
+
+    Args:
+        session: The session the audited object belongs to.
+        instance: The audited object.
+
+    Returns:
+        The organisation's id, or ``None`` when it cannot be determined.
+    """
+    org_id: Optional[uuid.UUID] = getattr(instance, "org_id", None)
+    if org_id is not None:
+        return org_id
+
+    unit_id: Optional[uuid.UUID] = getattr(instance, "unit_id", None)
+    if unit_id is None:
+        return None
+
+    # ``session.get`` answers from the identity map when the unit is
+    # already loaded, and issues a single indexed SELECT otherwise. The
+    # relationship is deliberately not used: touching it would trigger a
+    # lazy load, which cannot run inside a flush.
+    unit = session.get(Unit, unit_id)
+    if unit is None:
+        return None
+    return getattr(unit, "org_id", None)
+
+
+def _build_audit_values(item: PendingAudit, session: Session) -> Optional[dict[str, Any]]:
+    """Turn a captured audit entry into a column/value mapping.
 
     Args:
         item: The captured entry.
+        session: The session the audited object belongs to.
 
     Returns:
-        The row, or ``None`` when the instance has no primary key yet.
+        The column values, or ``None`` when the instance has no primary key
+        yet.
     """
     entity_id = getattr(item.instance, "id", None)
     if entity_id is None:
         return None
 
-    org_id = getattr(item.instance, "org_id", None)
+    org_id = _resolve_org_id(session, item.instance)
+
+    return {
+        "id": uuid.uuid4(),
+        "org_id": org_id,
+        "actor": "anonymous",
+        "action": item.action.value,
+        "entity": item.entity_name,
+        "entity_id": str(entity_id),
+        "payload_json": item.payload,
+        "created_at": datetime.utcnow(),
+    }
+
+
+def _build_audit_row(item: PendingAudit, session: Session) -> Optional[AuditLog]:
+    """Turn a captured audit entry into a persistable row.
+
+    Args:
+        item: The captured entry.
+        session: The session the audited object belongs to.
+
+    Returns:
+        The row, or ``None`` when the instance has no primary key yet.
+    """
+    values = _build_audit_values(item, session)
+    if values is None:
+        return None
 
     return AuditLog(
-        org_id=org_id,
-        actor="anonymous",
-        action=item.action,
-        entity=item.entity_name,
-        entity_id=str(entity_id),
-        payload_json=item.payload,
-        created_at=datetime.utcnow(),
+        id=values["id"],
+        org_id=values["org_id"],
+        actor=values["actor"],
+        action=AuditAction(values["action"]),
+        entity=values["entity"],
+        entity_id=values["entity_id"],
+        payload_json=values["payload_json"],
+        created_at=values["created_at"],
     )
 
 

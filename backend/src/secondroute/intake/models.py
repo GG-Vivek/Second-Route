@@ -10,15 +10,16 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Enum,
     ForeignKey,
     Index,
+    JSON,
     String,
     Text,
     UniqueConstraint,
-    JSON,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, relationship
@@ -128,6 +129,7 @@ class Inspection(Base):
     )  # "none", "present", "unknown"
     accessories_json = Column(JSON, nullable=False, default=dict)
     notes = Column(Text, nullable=True)
+    offline_created = Column(Boolean, nullable=False, default=False)
 
     # Relationships
     unit = relationship("Unit", back_populates="inspections")
