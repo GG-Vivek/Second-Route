@@ -41,6 +41,7 @@ dependencies = [
     "aiosqlite>=0.22.1",
     # Numeric (Monte Carlo engine, F2.5)
     "numpy>=1.26.0",
+    "mlflow>=3.17.1",
 ]
 
 [project.optional-dependencies]

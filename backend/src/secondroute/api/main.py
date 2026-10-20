@@ -157,6 +157,8 @@ from secondroute.feedback import feedback_router
 from secondroute.admin.api import router as admin_router
 from secondroute.costs.api import router as costs_router
 from secondroute.decision.api import router as decision_router
+from secondroute.auth import auth_router
+from secondroute.auth.api import org_router, user_router, org_user_router
 from secondroute.ingest.api import component_router
 from secondroute.ingest.api import router as ingest_router
 # from secondroute.api import condition, analytics, admin
@@ -169,6 +171,10 @@ app.include_router(decision_router, prefix=API_PREFIX)
 app.include_router(ingest_router, prefix=API_PREFIX)
 app.include_router(component_router, prefix=API_PREFIX)
 app.include_router(admin_router, prefix=API_PREFIX)
+app.include_router(auth_router, prefix=API_PREFIX)
+app.include_router(org_router, prefix=API_PREFIX)
+app.include_router(user_router, prefix=API_PREFIX)
+app.include_router(org_user_router, prefix=API_PREFIX)
 # ...
 
 

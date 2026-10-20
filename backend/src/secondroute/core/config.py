@@ -227,6 +227,28 @@ class Settings(BaseSettings):
         description="Ollama model for explanation generation",
     )
 
+    # OIDC/Keycloak
+    OIDC_BASE_URL: str = Field(
+        default="http://keycloak:8080",
+        description="Keycloak base URL",
+    )
+    OIDC_REALM: str = Field(
+        default="secondroute",
+        description="Keycloak realm",
+    )
+    OIDC_CLIENT_ID: str = Field(
+        default="secondroute",
+        description="Keycloak client ID",
+    )
+    OIDC_CLIENT_SECRET: str = Field(
+        default="dev-secret-change-in-production",
+        description="Keycloak client secret",
+    )
+    FRONTEND_URL: str = Field(
+        default="http://localhost:5173",
+        description="Frontend URL for redirects",
+    )
+
     # Monitoring
     PROMETHEUS_METRICS_PORT: int = 9090
     GRAFANA_URL: str | None = None
