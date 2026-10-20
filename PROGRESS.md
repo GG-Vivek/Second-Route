@@ -112,7 +112,7 @@
 | F5.2 Tenant isolation | 🔲 Not Started | — | — | — | — | — | org_id on every table, PostgreSQL RLS enforced |
 | F5.3 Risk profile settings | 🔲 Not Started | — | — | — | — | — | UI/API to set profile, recomputes decisions, audited |
 | F5.4 Batch decisions | 🔲 Not Started | — | — | — | — | — | POST /batches/decide, grouping, filter, CSV export |
-| F5.5 Offline inspection | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T22:45:00Z | 2026-10-20T40:00:00Z | — | IndexedDB drafts, queue sync, conflict resolution, `offline_created` flag + migration `0004` |
+| F5.5 Offline inspection | ✅ Done | ai-minimax-m3.1-flash-ses_ea89089b | feat/F5.5-offline-inspection | 2026-10-20T22:45:00Z | 2026-10-20T40:00:00Z | b62d40f | IndexedDB drafts, queue sync, conflict resolution, `offline_created` flag + migration `0004` |
 | F5.6 Historical backtest | 🔲 Not Started | — | — | — | — | — | No look-ahead, baseline comparison, bootstrap CI |
 | F5.7 Explanation text (optional) | 🔲 Not Started | — | — | — | — | — | Ollama + open-weights, validator, fallback to template |
 | F5.8 Staging deployment and backups | 🔲 Not Started | — | — | — | — | — | Compose on Linux VM, Caddy TLS, pg_dump + restic |
@@ -177,7 +177,7 @@
 ## Done
 
 - F1.1 SKU catalog and seed — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
-- F5.5 Offline inspection — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T40:00:00Z
+- F5.5 Offline inspection — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Completed: 2026-10-20T40:00:00Z — Commit: b62d40f
 - F1.2 Serial prefix lookup — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T16:45:00Z
 - F1.3 Return intake API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
 - F1.4 Inspection record API — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:45:00Z
