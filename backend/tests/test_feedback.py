@@ -19,7 +19,9 @@ class TestAuditLog:
     """Tests for audit log functionality."""
 
     @pytest.mark.asyncio
-    async def test_audit_log_on_unit_create(self, client: AsyncClient, db_session: AsyncSession) -> None:
+    async def test_audit_log_on_unit_create(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test that creating a unit generates an audit log entry."""
         # Create a SKU first
         sku = SKU(
@@ -69,7 +71,9 @@ class TestAuditLog:
         assert audit_log.payload_json["data"]["return_reason_code"] == "buyer_remorse"
 
     @pytest.mark.asyncio
-    async def test_audit_log_on_unit_update(self, client: AsyncClient, db_session: AsyncSession) -> None:
+    async def test_audit_log_on_unit_update(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test that updating a unit generates an audit log entry."""
         # Create SKU and unit
         sku = SKU(
@@ -99,7 +103,9 @@ class TestAuditLog:
         await db_session.refresh(unit)
 
         # Update unit status via API
-        response = await client.patch(f"/api/v1/units/{unit.id}/status", json={"status": "inspected"})
+        response = await client.patch(
+            f"/api/v1/units/{unit.id}/status", json={"status": "inspected"}
+        )
         assert response.status_code == 200
 
         # Check audit log
@@ -120,7 +126,9 @@ class TestAuditLog:
         assert audit_log.payload_json["changes"]["status"]["after"] == "inspected"
 
     @pytest.mark.asyncio
-    async def test_audit_log_on_inspection_create(self, client: AsyncClient, db_session: AsyncSession) -> None:
+    async def test_audit_log_on_inspection_create(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test that creating an inspection generates an audit log entry."""
         # Create SKU and unit
         sku = SKU(
@@ -180,7 +188,9 @@ class TestAuditLog:
         assert audit_log.payload_json["data"]["cosmetic_grade"] == "A"
 
     @pytest.mark.asyncio
-    async def test_audit_log_on_sku_create(self, client: AsyncClient, db_session: AsyncSession) -> None:
+    async def test_audit_log_on_sku_create(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test that creating a SKU generates an audit log entry."""
         sku_data = {
             "family": "Test",
@@ -214,7 +224,9 @@ class TestAuditLog:
         assert audit_log.action == AuditAction.CREATE
 
     @pytest.mark.asyncio
-    async def test_audit_log_list_endpoint(self, client: AsyncClient, db_session: AsyncSession) -> None:
+    async def test_audit_log_list_endpoint(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test the audit log list endpoint."""
         # Create some audit entries
         sku = SKU(
@@ -259,7 +271,9 @@ class TestAuditLog:
             assert "created_at" in log
 
     @pytest.mark.asyncio
-    async def test_audit_log_filter_by_entity(self, client: AsyncClient, db_session: AsyncSession) -> None:
+    async def test_audit_log_filter_by_entity(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test filtering audit logs by entity."""
         response = await client.get("/api/v1/audit-log?entity=units")
         assert response.status_code == 200
@@ -269,7 +283,9 @@ class TestAuditLog:
             assert log["entity"] == "units"
 
     @pytest.mark.asyncio
-    async def test_audit_log_filter_by_action(self, client: AsyncClient, db_session: AsyncSession) -> None:
+    async def test_audit_log_filter_by_action(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test filtering audit logs by action."""
         response = await client.get("/api/v1/audit-log?action=create")
         assert response.status_code == 200
@@ -327,7 +343,9 @@ class TestAuditLog:
         assert data["entity_id"] == str(unit.id)
 
     @pytest.mark.asyncio
-    async def test_audit_log_no_update_for_no_change(self, client: AsyncClient, db_session: AsyncSession) -> None:
+    async def test_audit_log_no_update_for_no_change(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
         """Test that updating with same values doesn't create audit log."""
         # Create SKU and unit
         sku = SKU(

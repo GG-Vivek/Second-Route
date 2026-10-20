@@ -4,9 +4,9 @@
 
 ---
 
-## Current Phase: **Phase 1 — Unit Intake and Inspection Record** (F1.1-F1.6 complete, F1.7 partial)
+## Current Phase: **Phase 3 — Market, Cost, and Component Intelligence**
 
-**Target:** Digital return log with inspections and photos.
+**Target:** Replace synthetic prices with free/partner data sources, add component/demand signals. Decision code unchanged from Phase 2.
 
 ---
 
@@ -156,7 +156,7 @@
 
 ## In Progress
 
-*No features currently in progress.*
+- F3.1 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T22:00:00Z — Branch: feat/F3.1-ebay-adapter
 
 ---
 
