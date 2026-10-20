@@ -12,6 +12,8 @@ import type {
   PredictedVsRealizedList,
   ReproducibilityResult,
   RegretReport,
+  CalibrationReport,
+  CalibrationVersion,
   TimeToSellReport,
 } from '@/types/decision'
 
@@ -39,6 +41,8 @@ export type {
   Reason,
   ReproducibilityResult,
   RegretReport,
+  CalibrationReport,
+  CalibrationVersion,
   RiskProfile,
   TimeToSellReport,
 } from '@/types/decision'
@@ -174,4 +178,24 @@ export async function getRegret(params?: { limit?: number }): Promise<RegretRepo
   if (params?.limit) search.set('limit', String(params.limit))
   const query = search.toString()
   return api.get<RegretReport>(`/analytics/regret${query ? `?${query}` : ''}`)
+}
+
+/** Fetch the reliability curve and the expected calibration error. */
+export async function getCalibration(params?: { bins?: number }): Promise<CalibrationReport> {
+  const search = new URLSearchParams()
+  if (params?.bins) search.set('bins', String(params.bins))
+  const query = search.toString()
+  return api.get<CalibrationReport>(`/analytics/calibration${query ? `?${query}` : ''}`)
+}
+
+/** Fit a new recalibration version and put it in force. */
+export async function recalibrate(params?: {
+  bins?: number
+  version?: string
+}): Promise<CalibrationVersion> {
+  const search = new URLSearchParams()
+  if (params?.bins) search.set('bins', String(params.bins))
+  if (params?.version) search.set('version', params.version)
+  const query = search.toString()
+  return api.post<CalibrationVersion>(`/analytics/calibration/recalibrate${query ? `?${query}` : ''}`)
 }

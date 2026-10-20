@@ -21,7 +21,9 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     String,
+    Text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -113,4 +115,51 @@ class RegretMeasurement(Base):
         return (
             f"<RegretMeasurement(id={self.id}, unit_id={self.unit_id}, "
             f"regret={self.regret}, kind={self.regret_kind})>"
+        )
+
+
+class CalibrationVersion(Base):
+    """One fitted recalibration version.
+
+    A recalibration is never applied silently: each fit produces its own
+    version, the version in force is recorded on every decision, and the
+    earlier versions stay in the table.
+
+    Attributes:
+        org_id: The organisation the version belongs to.
+        version: The name of the version.
+        mapping_json: The isotonic mapping, as ``[[predicted, calibrated]]``.
+        sample_size: How many observations the version was fitted on.
+        ece_before: The expected calibration error before the recalibration.
+        ece_after: The expected calibration error after the recalibration.
+        bins: How many bins the reliability curve uses.
+        is_active: True when this version is the one in force.
+        created_at: When the version was fitted.
+    """
+
+    __tablename__ = "calibration_versions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    org_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    version: Mapped[str] = mapped_column(String(60), nullable=False, unique=True)
+    mapping_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    sample_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    ece_before: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    ece_after: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    bins: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, index=True
+    )
+
+    __table_args__ = (Index("ix_calibration_versions_org_created", "org_id", "created_at"),)
+
+    def __repr__(self) -> str:
+        return (
+            f"<CalibrationVersion(id={self.id}, version={self.version}, active={self.is_active})>"
         )

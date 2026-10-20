@@ -292,6 +292,34 @@ export interface RegretReport {
   summary: RegretSummary
 }
 
+export interface CalibrationBin {
+  lower: number
+  upper: number
+  count: number
+  mean_predicted: number
+  observed_frequency: number
+  gap: number
+}
+
+export interface CalibrationReport {
+  bins: CalibrationBin[]
+  ece: number
+  sample_size: number
+  bin_count: number
+  active_version: string | null
+}
+
+export interface CalibrationVersion {
+  id: string
+  version: string
+  sample_size: number
+  ece_before: number
+  ece_after: number
+  bins: number
+  is_active: boolean
+  created_at: string
+}
+
 export const CHANNEL_LABELS: Record<string, string> = {
   RESELL_OPEN_BOX: 'Resell as open-box',
   RESELL_REFURB: 'Refurbish and resell',

@@ -53,6 +53,8 @@ class Decision(Base):
         input_snapshot_hash: SHA-256 of the canonical input snapshot.
         input_snapshot_json: The exact inputs the decision was made from.
         exploration_propensity: Propensity of the recommended choice (Phase 6).
+        calibration_version: The recalibration version in force when the
+            decision was made (Phase 4 - F4.6).
     """
 
     __tablename__ = "decisions"
@@ -84,6 +86,7 @@ class Decision(Base):
     input_snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     input_snapshot_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     exploration_propensity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    calibration_version: Mapped[str | None] = mapped_column(String(60), nullable=True, index=True)
 
     # Relationships
     unit = relationship("Unit", backref="decisions")

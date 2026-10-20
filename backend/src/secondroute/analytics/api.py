@@ -12,9 +12,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from secondroute.analytics.calibration import CalibrationService
 from secondroute.analytics.predicted_vs_realized import PredictedVsRealizedService
 from secondroute.analytics.regret import RegretService
 from secondroute.analytics.schemas import (
+    CalibrationReportRead,
+    CalibrationVersionRead,
     PredictedVsRealizedListRead,
     PredictedVsRealizedRead,
     RegretEstimateRead,
@@ -209,3 +212,62 @@ async def record_unit_regret(
         total=len(measurements),
         summary=service.summarize_measurements(measurements).to_dict(),
     )
+
+
+@router.get(
+    "/calibration",
+    response_model=CalibrationReportRead,
+    summary="The reliability curve and the expected calibration error",
+)
+async def get_calibration(
+    session: SessionDep,
+    bins: Annotated[int, Query(ge=2, le=100)] = 10,
+) -> CalibrationReportRead:
+    """Return the reliability curve of the engine and its ECE.
+
+    The curve compares the confidence the engine reported with how often
+    the recommended channel really was the best of the channels that were
+    tried.
+
+    Args:
+        session: Database session.
+        bins: How many bins the reliability curve uses.
+
+    Returns:
+        The calibration report.
+    """
+    service = CalibrationService()
+    report = await service.report(session, bins=bins)
+
+    return CalibrationReportRead.model_validate(report.to_dict())
+
+
+@router.post(
+    "/calibration/recalibrate",
+    response_model=CalibrationVersionRead,
+    summary="Fit a new recalibration version and put it in force",
+)
+async def recalibrate(
+    session: SessionDep,
+    bins: Annotated[int, Query(ge=2, le=100)] = 10,
+    version: Annotated[str | None, Query(description="The name of the version")] = None,
+) -> CalibrationVersionRead:
+    """Fit an isotonic recalibration and store it as a new version.
+
+    The recalibration is a versioned step: the new version is stored, the
+    previous one is deactivated but kept, and the version in force is
+    recorded on every decision from then on.
+
+    Args:
+        session: Database session.
+        bins: How many bins the reliability curve uses.
+        version: The name of the version. One is derived when it is left
+            out.
+
+    Returns:
+        The stored version.
+    """
+    service = CalibrationService()
+    record = await service.recalibrate(session, bins=bins, version=version)
+
+    return CalibrationVersionRead.model_validate(record)

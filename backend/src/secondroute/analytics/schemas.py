@@ -138,3 +138,41 @@ class StoredRegretRead(BaseModel):
     items: list[RegretMeasurementRead] = Field(default_factory=list)
     total: int = 0
     summary: dict[str, Any] = Field(default_factory=dict)
+
+
+class CalibrationBinRead(BaseModel):
+    """One bin of the reliability curve."""
+
+    lower: float
+    upper: float
+    count: int
+    mean_predicted: float
+    observed_frequency: float
+    gap: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CalibrationReportRead(BaseModel):
+    """The calibration of the engine."""
+
+    bins: list[CalibrationBinRead] = Field(default_factory=list)
+    ece: float = 0.0
+    sample_size: int = 0
+    bin_count: int = 10
+    active_version: Optional[str] = None
+
+
+class CalibrationVersionRead(BaseModel):
+    """One fitted recalibration version."""
+
+    id: UUID
+    version: str
+    sample_size: int
+    ece_before: float
+    ece_after: float
+    bins: int
+    is_active: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
