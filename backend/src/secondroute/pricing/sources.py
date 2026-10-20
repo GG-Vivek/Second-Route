@@ -61,9 +61,34 @@ class DatabasePriceSource:
 
     source_tag = "synthetic"
 
-    def __init__(self, session: AsyncSession, source_tag: str = "synthetic") -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        source_tag: str = "synthetic",
+        stale_limit_hours: int = 48,
+    ) -> None:
         self._session = session
         self.source_tag = source_tag
+        self.stale_limit_hours = stale_limit_hours
+        self._last_seen: datetime | None = None
+
+    @property
+    def stale_sources(self) -> frozenset[str]:
+        """The sources that are too old to trust.
+
+        Empty until the source has actually served a distribution - a source
+        that has never spoken cannot be stale.
+        """
+        if self._last_seen is None:
+            return frozenset()
+        last_seen = self._last_seen
+        if last_seen.tzinfo is None:
+            # The database stores naive UTC timestamps.
+            last_seen = last_seen.replace(tzinfo=UTC)
+        age_hours = (now_utc() - last_seen).total_seconds() / 3600.0
+        if age_hours > self.stale_limit_hours:
+            return frozenset({self.source_tag})
+        return frozenset()
 
     async def get_distribution(
         self,
@@ -108,6 +133,7 @@ class DatabasePriceSource:
         values = tuple(float(row.price) for row in rows)
         weights = tuple(max(float(row.weight), 1e-9) for row in rows)
         latest = max(row.observed_at for row in rows)
+        self._last_seen = latest
 
         return PriceDistribution(
             values=values,

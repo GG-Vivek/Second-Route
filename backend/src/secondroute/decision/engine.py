@@ -52,9 +52,15 @@ from secondroute.decision.explanations import (
     build_flip_conditions,
     build_reasons,
 )
+from secondroute.decision.hold import HoldPriceSource
 from secondroute.decision.models import Decision, hash_snapshot
 from secondroute.decision.parts import build_parts_source
 from secondroute.decision.utility import certainty_equivalent, rank_channels
+from secondroute.ingest.launch import (
+    get_decay_param,
+    hold_decision,
+    list_launch_events,
+)
 from secondroute.instructions.templates import ActionStep, action_steps_for
 from secondroute.pricing.composite import CompositePriceSource
 from secondroute.pricing.protocols import PriceSource
@@ -113,6 +119,43 @@ def _signal_payload(signals: InspectionSignals) -> dict[str, Any]:
         "accessories": dict(signals.accessories),
         "activation_lock": signals.activation_lock,
     }
+
+
+def _dominant_grade(signals: InspectionSignals) -> str:
+    """The grade with the highest probability for a unit.
+
+    Used to pick the decay parameters: the decay is fitted per grade, and the
+    grade a unit is most likely to be is the one whose decay applies.
+    """
+    distribution = grade_distribution(signals)
+    return distribution.most_likely
+
+
+def _stale_sources(price_source: Any) -> set[str]:
+    """The stale sources behind a price source, when it knows.
+
+    A price source that does not track its own freshness simply has no stale
+    sources - it cannot be blamed for what it does not know.
+    """
+    stale = getattr(price_source, "stale_sources", None)
+    if not stale:
+        return set()
+    return {str(name) for name in stale}
+
+
+def _degraded_confidence(confidence: float, stale: set[str]) -> float:
+    """Reduce the confidence when a source is stale.
+
+    Args:
+        confidence: The confidence the gate produced.
+        stale: The stale sources.
+
+    Returns:
+        The confidence, reduced when a source is stale.
+    """
+    if not stale:
+        return confidence
+    return confidence * settings.CONFIDENCE_DEGRADATION_FACTOR
 
 
 def _cost_book_payload(book: CostBook) -> dict[str, Any]:
@@ -175,6 +218,7 @@ async def run_decision(
     as_of: datetime | None = None,
     channels: tuple[str, ...] = DECISION_CHANNELS,
     include_flip_conditions: bool = True,
+    extra_eligibility: dict[str, tuple[bool, str | None]] | None = None,
 ) -> DecisionOutcome:
     """Run the decision engine for one unit.
 
@@ -191,6 +235,8 @@ async def run_decision(
         as_of: Timestamp used to look up prices.
         channels: Channels to evaluate.
         include_flip_conditions: Whether to run the sensitivity search.
+        extra_eligibility: Channel eligibility decided outside the grade
+            rules - the launch calendar decides whether HOLD is on the table.
 
     Returns:
         The decision outcome.
@@ -202,6 +248,8 @@ async def run_decision(
 
     distribution: GradeDistribution = grade_distribution(signals)
     eligibility = channel_eligibility(signals, distribution)
+    if extra_eligibility:
+        eligibility.update(extra_eligibility)
 
     evaluation_input = EvaluationInput(
         sku_id=sku_id,
@@ -294,6 +342,18 @@ async def run_decision(
             "Confidence below the configured threshold - the recommendation falls back "
             "to the most conservative channel available."
         )
+
+    # A stale price source makes the recommendation less trustworthy, so the
+    # confidence comes down and the card says why.
+    stale = _stale_sources(price_source)
+    if stale:
+        warnings.append(
+            "Some price sources are stale ("
+            + ", ".join(sorted(stale))
+            + f"); the confidence has been reduced by "
+            f"{settings.CONFIDENCE_DEGRADATION_FACTOR:.0%}."
+        )
+
     warnings.append("Prices are synthetic. This is a prototype, not a money claim.")
 
     snapshot = {
@@ -321,7 +381,7 @@ async def run_decision(
         recommended_channel=gated_channel,
         fallback_used=fallback_used,
         fallback_channel=fallback_channel,
-        confidence=confidence_result.confidence,
+        confidence=_degraded_confidence(confidence_result.confidence, _stale_sources(price_source)),
         within_margin_share=confidence_result.within_margin_share,
         risk_profile=risk_profile,
         model_version=DECISION_MODEL_VERSION,
@@ -399,9 +459,26 @@ async def decide_unit(
     # the unit, not the value of the unit. Everything else keeps the source
     # the caller passed in.
     parts_source = await build_parts_source(session, unit.id, inspection)
-    effective_price_source = CompositePriceSource(
-        {"PARTS_HARVEST": parts_source}, effective_price_source
+
+    # HOLD is only on the table when the launch calendar says it is safe.
+    launches = await list_launch_events(session, sku_family=family)
+    decay = await get_decay_param(session, sku_family=family, grade=_dominant_grade(signals))
+    hold = hold_decision(
+        rate_per_day=decay.rate_per_day if decay else 0.0,
+        launches=launches,
+        today=(as_of or datetime.utcnow()).date(),
     )
+
+    channel_sources: dict[str, Any] = {"PARTS_HARVEST": parts_source}
+    if hold.offered:
+        channel_sources["HOLD"] = HoldPriceSource(
+            effective_price_source, hold.expected_change_p50, window_days=hold.window_days
+        )
+
+    effective_price_source = CompositePriceSource(channel_sources, effective_price_source)
+
+    # The launch calendar decides whether HOLD is on the table.
+    hold_eligibility: dict[str, tuple[bool, str | None]] = {"HOLD": (hold.offered, hold.reason)}
 
     outcome = await run_decision(
         unit_id=unit.id,
@@ -415,6 +492,7 @@ async def decide_unit(
         threshold=threshold,
         as_of=as_of,
         include_flip_conditions=include_flip_conditions,
+        extra_eligibility=hold_eligibility,
     )
 
     decision = Decision(

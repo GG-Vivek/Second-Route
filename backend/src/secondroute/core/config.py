@@ -175,6 +175,41 @@ class Settings(BaseSettings):
         description="How old a component price may be before it is flagged stale",
     )
 
+    # Wikipedia articles used as the demand proxy for each SKU family.
+    # The Wikimedia API needs no key, but it does require a User-Agent that
+    # identifies the caller.
+    WIKIMEDIA_ARTICLES: dict[str, str] = Field(
+        default_factory=lambda: {
+            "MacBook Pro": "MacBook_Pro",
+            "MacBook Air": "MacBook_Air",
+            "ThinkPad X1 Carbon": "ThinkPad_X1_Carbon",
+            "Dell XPS 13": "Dell_XPS",
+        },
+        description="SKU family to the Wikipedia article that tracks it",
+    )
+
+    # The User-Agent sent to Wikimedia. Their policy requires a contact.
+    WIKIMEDIA_USER_AGENT: str = Field(
+        default="SecondRoute/0.1 (https://github.com/secondroute; ops@secondroute.local)",
+        description="User-Agent sent to the Wikimedia API",
+    )
+
+    # How long a fetched demand series is cached, in seconds.
+    WIKIMEDIA_CACHE_TTL_SECONDS: int = Field(
+        default=3600,
+        ge=0,
+        le=86400,
+        description="How long a fetched Wikimedia series is cached",
+    )
+
+    # How many weeks of demand history to pull.
+    WIKIMEDIA_WEEKS: int = Field(
+        default=26,
+        ge=1,
+        le=520,
+        description="How many weeks of pageview history to pull",
+    )
+
     # MLflow
     MLFLOW_TRACKING_URI: str = Field(
         default="http://localhost:5000",

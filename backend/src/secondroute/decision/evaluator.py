@@ -68,15 +68,18 @@ PHASE2_CHANNELS: Final[tuple[str, ...]] = (
 
 #: Every channel the engine can recommend.
 #:
-#: ``PARTS_HARVEST`` arrived in Phase 3 (F3.6). It is always eligible: there
-#: is always something to harvest, and the parts valuation decides whether it
-#: is worth doing.
+#: ``PARTS_HARVEST`` arrived in Phase 3 (F3.6) and ``HOLD`` in Phase 3
+#: (F3.8). Parts harvesting is always available - there is always something
+#: to harvest, and the parts valuation decides whether it is worth doing.
+#: HOLD is only on the table when the launch calendar says it is safe, which
+#: the caller decides and passes in.
 DECISION_CHANNELS: Final[tuple[str, ...]] = (
     "RESELL_OPEN_BOX",
     "RESELL_REFURB",
     "PARTS_HARVEST",
     "RECYCLE",
     "DONATE",
+    "HOLD",
 )
 
 

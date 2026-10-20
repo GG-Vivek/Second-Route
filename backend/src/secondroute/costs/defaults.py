@@ -37,6 +37,7 @@ _FEE_PCT: dict[str, float] = {
     "RESELL_OPEN_BOX": 0.12,
     "RESELL_REFURB": 0.15,
     "PARTS_HARVEST": 0.0,
+    "HOLD": 0.0,
     "RECYCLE": 0.0,
     "DONATE": 0.0,
 }
@@ -46,6 +47,7 @@ _FIXED_FEE: dict[str, float] = {
     "RESELL_OPEN_BOX": 25.0,
     "RESELL_REFURB": 20.0,
     "PARTS_HARVEST": 0.0,
+    "HOLD": 0.0,
     "RECYCLE": 6.0,
     "DONATE": 9.0,
 }
@@ -55,6 +57,7 @@ _LOGISTICS: dict[str, float] = {
     "RESELL_OPEN_BOX": 28.0,
     "RESELL_REFURB": 24.0,
     "PARTS_HARVEST": 12.0,
+    "HOLD": 0.0,
     "RECYCLE": 18.0,
     "DONATE": 22.0,
 }
@@ -64,6 +67,7 @@ _HANDLING: dict[str, float] = {
     "RESELL_OPEN_BOX": 18.0,
     "RESELL_REFURB": 65.0,
     "PARTS_HARVEST": 25.0,
+    "HOLD": 5.0,
     "RECYCLE": 8.0,
     "DONATE": 12.0,
 }
@@ -73,6 +77,7 @@ _HOLDING_PER_DAY: dict[str, float] = {
     "RESELL_OPEN_BOX": 0.30,
     "RESELL_REFURB": 0.55,
     "PARTS_HARVEST": 0.10,
+    "HOLD": 0.05,
     "RECYCLE": 0.20,
     "DONATE": 0.25,
 }
@@ -91,6 +96,10 @@ _REPAIR: dict[tuple[str, str], float] = {
     ("PARTS_HARVEST", "B"): 0.0,
     ("PARTS_HARVEST", "C"): 0.0,
     ("PARTS_HARVEST", "D"): 0.0,
+    ("HOLD", "A"): 0.0,
+    ("HOLD", "B"): 0.0,
+    ("HOLD", "C"): 0.0,
+    ("HOLD", "D"): 0.0,
     ("RECYCLE", "A"): 0.0,
     ("RECYCLE", "B"): 0.0,
     ("RECYCLE", "C"): 0.0,
@@ -115,6 +124,10 @@ _DAYS_TO_SELL: dict[tuple[str, str], float] = {
     ("PARTS_HARVEST", "B"): 5.0,
     ("PARTS_HARVEST", "C"): 6.0,
     ("PARTS_HARVEST", "D"): 7.0,
+    ("HOLD", "A"): 21.0,
+    ("HOLD", "B"): 21.0,
+    ("HOLD", "C"): 21.0,
+    ("HOLD", "D"): 21.0,
     ("RECYCLE", "A"): 3.0,
     ("RECYCLE", "B"): 3.0,
     ("RECYCLE", "C"): 3.0,

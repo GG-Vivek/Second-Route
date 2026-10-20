@@ -35,19 +35,29 @@ from secondroute.decision.schemas import (
     DecisionSummaryRead,
     ReproducibilityRead,
 )
-from secondroute.pricing.sources import SyntheticPriceSource
+from secondroute.pricing.composite import FallbackPriceSource
+from secondroute.pricing.protocols import PriceSource
+from secondroute.pricing.sources import DatabasePriceSource, SyntheticPriceSource
 
 router = APIRouter(tags=["Decisions"])
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-def _price_source() -> SyntheticPriceSource:
-    """Return the price source used by the Phase 2 API.
+def _price_source(session: AsyncSession) -> PriceSource:
+    """Return the price source used by the API.
 
-    Phase 3 swaps this for the real adapters. The protocol is unchanged.
+    Real market data is preferred, so the stored observations go first. The
+    synthetic source is the fallback, which is what keeps the prototype
+    working before any real data has been collected.
+
+    Phase 3 swaps the database source for the real adapters; the fallback
+    chain stays the same.
     """
-    return SyntheticPriceSource()
+    return FallbackPriceSource(
+        DatabasePriceSource(session, source_tag="synthetic"),
+        SyntheticPriceSource(),
+    )
 
 
 @router.post(
@@ -79,7 +89,7 @@ async def create_decision(
         decision = await decide_unit(
             session,
             unit_id,
-            _price_source(),
+            _price_source(session),
             risk_profile=body.risk_profile,
             as_of=body.as_of or datetime.utcnow(),
         )
@@ -243,7 +253,7 @@ async def reproduce_decision(decision_id: UUID, session: SessionDep) -> Reproduc
             sku_id=UUID(str(snapshot["sku_id"])),
             signals=signals,
             cost_book=book,
-            price_source=_price_source(),
+            price_source=_price_source(session),
             risk_profile=str(snapshot["risk_profile"]),
             samples=int(snapshot["samples"]),
             seed=int(snapshot["seed"]),

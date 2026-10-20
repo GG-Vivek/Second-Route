@@ -37,6 +37,42 @@ from secondroute.core.db import Base
 from secondroute.identity.organizations import Organization  # noqa: F401
 
 
+class SourceHealth(Base):
+    """The health of one data source.
+
+    The engine reads this to decide whether a source is fresh enough to
+    trust. A stale source drags the confidence of any decision that leans on
+    it down.
+
+    Attributes:
+        source: The source tag (e.g. ``partner_a``).
+        last_success_at: When the source last answered.
+        last_error_at: When the source last failed.
+        error_count: How many errors the source has had.
+        message: The last error message.
+    """
+
+    __tablename__ = "source_health"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_error_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    __table_args__ = (UniqueConstraint("source", name="uq_source_health"),)
+
+    def __repr__(self) -> str:
+        return (
+            f"<SourceHealth(source={self.source}, errors={self.error_count}, "
+            f"last_success={self.last_success_at})>"
+        )
+
+
 class ImportFile(Base):
     """The record of one partner sales import.
 

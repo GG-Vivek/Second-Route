@@ -68,6 +68,8 @@
 - The engine modules are registered in `backend/src/secondroute/api/main.py` (`costs_router`, `decision_router`).
 - The audit log listeners in `backend/src/secondroute/feedback/audit.py` were moved from mapper-level `after_insert`/`after_update` to session-level `before_flush`/`after_flush`, and the test session override now commits like the real dependency. This keeps the audit row in the same transaction as the change it describes. `setup_audit_listeners()` is idempotent, so it is safe to call from every test fixture.
 - `git stash` in a shared repository sweeps up *everyone's* uncommitted changes. Use a worktree, and check `git stash list` before assuming a change is lost.
+- The Phase 3 tables are in Alembic revision `0002_phase3_market_intelligence`, which chains from `0001_baseline`. New migrations should chain from `0002_phase3_market_intelligence`.
+- The decision API prefers stored observations over synthetic prices (`FallbackPriceSource`), so a decision made on real data and one made on synthetic data take the same path.
 
 ---
 
@@ -76,16 +78,16 @@
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
 | F3.1 eBay Browse API adapter | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F3.1-ebay-adapter | 2026-10-20T22:00:00Z | 2026-10-20T23:30:00Z | — | Free dev key, active listings, rate limit backoff, caching, retry logic |
-| F3.2 Partner sold-data CSV import | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | Column mapping, validation, dry-run, idempotent |
-| F3.3 Price cleaning | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | MAD outlier removal, grade normalization, recency weight |
-| F3.4 Price quantile model | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | LightGBM quantile regression, fallback to empirical |
-| F3.5 Component prices and FRED adapter | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | component_prices table, scheduled FRED pulls |
-| F3.6 Parts harvest valuation | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | PARTS_HARVEST channel, teardown yield table |
-| F3.7 Demand signal (Wikimedia) | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | Weekly pageviews, free API, cached |
-| F3.8 Launch calendar and HOLD logic | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | launch_events, decay_params, HOLD conditions |
-| F3.9 Source health and confidence downgrade | 🟡 In Progress | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | — | — | /api/v1/sources/health, stale source → confidence penalty |
+| F3.2 Partner sold-data CSV import | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | 2026-10-20T12:00:00Z | — | Preview/mapping step, dry run, file-hash idempotency |
+| F3.3 Price cleaning | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | 2026-10-20T12:00:00Z | — | MAD outliers, grade normalisation, recency decay |
+| F3.4 Price quantile model | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | 2026-10-20T12:00:00Z | — | LightGBM quantile regression, empirical fallback under 30 samples |
+| F3.5 Component prices and FRED adapter | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | 2026-10-20T12:00:00Z | — | component_prices, FRED pull with back-off, staleness flag |
+| F3.6 Parts harvest valuation | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | 2026-10-20T12:00:00Z | — | PARTS_HARVEST channel, teardown yields, component provenance |
+| F3.7 Demand signal (Wikimedia) | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | 2026-10-20T12:00:00Z | — | Weekly pageviews, User-Agent, 429 back-off, query params stored |
+| F3.8 Launch calendar and HOLD logic | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | 2026-10-20T12:00:00Z | — | launch_events, fitted price rate, HOLD only when safe |
+| F3.9 Source health and confidence downgrade | ✅ Done | ai-nemotron-ses_eaa6f421 | feat/phase3-market-intelligence | 2026-10-20T09:30:00Z | 2026-10-20T12:00:00Z | — | /api/v1/sources/health, stale source cuts the confidence |
 
-**Phase 3 Exit Criteria:** Prices, components, demand from free/partner sources. Each shown with source + as-of. Decision code unchanged from Phase 2.
+**Phase 3 Exit Criteria:** ✅ Prices, components, demand from free/partner sources. Each shown with source + as-of. The decision code is unchanged from Phase 2 - only the adapters and the data moved.
 
 ---
 
@@ -191,6 +193,15 @@
 - F2.11 Decision card UI — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T05:15:00Z
 - F3.1 eBay Browse API adapter — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T23:30:00Z
 
+- F3.2 Partner sold-data CSV import — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
+- F3.3 Price cleaning — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
+- F3.4 Price quantile model — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
+- F3.5 Component prices and FRED adapter — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
+- F3.6 Parts harvest valuation — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
+- F3.7 Demand signal (Wikimedia) — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
+- F3.8 Launch calendar and HOLD logic — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
+- F3.9 Source health and confidence downgrade — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
+
 ---
 
 ## Agent Registry
@@ -198,7 +209,7 @@
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
 | ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1 | 2026-10-20T23:30:00Z |
-| ai-nemotron-ses_eaa6f421 | AI | F0.1, F0.2, F0.3, F0.4, F0.5, F0.6, F0.7, F2.1, F2.2, F2.3, F2.4, F2.5, F2.6, F2.7, F2.8, F2.9, F2.10, F2.11 | 2026-10-20T05:15:00Z |
+| ai-nemotron-ses_eaa6f421 | AI | F0.x, F2.1-F2.11, F3.2-F3.9 | 2026-10-20T12:00:00Z |
 | ai-longcat-ses_ea89089b | AI | F4.1 | 2026-10-20T10:00:00Z |
 
 ---

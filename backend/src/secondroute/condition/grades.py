@@ -91,6 +91,7 @@ ELIGIBLE_CHANNELS: Final[tuple[str, ...]] = (
     "PARTS_HARVEST",
     "RECYCLE",
     "DONATE",
+    "HOLD",
 )
 
 #: The channels that sell the unit rather than its parts.

@@ -154,6 +154,7 @@ API_PREFIX = settings.API_PREFIX
 from secondroute.identity import identity_router
 from secondroute.intake import intake_router
 from secondroute.feedback import feedback_router
+from secondroute.admin.api import router as admin_router
 from secondroute.costs.api import router as costs_router
 from secondroute.decision.api import router as decision_router
 from secondroute.ingest.api import component_router
@@ -167,6 +168,7 @@ app.include_router(costs_router, prefix=API_PREFIX)
 app.include_router(decision_router, prefix=API_PREFIX)
 app.include_router(ingest_router, prefix=API_PREFIX)
 app.include_router(component_router, prefix=API_PREFIX)
+app.include_router(admin_router, prefix=API_PREFIX)
 # ...
 
 
