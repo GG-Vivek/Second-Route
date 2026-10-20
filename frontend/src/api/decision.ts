@@ -225,3 +225,8 @@ export async function getRegretOverTime(params?: {
 export async function getOverrideRate(): Promise<OverrideRateReport> {
   return api.get<OverrideRateReport>('/analytics/override-rate')
 }
+
+/** The URL of a CSV export. */
+export function exportUrl(entity: 'decisions' | 'overrides' | 'outcomes'): string {
+  return `/api/v1/export/${entity}`
+}

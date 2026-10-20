@@ -92,6 +92,7 @@ vi.mock('@/api/decision', () => ({
   getRegretOverTime: vi.fn(),
   getCalibration: vi.fn(),
   getOverrideRate: vi.fn(),
+  exportUrl: (entity: string) => `/api/v1/export/${entity}`,
 }))
 
 import {

@@ -247,3 +247,14 @@ class OverrideRateRead(BaseModel):
 
     synthetic: OverrideRateSectionRead = Field(default_factory=OverrideRateSectionRead)
     real: OverrideRateSectionRead = Field(default_factory=OverrideRateSectionRead)
+
+
+class ImportResultRead(BaseModel):
+    """What a re-import of an export found."""
+
+    entity: str
+    rows: int = 0
+    matching_hashes: int = 0
+    mismatching_hashes: int = 0
+    hash: str = ""
+    round_trips: bool = False

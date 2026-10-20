@@ -104,7 +104,7 @@
 | F4.5 Regret calculation | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:09:00Z | 2026-10-20T18:20:00Z | — | Observed + estimated (labeled), never summed silently |
 | F4.6 Calibration | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:35:00Z | 2026-10-20T18:50:00Z | — | Reliability curve, ECE, isotonic recalibration (versioned) |
 | F4.7 Analytics page | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T18:55:00Z | 2026-10-20T19:05:00Z | — | North star, regret over time, calibration, override rate |
-| F4.8 Data export | 🔲 Not Started | — | — | — | — | — | CSV export decisions/overrides/outcomes, round-trip |
+| F4.8 Data export | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/phase6-phase7-learning | 2026-10-20T19:10:00Z | 2026-10-20T19:20:00Z | — | CSV export decisions/overrides/outcomes, round-trip |
 
 **Phase 4 Exit Criteria:** System measures own accuracy and decision quality. First calibration and regret numbers exist (even on synthetic).
 
@@ -220,6 +220,11 @@
 - F4.1 Override with reason — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:57:00Z — Commit: 9b217b0
 - F4.2 Outcome logging — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:58:00Z — Commit: 7711b82
 - F4.3 Predicted vs realized view — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T17:59:00Z — Commit: 8617b55
+- F4.4 Time-to-sell model — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T18:08:00Z — Commit: 51182d8
+- F4.5 Regret calculation — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T18:20:00Z — Commit: 91f49ff
+- F4.6 Calibration — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T18:50:00Z — Commit: 974cead
+- F4.7 Analytics page — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T19:05:00Z — Commit: 2acccb3
+- F4.8 Data export — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T19:20:00Z
 
 ---
 
@@ -227,7 +232,7 @@
 
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
-| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F4.1, F4.2, F4.3, F6.1-F6.9, F7.1-F7.6 | 2026-10-20T17:59:00Z |
+| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F4.1-F4.8, F6.1-F6.9, F7.1-F7.6 | 2026-10-20T19:20:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.x, F2.1-F2.11, F3.2-F3.9 | 2026-10-20T12:00:00Z |
 | ai-longcat-ses_ea89089b | AI | F4.1, F5.3-F5.6 | 2026-10-20T42:30:00Z |
 | ai-minimax-m3.1-flash-ses_ea89089b | AI | F5.5, F5.6 | 2026-10-20T42:30:00Z |
@@ -255,4 +260,4 @@
 ---
 
 *Last updated: 2026-10-20*
-*Next review: Before starting Phase 4 work (F4.4 Time-to-sell model)*
+*Next review: Phase 4 is complete. Before starting Phase 5 work (F5.7 Explanation text)*

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Download, Loader2 } from 'lucide-react'
 import {
   AnalyticsHeader,
   CalibrationChart,
@@ -10,6 +10,7 @@ import {
   type DataKind,
 } from '@/components/analytics/AnalyticsPanels'
 import {
+  exportUrl,
   getCalibration,
   getNorthStar,
   getOverrideRate,
@@ -103,6 +104,30 @@ export function AnalyticsPage() {
           kind={kind}
         />
       </div>
+
+      <section aria-labelledby="export-heading" className="rounded-lg border bg-card p-4">
+        <h2 id="export-heading" className="font-semibold">
+          Export
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          The exports carry the snapshot hash and the model version, so they can be
+          checked against the data they came from.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {(['decisions', 'overrides', 'outcomes'] as const).map((entity) => (
+            <a
+              key={entity}
+              href={exportUrl(entity)}
+              download
+              className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-accent"
+              data-testid={`export-${entity}`}
+            >
+              <Download className="h-4 w-4" aria-hidden="true" />
+              {entity}
+            </a>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
