@@ -292,6 +292,85 @@ export interface RegretReport {
   summary: RegretSummary
 }
 
+export interface CalibrationBin {
+  lower: number
+  upper: number
+  count: number
+  mean_predicted: number
+  observed_frequency: number
+  gap: number
+}
+
+export interface CalibrationReport {
+  bins: CalibrationBin[]
+  ece: number
+  sample_size: number
+  bin_count: number
+  active_version: string | null
+}
+
+export interface CalibrationVersion {
+  id: string
+  version: string
+  sample_size: number
+  ece_before: number
+  ece_after: number
+  bins: number
+  is_active: boolean
+  created_at: string
+}
+
+export interface NorthStarSection {
+  returns_count: number
+  net_recovered_total: number
+  baseline_total: number
+  net_recovered_per_return: number
+  baseline_per_return: number
+  above_baseline_per_return: number
+  observed_baseline_count: number
+  estimated_baseline_count: number
+}
+
+export interface NorthStarReport {
+  synthetic: NorthStarSection
+  real: NorthStarSection
+  baseline_channel: string
+}
+
+export interface RegretBucket {
+  period: string
+  count: number
+  mean_regret: number
+  observed_count: number
+  estimated_count: number
+  observed_mean_regret: number
+  estimated_mean_regret: number
+}
+
+export interface RegretOverTimeReport {
+  bucket: string
+  synthetic: RegretBucket[]
+  real: RegretBucket[]
+}
+
+export interface ReasonCount {
+  reason: string
+  count: number
+  share: number
+}
+
+export interface OverrideRateSection {
+  decisions_count: number
+  overrides_count: number
+  override_rate: number
+  by_reason: ReasonCount[]
+}
+
+export interface OverrideRateReport {
+  synthetic: OverrideRateSection
+  real: OverrideRateSection
+}
+
 export const CHANNEL_LABELS: Record<string, string> = {
   RESELL_OPEN_BOX: 'Resell as open-box',
   RESELL_REFURB: 'Refurbish and resell',

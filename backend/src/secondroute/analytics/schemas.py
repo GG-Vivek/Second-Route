@@ -138,3 +138,123 @@ class StoredRegretRead(BaseModel):
     items: list[RegretMeasurementRead] = Field(default_factory=list)
     total: int = 0
     summary: dict[str, Any] = Field(default_factory=dict)
+
+
+class CalibrationBinRead(BaseModel):
+    """One bin of the reliability curve."""
+
+    lower: float
+    upper: float
+    count: int
+    mean_predicted: float
+    observed_frequency: float
+    gap: float
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CalibrationReportRead(BaseModel):
+    """The calibration of the engine."""
+
+    bins: list[CalibrationBinRead] = Field(default_factory=list)
+    ece: float = 0.0
+    sample_size: int = 0
+    bin_count: int = 10
+    active_version: Optional[str] = None
+
+
+class CalibrationVersionRead(BaseModel):
+    """One fitted recalibration version."""
+
+    id: UUID
+    version: str
+    sample_size: int
+    ece_before: float
+    ece_after: float
+    bins: int
+    is_active: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NorthStarSectionRead(BaseModel):
+    """The north star of one kind of data."""
+
+    returns_count: int = 0
+    net_recovered_total: float = 0.0
+    baseline_total: float = 0.0
+    net_recovered_per_return: float = 0.0
+    baseline_per_return: float = 0.0
+    above_baseline_per_return: float = 0.0
+    observed_baseline_count: int = 0
+    estimated_baseline_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NorthStarRead(BaseModel):
+    """The north star, with the synthetic and the real data apart."""
+
+    synthetic: NorthStarSectionRead = Field(default_factory=NorthStarSectionRead)
+    real: NorthStarSectionRead = Field(default_factory=NorthStarSectionRead)
+    baseline_channel: str = "RECYCLE"
+
+
+class RegretBucketRead(BaseModel):
+    """The regret of one period."""
+
+    period: str
+    count: int = 0
+    mean_regret: float = 0.0
+    observed_count: int = 0
+    estimated_count: int = 0
+    observed_mean_regret: float = 0.0
+    estimated_mean_regret: float = 0.0
+
+
+class RegretOverTimeRead(BaseModel):
+    """The regret over time, with the synthetic and the real data apart."""
+
+    bucket: str = "month"
+    synthetic: list[RegretBucketRead] = Field(default_factory=list)
+    real: list[RegretBucketRead] = Field(default_factory=list)
+
+
+class ReasonCountRead(BaseModel):
+    """How often one override reason was given."""
+
+    reason: str
+    count: int = 0
+    share: float = 0.0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OverrideRateSectionRead(BaseModel):
+    """The override rate of one kind of data."""
+
+    decisions_count: int = 0
+    overrides_count: int = 0
+    override_rate: float = 0.0
+    by_reason: list[ReasonCountRead] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class OverrideRateRead(BaseModel):
+    """The override rate, with the synthetic and the real data apart."""
+
+    synthetic: OverrideRateSectionRead = Field(default_factory=OverrideRateSectionRead)
+    real: OverrideRateSectionRead = Field(default_factory=OverrideRateSectionRead)
+
+
+class ImportResultRead(BaseModel):
+    """What a re-import of an export found."""
+
+    entity: str
+    rows: int = 0
+    matching_hashes: int = 0
+    mismatching_hashes: int = 0
+    hash: str = ""
+    round_trips: bool = False

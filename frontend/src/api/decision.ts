@@ -12,6 +12,11 @@ import type {
   PredictedVsRealizedList,
   ReproducibilityResult,
   RegretReport,
+  CalibrationReport,
+  CalibrationVersion,
+  NorthStarReport,
+  OverrideRateReport,
+  RegretOverTimeReport,
   TimeToSellReport,
 } from '@/types/decision'
 
@@ -39,6 +44,11 @@ export type {
   Reason,
   ReproducibilityResult,
   RegretReport,
+  CalibrationReport,
+  CalibrationVersion,
+  NorthStarReport,
+  OverrideRateReport,
+  RegretOverTimeReport,
   RiskProfile,
   TimeToSellReport,
 } from '@/types/decision'
@@ -174,4 +184,49 @@ export async function getRegret(params?: { limit?: number }): Promise<RegretRepo
   if (params?.limit) search.set('limit', String(params.limit))
   const query = search.toString()
   return api.get<RegretReport>(`/analytics/regret${query ? `?${query}` : ''}`)
+}
+
+/** Fetch the reliability curve and the expected calibration error. */
+export async function getCalibration(params?: { bins?: number }): Promise<CalibrationReport> {
+  const search = new URLSearchParams()
+  if (params?.bins) search.set('bins', String(params.bins))
+  const query = search.toString()
+  return api.get<CalibrationReport>(`/analytics/calibration${query ? `?${query}` : ''}`)
+}
+
+/** Fit a new recalibration version and put it in force. */
+export async function recalibrate(params?: {
+  bins?: number
+  version?: string
+}): Promise<CalibrationVersion> {
+  const search = new URLSearchParams()
+  if (params?.bins) search.set('bins', String(params.bins))
+  if (params?.version) search.set('version', params.version)
+  const query = search.toString()
+  return api.post<CalibrationVersion>(`/analytics/calibration/recalibrate${query ? `?${query}` : ''}`)
+}
+
+/** Fetch the north star: the net recovered per return, above the baseline. */
+export async function getNorthStar(): Promise<NorthStarReport> {
+  return api.get<NorthStarReport>('/analytics/north-star')
+}
+
+/** Fetch the regret of every period. */
+export async function getRegretOverTime(params?: {
+  bucket?: 'month' | 'week'
+}): Promise<RegretOverTimeReport> {
+  const search = new URLSearchParams()
+  if (params?.bucket) search.set('bucket', params.bucket)
+  const query = search.toString()
+  return api.get<RegretOverTimeReport>(`/analytics/regret-over-time${query ? `?${query}` : ''}`)
+}
+
+/** Fetch the override rate and the reasons behind it. */
+export async function getOverrideRate(): Promise<OverrideRateReport> {
+  return api.get<OverrideRateReport>('/analytics/override-rate')
+}
+
+/** The URL of a CSV export. */
+export function exportUrl(entity: 'decisions' | 'overrides' | 'outcomes'): string {
+  return `/api/v1/export/${entity}`
 }
