@@ -8,12 +8,22 @@ from pydantic import ValidationError
 from secondroute.core.config import Settings
 
 
+def _settings(**overrides) -> Settings:
+    """Build settings that ignore the developer's ``.env`` file.
+
+    The tests here assert the *defaults*, so they must not read the
+    environment file a developer may have beside them: a ``.env`` with a
+    different log level would otherwise fail the test.
+    """
+    return Settings(_env_file=None, **overrides)  # type: ignore[call-arg]
+
+
 class TestSettings:
     """Tests for Settings model."""
 
     def test_default_settings(self) -> None:
         """Test that default settings load correctly."""
-        settings = Settings(
+        settings = _settings(
             SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
             DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
             REDIS_URL="redis://localhost:6379/0",
@@ -30,7 +40,7 @@ class TestSettings:
 
     def test_risk_profile_lambdas(self) -> None:
         """Test risk profile lambda values."""
-        settings = Settings(
+        settings = _settings(
             SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
             DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
             REDIS_URL="redis://localhost:6379/0",
@@ -42,7 +52,7 @@ class TestSettings:
 
     def test_is_production_property(self) -> None:
         """Test is_production computed field."""
-        settings = Settings(
+        settings = _settings(
             SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
             DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
             REDIS_URL="redis://localhost:6379/0",
@@ -50,7 +60,7 @@ class TestSettings:
         )
         assert settings.is_production is False
 
-        settings = Settings(
+        settings = _settings(
             SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
             DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
             REDIS_URL="redis://localhost:6379/0",
@@ -65,7 +75,7 @@ class TestSettings:
         is resolved by SQLAlchemy to psycopg3, but this project installs
         psycopg2, so leaving the driver off fails at connection time.
         """
-        settings = Settings(
+        settings = _settings(
             SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
             DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
             REDIS_URL="redis://localhost:6379/0",
@@ -75,7 +85,7 @@ class TestSettings:
     def test_confidence_threshold_validation(self) -> None:
         """Test confidence threshold validation."""
         with pytest.raises(ValidationError):
-            Settings(
+            _settings(
                 SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
                 DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
                 REDIS_URL="redis://localhost:6379/0",
@@ -83,7 +93,7 @@ class TestSettings:
             )
 
         with pytest.raises(ValidationError):
-            Settings(
+            _settings(
                 SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
                 DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
                 REDIS_URL="redis://localhost:6379/0",
@@ -93,7 +103,7 @@ class TestSettings:
     def test_monte_carlo_samples_validation(self) -> None:
         """Test Monte Carlo samples validation."""
         with pytest.raises(ValidationError):
-            Settings(
+            _settings(
                 SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
                 DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
                 REDIS_URL="redis://localhost:6379/0",
@@ -101,7 +111,7 @@ class TestSettings:
             )
 
         with pytest.raises(ValidationError):
-            Settings(
+            _settings(
                 SECRET_KEY="test-secret-key-that-is-long-enough-for-validation",
                 DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
                 REDIS_URL="redis://localhost:6379/0",
@@ -111,7 +121,7 @@ class TestSettings:
     def test_secret_key_min_length(self) -> None:
         """Test secret key minimum length."""
         with pytest.raises(ValidationError):
-            Settings(
+            _settings(
                 SECRET_KEY="short",  # Too short
                 DATABASE_URL="postgresql+asyncpg://test:test@localhost:5432/test",
                 REDIS_URL="redis://localhost:6379/0",

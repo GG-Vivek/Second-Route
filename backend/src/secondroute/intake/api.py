@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from secondroute.core.db import get_session
+from secondroute.core.db import current_org_uuid, get_session
 from secondroute.intake.models import (
     Unit,
     Inspection,
@@ -74,6 +74,11 @@ async def create_unit(
         return_reason_code=unit_data.return_reason_code,
         order_channel=unit_data.order_channel,
         status=UnitStatus.RECEIVED,
+        # The unit belongs to the organisation the request acts for. The
+        # row-level security policy checks it on the way in, so a request
+        # that names no organisation is refused by the database rather
+        # than quietly writing a row nobody owns.
+        org_id=current_org_uuid(),
     )
     session.add(unit)
     await session.flush()

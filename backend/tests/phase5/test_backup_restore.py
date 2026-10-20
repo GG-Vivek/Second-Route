@@ -260,8 +260,8 @@ class TestRestoreDrill:
 
         # Restore it into a fresh database, then lose a unit.
         created = subprocess.run(
-            ["createdb", "--maintenance-db", _database_of(postgres_url), lossy_database],
-            env=_libpq_environment(postgres_url),
+            ["createdb", "--maintenance-db", _database_of(backup_url), lossy_database],
+            env=_libpq_environment(backup_url),
             capture_output=True,
             text=True,
             timeout=60,
@@ -338,7 +338,7 @@ class TestRestoreDrill:
 
         subprocess.run(
             ["dropdb", "--if-exists", "--force", lossy_database],
-            env=_libpq_environment(postgres_url),
+            env=_libpq_environment(backup_url),
             capture_output=True,
             text=True,
             timeout=60,

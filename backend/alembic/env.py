@@ -39,6 +39,7 @@ import secondroute.learning.drift  # noqa: F401
 import secondroute.learning.exploration  # noqa: F401
 import secondroute.learning.expert_review  # noqa: F401
 import secondroute.analytics.models  # noqa: F401
+import secondroute.instructions.models  # noqa: F401
 
 # Alembic Config object
 config = context.config

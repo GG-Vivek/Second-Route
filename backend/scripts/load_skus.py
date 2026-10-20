@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 
 from secondroute.core.config import settings
-from secondroute.core.db import Base, engine, get_session_context
+from secondroute.core.db import Base, close_db, engine, get_session_context, init_db
 from secondroute.identity.models import SKU, SerialPrefix
 
 
@@ -97,8 +97,15 @@ async def main() -> None:
     print(f"Loading SKUs from {csv_path}...")
     print(f"Database: {settings.database_url_sync}")
 
-    async with get_session_context() as session:
-        created, skipped = await load_skus_from_csv(csv_path, session)
+    # The session factory is a module-level global, so the engine has to
+    # be set up before a session can be opened. Without this the script
+    # fails with "The database is not initialised".
+    await init_db()
+    try:
+        async with get_session_context() as session:
+            created, skipped = await load_skus_from_csv(csv_path, session)
+    finally:
+        await close_db()
 
     print(f"Done! Created: {created}, Skipped (already exist): {skipped}")
 

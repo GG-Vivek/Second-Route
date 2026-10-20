@@ -8,12 +8,14 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import ProgrammingError
 
 from secondroute.core.config import settings
-from secondroute.core.db import close_db, init_db
+from secondroute.core.db import close_db, init_db, set_current_org_id
+from secondroute.feedback.audit import setup_audit_listeners
 from secondroute.core.logging import (
     bind_request_context,
     clear_request_context,
@@ -37,6 +39,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     await init_db()
     logger.info("database_initialized")
+
+    # The audit listeners have to be attached to the session here, once
+    # every model is loaded. Without this the application records no
+    # audit rows at all: the listeners are only wired up by the test
+    # suite, so the audit log is empty in a running deployment.
+    setup_audit_listeners()
+    logger.info("audit_listeners_ready")
 
     yield
 
@@ -87,6 +96,44 @@ async def add_request_id(request: Request, call_next: Any) -> Any:
         clear_request_context()
 
 
+# The organisation context.
+#
+# Every request acts for one organisation, and both the application
+# filter and the database's row-level security policies read that
+# organisation. The authentication dependency sets it from the verified
+# token when there is one.
+#
+# Without a token there is no tenant, and a write to a tenant-scoped
+# table is refused by the policies - which is the right answer for a
+# request that names no tenant, and the wrong answer for a developer who
+# is trying the application out. So outside production the tenant can
+# also be named with a header.
+#
+# This is a development affordance and nothing else. In production the
+# header is ignored, so a caller cannot choose a tenant: the only way in
+# is a token.
+DEV_ORG_HEADER = "X-Org-Id"
+
+
+def _development_org_header_allowed() -> bool:
+    """Whether the organisation may be named with a header.
+
+    Returns:
+        True outside production.
+    """
+    return settings.ENVIRONMENT.lower() not in ("production", "prod")
+
+
+@app.middleware("http")
+async def resolve_organisation(request: Request, call_next: Any) -> Any:
+    """Establish which organisation the request acts for."""
+    if _development_org_header_allowed():
+        org_id = request.headers.get(DEV_ORG_HEADER, "").strip()
+        if org_id:
+            set_current_org_id(org_id)
+    return await call_next(request)
+
+
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -103,6 +150,38 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         content={
             "error": "internal_server_error",
             "message": "An unexpected error occurred",
+            "request_id": get_request_id(),
+        },
+    )
+
+
+@app.exception_handler(ProgrammingError)
+async def row_level_security_handler(request: Request, exc: ProgrammingError) -> JSONResponse:
+    """Turn a refused write into a legible answer.
+
+    The row-level security policies refuse a write that names no
+    organisation, or one that names the wrong one. That is the isolation
+    working, and it deserves an answer that says so rather than a
+    generic "something went wrong".
+    """
+    message = str(getattr(exc, "orig", exc))
+    if "row-level security" not in message and "row level security" not in message:
+        return await global_exception_handler(request, exc)
+
+    logger.warning(
+        "rls.refused",
+        path=request.url.path,
+        method=request.method,
+        exc_message=message,
+    )
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={
+            "error": "tenant_not_resolved",
+            "message": (
+                "This request does not name a tenant. Log in, or - outside "
+                f"production - send the {DEV_ORG_HEADER} header."
+            ),
             "request_id": get_request_id(),
         },
     )

@@ -5,6 +5,15 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Where the API is.
+//
+// In the compose stack the backend answers to the service name, and the
+// browser never resolves it: the request goes to the Vite dev server,
+// which forwards it inside the compose network. On a developer machine
+// there is no such network, so the address has to be the one the backend
+// actually listens on.
+const apiTarget = process.env.VITE_PROXY_TARGET || 'http://backend:8000'
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -18,11 +27,11 @@ export default defineConfig({
     host: '0.0.0.0',
     proxy: {
       '/api': {
-        target: 'http://backend:8000',
+        target: apiTarget,
         changeOrigin: true,
       },
       '/health': {
-        target: 'http://backend:8000',
+        target: apiTarget,
         changeOrigin: true,
       },
     },

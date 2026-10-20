@@ -48,12 +48,16 @@ BACKUP_URL="$(db_url)"
 
 # The role that creates and drops the fresh database.
 #
-# It is not the backup role: that role exists to read every row and to
-# nothing else, and giving it the right to create databases would give it
-# the right to read every tenant's data in a database of its own choosing.
-# The application's role creates the database unless an administrator URL
-# says otherwise.
-ADMIN_URL_RAW="${DRILL_ADMIN_URL:-${DATABASE_URL}}"
+# It is the role that is allowed to create databases. The backup role is
+# that role: it is created with CREATEDB, because a backup has to be
+# able to be taken and restored into a database of its own. DRILL_ADMIN_URL
+# names a different role when an operator has one.
+#
+# The application's role is deliberately not used for this: it is
+# NOSUPERUSER NOCREATEDB NOBYPASSRLS, and giving it the right to create
+# databases would give it the right to read every tenant's data in a
+# database of its own choosing.
+ADMIN_URL_RAW="${DRILL_ADMIN_URL:-${BACKUP_DATABASE_URL:-${DATABASE_URL}}}"
 ADMIN_URL="$(strip_driver "${ADMIN_URL_RAW}")"
 
 # The backend's virtual environment, found relative to the repository

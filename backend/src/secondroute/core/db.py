@@ -4,6 +4,7 @@ Database configuration and session management.
 Provides async SQLAlchemy engine, session factory, and utilities.
 """
 
+import uuid
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from pathlib import Path
@@ -155,9 +156,21 @@ def _require_session_maker() -> async_sessionmaker:
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Get a database session."""
+    """Get a database session.
+
+    The organisation context is applied to the connection here, before the
+    route runs. The context variable is set by the request middleware (or
+    by the authentication dependency, which knows the tenant from the
+    token); this turns it into the PostgreSQL setting the row-level
+    security policies read, on the same connection and inside the same
+    transaction as the work.
+
+    Without it the policies have nothing to match, and every write to a
+    tenant-scoped table is refused.
+    """
     maker = _require_session_maker()
     async with maker() as session:
+        await set_session_org_id(session, get_current_org_id())
         try:
             yield session
             await session.commit()
@@ -179,6 +192,22 @@ def async_session_factory() -> async_sessionmaker:
 def get_current_org_id() -> str | None:
     """Get the current org_id from context."""
     return current_org_id.get()
+
+
+def current_org_uuid() -> uuid.UUID | None:
+    """Return the organisation the request acts for, as an id.
+
+    Returns:
+        The organisation's id, or None when the request names no
+        organisation.
+    """
+    raw = current_org_id.get()
+    if not raw:
+        return None
+    try:
+        return uuid.UUID(raw)
+    except (ValueError, AttributeError, TypeError):
+        return None
 
 
 def set_current_org_id(org_id: str | None) -> None:
