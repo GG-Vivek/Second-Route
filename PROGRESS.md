@@ -116,7 +116,7 @@
 |---------|--------|-------|--------|---------|-----------|--------|-------|
 | F5.1 Authentication | 🔲 Not Started | — | — | — | — | — | Keycloak, OIDC, roles: inspector/manager/admin/analyst |
 | F5.2 Tenant isolation | 🔲 Not Started | — | — | — | — | — | org_id on every table, PostgreSQL RLS enforced |
-| F5.3 Risk profile settings | 🔲 Not Started | — | — | — | — | — | UI/API to set profile, recomputes decisions, audited |
+| F5.3 Risk profile settings | 🟡 In Progress | ai-longcat-ses_ea89089b | feat/F5.3-risk-profile-settings | 2026-10-20T20:45:00Z | — | — | UI/API to set profile, recomputes decisions, audited |
 | F5.4 Batch decisions | 🔲 Not Started | — | — | — | — | — | POST /batches/decide, grouping, filter, CSV export |
 | F5.5 Offline inspection | 🔲 Not Started | — | — | — | — | — | IndexedDB drafts, queue sync, conflict resolution |
 | F5.6 Historical backtest | 🔲 Not Started | — | — | — | — | — | No look-ahead, baseline comparison, bootstrap CI |
@@ -162,8 +162,7 @@
 
 ## In Progress
 
-- F3.1 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T22:00:00Z — Branch: feat/F3.1-ebay-adapter
-- F4.1 — Agent: ai-longcat-ses_ea89089b — Started: 2026-10-20T10:00:00Z — Branch: feat/F4.1-override-with-reason
+*No features currently in progress.*
 
 ---
 
@@ -203,6 +202,9 @@
 - F3.7 Demand signal (Wikimedia) — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
 - F3.8 Launch calendar and HOLD logic — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
 - F3.9 Source health and confidence downgrade — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T12:00:00Z
+- F6.1 Model registry — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T24:30:00Z
+- F6.2 Shadow mode — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T25:30:00Z
+- F6.3 Promotion gate — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T26:30:00Z
 
 ---
 
