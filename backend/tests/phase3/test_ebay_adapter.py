@@ -4,6 +4,7 @@ Tests for the eBay Browse API adapter (Phase 3 - F3.1).
 
 import pytest
 from datetime import datetime, timezone, UTC
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -14,6 +15,42 @@ from secondroute.pricing.sources import (
     EbayListing,
     EBAY_CONDITION_TO_GRADE,
 )
+
+
+def make_listing(
+    item_id: str,
+    title: str,
+    price: float,
+    condition: str,
+    condition_id: str,
+) -> EbayListing:
+    """Build a listing from a raw eBay payload."""
+    return EbayListing.model_validate(
+        {
+            "itemId": item_id,
+            "title": title,
+            "price": {"value": price, "currency": "USD"},
+            "condition": condition,
+            "conditionId": condition_id,
+            "itemWebUrl": f"https://ebay.com/{item_id}",
+            "listingType": "FIXED_PRICE",
+            "format": "FIXED_PRICE",
+        }
+    )
+
+
+def make_response(listings: list[EbayListing]) -> EbayBrowseResponse:
+    """Build a browse response from a list of listings."""
+    return EbayBrowseResponse.model_validate(
+        {
+            "total": len(listings),
+            "limit": 50,
+            "offset": 0,
+            "itemSummaries": [
+                listing.model_dump(by_alias=True, exclude_none=True) for listing in listings
+            ],
+        }
+    )
 
 
 class TestEbayConditionMapping:
@@ -58,13 +95,13 @@ class TestEbayBrowsePriceSource:
     """Tests for the eBay Browse API price source."""
 
     @pytest.fixture
-    def mock_httpx_client(self):
+    def mock_httpx_client(self) -> AsyncMock:
         """Create a mock httpx AsyncClient."""
         client = AsyncMock()
         return client
 
     @pytest.fixture
-    def ebay_source(self, mock_httpx_client):
+    def ebay_source(self, mock_httpx_client: AsyncMock) -> EbayBrowsePriceSource:
         """Create an eBay source with mocked client."""
         return EbayBrowsePriceSource(
             sku_family="MacBook Pro",
@@ -78,8 +115,8 @@ class TestEbayBrowsePriceSource:
     ) -> None:
         """Test that no matching listings raises PriceSourceNotFoundError."""
         # Mock _fetch_listings to return empty items
-        ebay_source._fetch_listings = AsyncMock(
-            return_value=EbayBrowseResponse(total=0, limit=50, offset=0, items=[])
+        ebay_source._fetch_listings = AsyncMock(  # type: ignore[method-assign]
+            return_value=make_response([])
         )
 
         with pytest.raises(PriceSourceNotFoundError) as exc_info:
@@ -98,30 +135,24 @@ class TestEbayBrowsePriceSource:
         """Test that listings are filtered by grade."""
         # Create mock listings with different grades
         listings = [
-            EbayListing(
-                itemId="1",
+            make_listing(
+                item_id="1",
                 title="MacBook Pro A",
-                price={"value": 1000.0, "currency": "USD"},
+                price=1000.0,
                 condition="New",
-                conditionId="1000",  # Maps to A
-                itemWebUrl="https://ebay.com/1",
-                listingType="FIXED_PRICE",
-                format="FIXED_PRICE",
+                condition_id="1000",  # Maps to A
             ),
-            EbayListing(
-                itemId="2",
+            make_listing(
+                item_id="2",
                 title="MacBook Pro B",
-                price={"value": 800.0, "currency": "USD"},
+                price=800.0,
                 condition="Very Good",
-                conditionId="4000",  # Maps to B
-                itemWebUrl="https://ebay.com/2",
-                listingType="FIXED_PRICE",
-                format="FIXED_PRICE",
+                condition_id="4000",  # Maps to B
             ),
         ]
 
-        ebay_source._fetch_listings = AsyncMock(
-            return_value=EbayBrowseResponse(total=2, limit=50, offset=0, items=listings)
+        ebay_source._fetch_listings = AsyncMock(  # type: ignore[method-assign]
+            return_value=make_response(listings)
         )
 
         # Request grade A - should only get the first listing
@@ -141,20 +172,17 @@ class TestEbayBrowsePriceSource:
     ) -> None:
         """Test that listings are filtered by channel."""
         listings = [
-            EbayListing(
-                itemId="1",
+            make_listing(
+                item_id="1",
                 title="MacBook Pro",
-                price={"value": 1000.0, "currency": "USD"},
+                price=1000.0,
                 condition="New",
-                conditionId="1000",  # Maps to A
-                itemWebUrl="https://ebay.com/1",
-                listingType="FIXED_PRICE",
-                format="FIXED_PRICE",
+                condition_id="1000",  # Maps to A
             ),
         ]
 
-        ebay_source._fetch_listings = AsyncMock(
-            return_value=EbayBrowseResponse(total=1, limit=50, offset=0, items=listings)
+        ebay_source._fetch_listings = AsyncMock(  # type: ignore[method-assign]
+            return_value=make_response(listings)
         )
 
         # Request a channel not in our map - should get no results
@@ -207,7 +235,7 @@ class TestEbayBrowsePriceSource:
         )
 
         # Also mock the OAuth token endpoint
-        test_source._get_access_token = AsyncMock(return_value="test-token")
+        test_source._get_access_token = AsyncMock(return_value="test-token")  # type: ignore[method-assign]
 
         fixed_as_of = datetime.now(UTC)
 
@@ -228,7 +256,7 @@ class TestEbayBrowsePriceSource:
         )
 
         # HTTP client should only be called once due to caching
-        assert mock_client.get.call_count == 1
+        assert mock_client.get.call_count == 1  # type: ignore[attr-defined]
         assert dist1.values == dist2.values
 
     @pytest.mark.asyncio
@@ -237,30 +265,24 @@ class TestEbayBrowsePriceSource:
     ) -> None:
         """Test that distribution has correct weights and currency."""
         listings = [
-            EbayListing(
-                itemId="1",
+            make_listing(
+                item_id="1",
                 title="MacBook Pro",
-                price={"value": 1000.0, "currency": "USD"},
+                price=1000.0,
                 condition="New",
-                conditionId="1000",
-                itemWebUrl="https://ebay.com/1",
-                listingType="FIXED_PRICE",
-                format="FIXED_PRICE",
+                condition_id="1000",
             ),
-            EbayListing(
-                itemId="2",
+            make_listing(
+                item_id="2",
                 title="MacBook Pro",
-                price={"value": 1100.0, "currency": "USD"},
+                price=1100.0,
                 condition="New",
-                conditionId="1000",
-                itemWebUrl="https://ebay.com/2",
-                listingType="FIXED_PRICE",
-                format="FIXED_PRICE",
+                condition_id="1000",
             ),
         ]
 
-        ebay_source._fetch_listings = AsyncMock(
-            return_value=EbayBrowseResponse(total=2, limit=50, offset=0, items=listings)
+        ebay_source._fetch_listings = AsyncMock(  # type: ignore[method-assign]
+            return_value=make_response(listings)
         )
 
         dist = await ebay_source.get_distribution(
@@ -283,7 +305,7 @@ class TestEbayBrowsePriceSource:
         """Test that OAuth tokens are cached and reused."""
         # This test verifies the token caching logic without hitting the network
         # We mock the token endpoint
-        ebay_source._get_access_token = AsyncMock(return_value="cached-token")
+        ebay_source._get_access_token = AsyncMock(return_value="cached-token")  # type: ignore[method-assign]
 
         token1 = await ebay_source._get_access_token()
         token2 = await ebay_source._get_access_token()
@@ -297,20 +319,22 @@ class TestEbayBrowsePriceSource:
     async def test_close_closes_client(self, ebay_source: EbayBrowsePriceSource) -> None:
         """Test that close() closes the HTTP client."""
         await ebay_source.close()
-        ebay_source._client.aclose.assert_called_once()
+        client = cast(AsyncMock, ebay_source._client)
+        assert client is not None
+        client.aclose.assert_called_once()
 
 
 class TestEbayRateLimitHandling:
     """Tests for rate limit handling."""
 
     @pytest.fixture
-    def mock_httpx_client(self):
+    def mock_httpx_client(self) -> AsyncMock:
         """Create a mock httpx AsyncClient."""
         client = AsyncMock()
         return client
 
     @pytest.fixture
-    def ebay_source(self, mock_httpx_client):
+    def ebay_source(self, mock_httpx_client: AsyncMock) -> EbayBrowsePriceSource:
         """Create an eBay source with mocked client."""
         return EbayBrowsePriceSource(
             sku_family="MacBook Pro",
@@ -324,7 +348,8 @@ class TestEbayRateLimitHandling:
         from secondroute.pricing.sources import EbayRateLimitError
 
         # Mock the HTTP client to raise rate limit on first call, then succeed
-        mock_client = ebay_source._client
+        mock_client = cast(AsyncMock, ebay_source._client)
+        assert mock_client is not None
         mock_response_429 = MagicMock()
         mock_response_429.status_code = 429
         mock_response_429.headers = {"Retry-After": "1"}
@@ -357,7 +382,7 @@ class TestEbayRateLimitHandling:
         ]
 
         # Also mock the OAuth token
-        ebay_source._get_access_token = AsyncMock(return_value="test-token")
+        ebay_source._get_access_token = AsyncMock(return_value="test-token")  # type: ignore[method-assign]
 
         # Should retry and eventually succeed
         dist = await ebay_source.get_distribution(
@@ -370,14 +395,15 @@ class TestEbayRateLimitHandling:
         assert len(dist.values) == 1
         assert dist.values[0] == 1000.0
         # HTTP client should be called twice (once for rate limit, once for success)
-        assert mock_client.get.call_count == 2
+        assert mock_client.get.call_count == 2  # type: ignore[attr-defined]
 
     @pytest.mark.asyncio
     async def test_max_retries_exceeded_raises(self, ebay_source: EbayBrowsePriceSource) -> None:
         """Test that after max retries, rate limit error is raised."""
         from secondroute.pricing.sources import EbayRateLimitError
 
-        mock_client = ebay_source._client
+        mock_client = cast(AsyncMock, ebay_source._client)
+        assert mock_client is not None
         mock_response_429 = MagicMock()
         mock_response_429.status_code = 429
         mock_response_429.headers = {"Retry-After": "1"}
@@ -388,15 +414,15 @@ class TestEbayRateLimitHandling:
 
         call_count = 0
 
-        async def mock_get(*args, **kwargs):
+        async def mock_get(*args: Any, **kwargs: Any) -> MagicMock:
             nonlocal call_count
             call_count += 1
             return mock_response_429
 
-        mock_client.get = mock_get
+        mock_client.get = mock_get  # type: ignore[method-assign]
 
         # Also mock the OAuth token
-        ebay_source._get_access_token = AsyncMock(return_value="test-token")
+        ebay_source._get_access_token = AsyncMock(return_value="test-token")  # type: ignore[method-assign]
 
         with pytest.raises(EbayRateLimitError):
             await ebay_source.get_distribution(

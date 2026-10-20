@@ -68,7 +68,9 @@
 - The engine modules are registered in `backend/src/secondroute/api/main.py` (`costs_router`, `decision_router`).
 - The audit log listeners in `backend/src/secondroute/feedback/audit.py` were moved from mapper-level `after_insert`/`after_update` to session-level `before_flush`/`after_flush`, and the test session override now commits like the real dependency. This keeps the audit row in the same transaction as the change it describes. `setup_audit_listeners()` is idempotent, so it is safe to call from every test fixture.
 - `git stash` in a shared repository sweeps up *everyone's* uncommitted changes. Use a worktree, and check `git stash list` before assuming a change is lost.
-- The Phase 3 tables are in Alembic revision `0002_phase3_market_intelligence`, which chains from `0001_baseline`. New migrations should chain from `0002_phase3_market_intelligence`.
+- The Phase 3 tables are in Alembic revision `0002_phase3_market_intelligence`, which chains from `0001_baseline`.
+- **Migration collision to resolve at merge time:** the Phase 4 branch has `0002_overrides`, also chaining from `0001_baseline`. Two revisions with the same parent give Alembic two heads and `upgrade head` fails. When the branches merge, keep `0002_overrides` on `0001_baseline` and renumber the Phase 3 revision to `0003_phase3_market_intelligence` with `down_revision = "0002_overrides"`. Do it in the merge commit, not on either branch.
+- The eBay adapter's model fields use `validation_alias` so the models can be built either from a raw API payload or from Python field names. The eBay tests build the listings from raw payloads, which is how the adapter sees them.
 - The decision API prefers stored observations over synthetic prices (`FallbackPriceSource`), so a decision made on real data and one made on synthetic data take the same path.
 
 ---

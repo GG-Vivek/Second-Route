@@ -330,23 +330,35 @@ def now_utc() -> datetime:
 class EbayPrice(BaseModel):
     """Model for eBay listing price."""
 
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
     value: float
     currency: str
 
 
 class EbayListing(BaseModel):
-    """Model for an eBay Browse API listing item."""
+    """Model for an eBay Browse API listing item.
 
-    item_id: str = Field(alias="itemId")
+    The API's field names are the validation aliases, so the model can be
+    built either from a raw API payload or from Python field names.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    item_id: str = Field(validation_alias="itemId")
     title: str
     price: EbayPrice
     condition: str
-    condition_id: str = Field(alias="conditionId")
-    item_web_url: str = Field(alias="itemWebUrl")
+    condition_id: str = Field(validation_alias="conditionId")
+    item_web_url: str = Field(validation_alias="itemWebUrl")
     image: Optional[str] = None
-    seller_feedback_percentage: Optional[str] = Field(None, alias="seller.feedbackPercentage")
-    seller_feedback_score: Optional[int] = Field(None, alias="seller.feedbackScore")
-    listing_type: str = Field(alias="listingType")
+    seller_feedback_percentage: Optional[str] = Field(
+        default=None, validation_alias="seller.feedbackPercentage"
+    )
+    seller_feedback_score: Optional[int] = Field(
+        default=None, validation_alias="seller.feedbackScore"
+    )
+    listing_type: str = Field(validation_alias="listingType")
     format: str = Field(alias="format")
 
     @property
@@ -366,7 +378,7 @@ class EbayBrowseResponse(BaseModel):
     total: int
     limit: int
     offset: int
-    items: list[EbayListing] = Field(default_factory=list, alias="itemSummaries")
+    items: list[EbayListing] = Field(default_factory=list, validation_alias="itemSummaries")
 
 
 class EbayErrorResponse(BaseModel):
