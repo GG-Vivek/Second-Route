@@ -35,6 +35,16 @@ jobs:
           pip install uv
           uv sync --frozen --all-extras
 
+      - name: Check the runtime environment
+        # The container installs the core dependencies only, so the core
+        # has to be enough to start the application. Without this check a
+        # dependency that only reaches the environment through an optional
+        # extra goes unnoticed until the image is built - and then only
+        # as a container that cannot start.
+        run: |
+          UV_PROJECT_ENVIRONMENT=/tmp/runtime-check uv sync --frozen --no-dev
+          /tmp/runtime-check/bin/python -c "import secondroute.api.main; print('the application starts')"
+
       - name: Run ruff (lint)
         run: uv run ruff check .
 

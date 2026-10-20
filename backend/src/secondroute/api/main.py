@@ -37,15 +37,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(
         "application_startup", version=settings.APP_VERSION, environment=settings.ENVIRONMENT
     )
-    await init_db()
-    logger.info("database_initialized")
 
     # The audit listeners have to be attached to the session here, once
     # every model is loaded. Without this the application records no
     # audit rows at all: the listeners are only wired up by the test
     # suite, so the audit log is empty in a running deployment.
+    #
+    # They are attached before the database rather than after it, because
+    # they need the models loaded and not a working database: a database
+    # that is briefly unavailable must not leave the audit log off.
     setup_audit_listeners()
     logger.info("audit_listeners_ready")
+
+    await init_db()
+    logger.info("database_initialized")
 
     yield
 

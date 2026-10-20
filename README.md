@@ -74,7 +74,27 @@ checks the whole card payload. It needs no network and no database server.
 
 ## Quick Start
 
-### With Docker
+### One command
+
+```bash
+make dev
+```
+
+That is the whole thing. It checks the prerequisites, prepares the
+database, runs the migrations, seeds the catalogue and a development
+organisation, and starts the API and the frontend. Ctrl-C stops both.
+
+It needs `uv`, Node and a PostgreSQL it can reach. On a Mac with
+Homebrew's PostgreSQL:
+
+```bash
+brew services start postgresql@16   # once
+make dev                             # every time
+```
+
+The application is then on <http://localhost:5173>.
+
+### By hand, with Docker
 
 ```bash
 # Clone and enter
@@ -88,9 +108,9 @@ docker compose up -d
 cd backend
 cp .env.example .env
 # Edit .env if needed
-pip install -e ".[dev]"
-alembic upgrade head
-uvicorn secondroute.api.main:app --reload
+uv sync --all-extras
+uv run alembic upgrade head
+uv run uvicorn secondroute.api.main:app --reload
 
 # Frontend (in separate terminal)
 cd frontend
@@ -100,7 +120,7 @@ npm run dev
 
 The stack is then on <http://localhost:5173>.
 
-### Without Docker
+### By hand, without Docker
 
 The backend needs PostgreSQL; Redis is optional (the health check reports
 "degraded" without it, and only the session store and the job queue use
@@ -118,7 +138,7 @@ cd backend
 cp .env.example .env
 # Set DATABASE_URL to the application role, not the superuser:
 #   postgresql+asyncpg://secondroute_app:secondroute@127.0.0.1:5432/secondroute
-uv sync
+uv sync --all-extras
 uv run alembic upgrade head
 uv run python scripts/load_skus.py        # the SKU catalogue
 uv run python scripts/seed_dev_org.py     # an organisation to act for
@@ -137,6 +157,11 @@ The frontend is then on <http://localhost:5173>.
 > script in particular only exists at `docker/postgres/01-create-app-role.sh`
 > from the root, so running it from `backend/` fails with
 > `No such file or directory`. If you see that, `cd` to the root first.
+
+> **`uv sync` needs `--all-extras`.** The `dev` group alone is not
+> enough: the extras are what carry the testing, machine-learning and
+> vision dependencies. A plain `uv sync` also prunes them, which is how
+> `greenlet` and `python-jose` went missing in the first place.
 
 ### Which organisation a request acts for
 

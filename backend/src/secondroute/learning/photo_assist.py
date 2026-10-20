@@ -172,9 +172,12 @@ class PhotoQualityChecker:
             # Brightness
             brightness = gray.mean()
 
-            is_blurry = laplacian_var < self.blur_threshold
-            is_too_dark = brightness < self.dark_threshold
-            is_too_bright = brightness > self.bright_threshold
+            # The comparisons are numpy booleans, which are not the same
+            # thing as Python's, so they are cast before they are put in
+            # the result.
+            is_blurry = bool(laplacian_var < self.blur_threshold)
+            is_too_dark = bool(brightness < self.dark_threshold)
+            is_too_bright = bool(brightness > self.bright_threshold)
             quality_ok = not is_blurry and not is_too_dark and not is_too_bright
 
             return PhotoQualityResult(
