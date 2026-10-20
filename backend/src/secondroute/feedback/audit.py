@@ -16,6 +16,7 @@ from sqlalchemy.orm import Mapper, Session
 from secondroute.core.db import Base
 from secondroute.feedback.models import AuditLog, AuditAction
 from secondroute.identity.models import SKU, SerialPrefix
+from secondroute.identity.organizations import Organization
 from secondroute.intake.models import Unit, Inspection, Photo
 
 #: Key under which the pending audit entries are stashed on the session.
@@ -29,6 +30,7 @@ AUDITED_MODELS: dict[type[Any], str] = {
     Unit: "units",
     Inspection: "inspections",
     Photo: "photos",
+    Organization: "organizations",
 }
 
 # Fields to exclude from audit payload (sensitive or large)

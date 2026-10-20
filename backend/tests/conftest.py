@@ -21,6 +21,7 @@ import secondroute.identity.models  # noqa: F401
 import secondroute.intake.models  # noqa: F401
 import secondroute.feedback.models  # noqa: F401
 import secondroute.learning.shadow  # noqa: F401
+import secondroute.learning.promotion  # noqa: F401
 
 # Test database URL (in-memory SQLite for unit tests)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"

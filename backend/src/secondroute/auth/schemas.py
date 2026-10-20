@@ -105,16 +105,16 @@ class OIDCDiscoveryResponse(BaseModel):
     jwks_uri: str
     userinfo_endpoint: Optional[str] = None
     end_session_endpoint: Optional[str] = None
-    scopes_supported: list[str]
-    response_types_supported: list[str]
-    subject_types_supported: list[str]
-    id_token_signing_alg_values_supported: list[str]
+    scopes_supported: List[str]
+    response_types_supported: List[str]
+    subject_types_supported: List[str]
+    id_token_signing_alg_values_supported: List[str]
 
 
 class JWKSResponse(BaseModel):
     """JWKS response."""
 
-    keys: list[dict]
+    keys: List[dict]
 
 
 class LoginRequest(BaseModel):
