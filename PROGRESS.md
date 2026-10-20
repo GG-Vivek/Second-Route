@@ -309,6 +309,7 @@ green on a laptop, and CI provides one.
 | ADR-002 | Decision Engine Design | Accepted | 2026-10-20 |
 | ADR-003 | Market Intelligence Design | Accepted | 2026-10-20 |
 | ADR-004 | Offline inspection storage and the fake-indexeddb test shim | Accepted | 2026-10-20 |
+| ADR-005 | The feedback loop analytics | Accepted | 2026-10-20 |
 
 ---
 
