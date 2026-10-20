@@ -157,6 +157,7 @@ ignore = [
 "src/secondroute/decision/*.py" = ["PLR0913", "PLR0917"]
 "src/secondroute/condition/grades.py" = ["PLR0913"]
 "src/secondroute/pricing/protocols.py" = ["PLR0913"]
+"src/secondroute/feedback/*.py" = ["PLR0913", "PLR0917"]
 "tests/phase2/*" = ["PLR0913", "PLR0917"]
 
 [tool.ruff.format]

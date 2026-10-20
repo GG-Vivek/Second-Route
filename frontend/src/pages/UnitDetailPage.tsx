@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle, FileText, Camera, ChevronDown, ChevronUp, Eye } from 'lucide-react'
 import { format } from 'date-fns'

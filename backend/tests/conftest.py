@@ -14,10 +14,12 @@ from sqlalchemy.pool import StaticPool
 from secondroute.api.main import app
 from secondroute.core.config import settings
 from secondroute.core.db import Base, get_session
+from secondroute.feedback.audit import setup_audit_listeners
 
 # Import all models to ensure they're registered with Base.metadata
 import secondroute.identity.models  # noqa: F401
 import secondroute.intake.models  # noqa: F401
+import secondroute.feedback.models  # noqa: F401
 
 # Test database URL (in-memory SQLite for unit tests)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -43,6 +45,10 @@ async def test_engine() -> AsyncGenerator[Any, None]:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # The audit listeners are attached to the Session, so they have to be
+    # registered once the models are loaded.
+    setup_audit_listeners()
 
     yield engine
 
@@ -74,7 +80,13 @@ async def client(test_session: AsyncSession) -> AsyncGenerator[AsyncClient, None
     """Create test client with overridden database session."""
 
     async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
-        yield test_session
+        # Mirror the real dependency: commit on success, roll back on error.
+        try:
+            yield test_session
+            await test_session.commit()
+        except Exception:
+            await test_session.rollback()
+            raise
 
     app.dependency_overrides[get_session] = override_get_session
 

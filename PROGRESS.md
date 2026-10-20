@@ -65,6 +65,7 @@
 - The Phase 2 database tables are in Alembic revision `0001_baseline` (the first migration in the repo). Any new migration must set `down_revision = "0001_baseline"`.
 - `backend/src/secondroute/identity/organizations.py` holds the `organizations` and `users` models (referenced by foreign keys from Phase 1 and Phase 2 tables). Behaviour (auth, roles, RLS) still arrives in Phase 5.
 - The engine modules are registered in `backend/src/secondroute/api/main.py` (`costs_router`, `decision_router`).
+- The audit log listeners in `backend/src/secondroute/feedback/audit.py` were moved from mapper-level `after_insert`/`after_update` to session-level `before_flush`/`after_flush`, and the test session override now commits like the real dependency. This keeps the audit row in the same transaction as the change it describes. `setup_audit_listeners()` is idempotent, so it is safe to call from every test fixture.
 
 ---
 

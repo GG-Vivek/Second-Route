@@ -61,9 +61,9 @@ export interface Inspection {
   battery_health_pct: string
   battery_cycles: string | null
   cosmetic_grade: string
-  functional_tests_json: Record<string, unknown>
+  functional_tests_json: Record<string, boolean>
   activation_lock: 'none' | 'present' | 'unknown'
-  accessories_json: Record<string, unknown>
+  accessories_json: Record<string, boolean>
   notes: string | null
 }
 
@@ -92,9 +92,9 @@ export interface CreateInspectionRequest {
   battery_health_pct: string
   battery_cycles?: string
   cosmetic_grade: string
-  functional_tests_json: Record<string, unknown>
+  functional_tests_json: Record<string, boolean>
   activation_lock: 'none' | 'present' | 'unknown'
-  accessories_json: Record<string, unknown>
+  accessories_json: Record<string, boolean>
   notes?: string
 }
 

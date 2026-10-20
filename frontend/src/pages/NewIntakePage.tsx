@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, AlertCircle, Search } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertCircle, Search, CheckCircle } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import {
   listSKUs,

@@ -196,7 +196,7 @@ def upgrade() -> None:
         sa.Column("id", UUID, nullable=False),
         sa.Column("org_id", UUID, nullable=True),
         sa.Column("actor", sa.String(length=200), nullable=True),
-        sa.Column("action", sa.String(length=60), nullable=False),
+        sa.Column("action", sa.String(length=20), nullable=False),
         sa.Column("entity", sa.String(length=60), nullable=False),
         sa.Column("entity_id", sa.String(length=100), nullable=True),
         sa.Column("payload_json", sa.Text(), nullable=False),

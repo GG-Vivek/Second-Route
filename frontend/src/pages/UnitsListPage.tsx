@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Loader2, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react'
+import { Loader2, Search, Filter, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/utils/cn'
 import { listUnits, type Unit, type UnitStatus, UNIT_STATUSES } from '@/api/intake'
