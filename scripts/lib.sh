@@ -32,6 +32,22 @@ strip_driver() {
     printf '%s' "$url"
 }
 
+# Print a connection URL with the asynchronous driver named.
+#
+# The application talks to the database with asyncpg. A URL that names no
+# driver is resolved by SQLAlchemy to psycopg, which is not installed, so
+# the application would fail to start with a bare "No module named
+# 'psycopg'". The driver is named here, so that a URL written the natural
+# way still starts the application.
+async_url() {
+    local url="$1"
+    case "${url}" in
+        postgresql://*) url="postgresql+asyncpg://${url#postgresql://}" ;;
+        postgresql+psycopg2://*) url="postgresql+asyncpg://${url#postgresql+psycopg2://}" ;;
+    esac
+    printf '%s' "$url"
+}
+
 # Print the connection URL the backup and restore tools use.
 #
 # BACKUP_DATABASE_URL, when it is set, is used instead of DATABASE_URL. The
@@ -62,9 +78,18 @@ app_db_url() {
 
 # Print the host, port, database and user of the connection URL, one per
 # line. Used to build the fresh database the drill restores into.
+#
+# With no argument it describes the backup URL, which is the one the
+# backup and restore tools use. A URL can be given instead, which is what
+# the drill does for the role that creates and drops databases: that role
+# is deliberately not the backup role, which is not allowed to create
+# databases.
 db_parts() {
     local url
-    url="$(db_url)"
+    url="${1:-}"
+    if [[ -z "$url" ]]; then
+        url="$(db_url)"
+    fi
     python3 - "$url" <<'PY'
 import sys
 from urllib.parse import urlparse

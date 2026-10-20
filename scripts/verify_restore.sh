@@ -46,6 +46,16 @@ APP_URL_RAW="${DATABASE_URL}"
 APP_URL="$(app_db_url)"
 BACKUP_URL="$(db_url)"
 
+# The role that creates and drops the fresh database.
+#
+# It is not the backup role: that role exists to read every row and to
+# nothing else, and giving it the right to create databases would give it
+# the right to read every tenant's data in a database of its own choosing.
+# The application's role creates the database unless an administrator URL
+# says otherwise.
+ADMIN_URL_RAW="${DRILL_ADMIN_URL:-${DATABASE_URL}}"
+ADMIN_URL="$(strip_driver "${ADMIN_URL_RAW}")"
+
 # The backend's virtual environment, found relative to the repository
 # rather than to the working directory, so the drill runs from anywhere.
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -62,16 +72,27 @@ PYTHON="${BACKEND_DIR}/.venv/bin/python"
 DB_PARTS=()
 while IFS= read -r _line; do
     DB_PARTS+=("$_line")
-done <<<"$(db_parts)"
+done <<<"$(db_parts "$ADMIN_URL")"
 PGHOST="${DB_PARTS[0]}"
 PGPORT="${DB_PARTS[1]}"
 PGDATABASE="${DB_PARTS[2]}"
 PGUSER="${DB_PARTS[3]}"
+# The host has to be exported as well: createdb and dropdb are given the
+# maintenance database by name, so they resolve the connection through the
+# libpq variables. Without the host they fall back to the Unix socket,
+# which is not where the server is listening when it is reached over TCP -
+# which is the case for a database in a container.
+export PGHOST
 export PGPORT
 export PGDATABASE
 export PGUSER
 
-log "source database: ${PGDATABASE} on ${PGHOST}:${PGPORT}"
+# The source database, for the log line. It is the application URL's
+# database, which is not the administrator URL's database when the two
+# differ.
+SOURCE_DB="$(db_parts "$APP_URL" | sed -n '3p')"
+
+log "source database: ${SOURCE_DB} on ${PGHOST}:${PGPORT}"
 log "drill database:  ${DRILL_DATABASE}"
 
 cleanup() {
@@ -96,7 +117,10 @@ fi
 
 DRILL_URL="${APP_URL%/*}/${DRILL_DATABASE}"
 # The same database, addressed with the original URL, for the application.
-DRILL_URL_RAW="${APP_URL_RAW%/*}/${DRILL_DATABASE}"
+# The driver is named explicitly, because the application talks to the
+# database asynchronously and a URL without a driver is resolved to a
+# driver that is not installed.
+DRILL_URL_RAW="$(async_url "${APP_URL_RAW%/*}/${DRILL_DATABASE}")"
 # The backup role, pointed at the drill database, for the restore.
 DRILL_BACKUP_URL="${BACKUP_URL%/*}/${DRILL_DATABASE}"
 
@@ -123,8 +147,15 @@ fi
 # ---------------------------------------------------------------------
 # 4. The row counts must match.
 # ---------------------------------------------------------------------
+# The counts are read with the backup role, not the application's. The
+# application's role is held to the tenant-isolation policies, and with no
+# organisation in context it reads *no rows at all* from the tables that
+# carry tenant data - the units, the decisions, the outcomes, the audit
+# log. Comparing the counts the application role sees would compare zero
+# with zero and pass even if the restore had lost every unit.
 log "comparing the row counts"
-if ! "${PYTHON}" "${SCRIPT_DIR}/row_counts.py" --source "${APP_URL}" --target "${DRILL_URL}"; then
+if ! "${PYTHON}" "${SCRIPT_DIR}/row_counts.py" --source "${BACKUP_URL}" \
+    --target "${DRILL_BACKUP_URL}"; then
     log "ERROR: the restored database does not reproduce the original."
     exit 1
 fi
