@@ -35,6 +35,7 @@ from sqlalchemy import select
 
 logger = structlog.get_logger(__name__)
 
+
 # Shadow prediction storage table
 class ShadowPrediction(Base):
     """Stores shadow model predictions for comparison.
@@ -45,7 +46,12 @@ class ShadowPrediction(Base):
     __tablename__ = "shadow_predictions"
 
     id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    decision_id = Column(PGUUID(as_uuid=True), ForeignKey("decisions.id", ondelete="CASCADE"), nullable=False, index=True)
+    decision_id = Column(
+        PGUUID(as_uuid=True),
+        ForeignKey("decisions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     candidate_model_version = Column(String(60), nullable=False)
     active_model_version = Column(String(60), nullable=False)
     shadow_recommended_channel = Column(String(40), nullable=True)

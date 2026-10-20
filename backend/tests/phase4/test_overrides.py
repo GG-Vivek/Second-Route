@@ -81,9 +81,7 @@ class TestCreateOverride:
     """Tests for POST /decisions/{id}/override."""
 
     @pytest.mark.asyncio
-    async def test_create_override(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_create_override(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """Test creating an override with a reason."""
         decision = await _make_decision(db_session)
 
@@ -158,9 +156,7 @@ class TestCreateOverride:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_override_is_stored(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_override_is_stored(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """Test that the override is persisted."""
         decision = await _make_decision(db_session)
 
@@ -257,9 +253,7 @@ class TestListOverrides:
         assert data["items"] == []
 
     @pytest.mark.asyncio
-    async def test_get_override_by_id(
-        self, client: AsyncClient, db_session: AsyncSession
-    ) -> None:
+    async def test_get_override_by_id(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """Test getting one override by ID."""
         decision = await _make_decision(db_session)
 

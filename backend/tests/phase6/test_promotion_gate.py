@@ -235,7 +235,7 @@ class TestPromotionGateRecord:
             )
             await gate.record_promotion(
                 session=db_session,
-                candidate_model_version=f"decision-v{i+2}",
+                candidate_model_version=f"decision-v{i + 2}",
                 active_model_version="decision-v1",
                 result=result,
             )

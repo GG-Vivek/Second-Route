@@ -210,8 +210,8 @@ class TestPrometheusExport:
 
         metrics = monitor.export_prometheus_metrics(psi_results)
 
-        assert "drift_psi{feature=\"battery_health\"} 0.150000" in metrics
-        assert "drift_psi_alert{feature=\"battery_health\"} 0" in metrics
+        assert 'drift_psi{feature="battery_health"} 0.150000' in metrics
+        assert 'drift_psi_alert{feature="battery_health"} 0' in metrics
 
     def test_export_calibration_metrics(self) -> None:
         """Test exporting calibration metrics."""

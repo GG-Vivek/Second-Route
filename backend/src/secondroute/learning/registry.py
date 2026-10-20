@@ -316,7 +316,9 @@ class ModelRegistry:
                                     training_data_hash=run.data.tags.get("training_data_hash", ""),
                                     metrics=run.data.metrics,
                                     calibration_curve=[],
-                                    feature_list=json.loads(run.data.params.get("feature_list", "[]")),
+                                    feature_list=json.loads(
+                                        run.data.params.get("feature_list", "[]")
+                                    ),
                                     created_at=run.info.start_time,
                                     is_active=self._active_version == mv,
                                     mlflow_run_id=run.info.run_id,
@@ -333,7 +335,10 @@ class ModelRegistry:
         Args:
             model_version: Version string to set as active.
         """
-        if model_version not in self._in_memory_registry and self.get_model_version(model_version) is None:
+        if (
+            model_version not in self._in_memory_registry
+            and self.get_model_version(model_version) is None
+        ):
             raise ValueError(f"Model version {model_version} not found in registry")
 
         self._active_version = model_version
