@@ -273,14 +273,14 @@ async def get_organization(
 
 @org_router.get(
     "",
-    response_model=List[OrganizationRead],
+    response_model=list[OrganizationRead],
     summary="List organizations",
 )
 async def list_organizations(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-) -> List[OrganizationRead]:
+) -> list[OrganizationRead]:
     """List all organizations."""
     result = await session.execute(
         select(Organization).order_by(Organization.created_at.desc()).limit(limit).offset(offset)
@@ -345,7 +345,7 @@ async def get_user(
 
 @user_router.get(
     "",
-    response_model=List[UserRead],
+    response_model=list[UserRead],
     summary="List users",
 )
 async def list_users(
@@ -353,7 +353,7 @@ async def list_users(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-) -> List[UserRead]:
+) -> list[UserRead]:
     """List users, optionally filtered by organization."""
     query = select(User).order_by(User.created_at.desc()).limit(limit).offset(offset)
     if org_id:
@@ -418,7 +418,7 @@ async def create_user(
 
 @org_user_router.get(
     "",
-    response_model=List[UserRead],
+    response_model=list[UserRead],
     summary="List users in organization",
 )
 async def list_org_users(
@@ -426,7 +426,7 @@ async def list_org_users(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-) -> List[UserRead]:
+) -> list[UserRead]:
     """List users in an organization."""
     # Verify org exists
     org = await session.get(Organization, org_id)

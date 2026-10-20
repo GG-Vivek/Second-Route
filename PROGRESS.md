@@ -104,16 +104,15 @@
 
 ---
 
-## Phase 5: Pilot Readiness (F5.1 complete, F5.2 in progress, F5.3–F5.8 not started)
+## Phase 5: Pilot Readiness (F5.1–F5.2 complete, F5.3–F5.8 not started)
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
 <<<<<<< Updated upstream
 | F5.1 Authentication | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.1-authentication | 2026-10-20T18:15:00Z | 2026-10-20T19:30:00Z | — | Keycloak, OIDC, roles: inspector/manager/admin/analyst |
-| F5.2 Tenant isolation | 🔲 Not Started | — | — | — | — | — | org_id on every table, PostgreSQL RLS enforced |
 =======
 | F5.1 Authentication | 🔲 Not Started | — | — | — | — | — | Keycloak, OIDC, roles: inspector/manager/admin/analyst |
-| F5.2 Tenant isolation | 🟡 In Progress | ai-longcat-ses_ea89089b | feat/F5.2-tenant-isolation | 2026-10-20T19:45:00Z | — | — | org_id on every table, PostgreSQL RLS enforced |
+| F5.2 Tenant isolation | ✅ Done | ai-longcat-ses_ea89089b | feat/F5.2-tenant-isolation | 2026-10-20T19:45:00Z | 2026-10-20T20:30:00Z | — | org_id on every table, PostgreSQL RLS enforced |
 >>>>>>> Stashed changes
 | F5.3 Risk profile settings | 🔲 Not Started | — | — | — | — | — | UI/API to set profile, recomputes decisions, audited |
 | F5.4 Batch decisions | 🔲 Not Started | — | — | — | — | — | POST /batches/decide, grouping, filter, CSV export |
@@ -130,8 +129,8 @@
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F6.1 Model registry | 🟡 In Progress | ai-nemotron-ses_eaa59d66 | feat/F6.1-model-registry | 2026-10-20T24:00:00Z | — | — | MLflow, training data hash, metrics, calibration, features |
-| F6.2 Shadow mode | 🔲 Not Started | — | — | — | — | — | Candidate runs alongside, logs only, never shown to users |
+| F6.1 Model registry | ✅ Done | ai-nemotron-ses_eaa59d66 | feat/F6.1-model-registry | 2026-10-20T24:00:00Z | 2026-10-20T24:30:00Z | — | MLflow + in-memory fallback, training data hash, metrics, calibration curve, feature list |
+| F6.2 Shadow mode | 🟡 In Progress | ai-nemotron-ses_eaa59d66 | feat/F6.2-shadow-mode | 2026-10-20T25:00:00Z | — | — | Candidate runs alongside, logs only, never shown to users |
 | F6.3 Promotion gate | 🔲 Not Started | — | — | — | — | — | Beats active on net MAE + ECE, min sample, admin action |
 | F6.4 Drift monitoring | 🔲 Not Started | — | — | — | — | — | PSI on inputs, calibration drift, Prometheus + Grafana alerts |
 | F6.5 Controlled exploration | 🔲 Not Started | — | — | — | — | — | 3-5% cap, exclusions, propensity logged |
@@ -161,7 +160,7 @@
 
 ## In Progress
 
-- F6.1 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T24:00:00Z — Branch: feat/F6.1-model-registry
+- F6.2 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T25:00:00Z — Branch: feat/F6.2-shadow-mode
 
 ---
 
@@ -191,6 +190,7 @@
 - F2.9 Decision API and persistence — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:45:00Z
 - F2.10 Action card templates — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T04:50:00Z
 - F2.11 Decision card UI — Agent: ai-nemotron-ses_eaa6f421 — Completed: 2026-10-20T05:15:00Z
+- F6.1 Model registry — Agent: ai-nemotron-ses_eaa59d66 — Completed: 2026-10-20T24:30:00Z
 
 ---
 
@@ -198,7 +198,7 @@
 
 | Agent ID | Type | Assigned Features | Last Active |
 |----------|------|-------------------|-------------|
-| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7 | 2026-10-20T21:30:00Z |
+| ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1, F6.1 | 2026-10-20T24:30:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.1, F0.2, F0.3, F0.4, F0.5, F0.6, F0.7, F2.1, F2.2, F2.3, F2.4, F2.5, F2.6, F2.7, F2.8, F2.9, F2.10, F2.11 | 2026-10-20T05:15:00Z |
 
 ---
@@ -224,4 +224,4 @@
 ---
 
 *Last updated: 2026-10-20*
-*Next review: Before starting Phase 3 work*
+*Next review: Before starting Phase 6 work (F6.2)*
