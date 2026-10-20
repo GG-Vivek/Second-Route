@@ -82,6 +82,20 @@ BLOCKING_ACTIVATION_LOCKS: Final[frozenset[str]] = frozenset({"present"})
 #: Minimum expected grade level for the open-box channel.
 MIN_OPEN_BOX_LEVEL: Final[float] = 2.4
 
+#: The channels a unit can be routed to. ``PARTS_HARVEST`` arrived in
+#: Phase 3 (F3.6) and is always eligible - there is always something to
+#: harvest, and the parts valuation decides whether it is worth doing.
+ELIGIBLE_CHANNELS: Final[tuple[str, ...]] = (
+    "RESELL_OPEN_BOX",
+    "RESELL_REFURB",
+    "PARTS_HARVEST",
+    "RECYCLE",
+    "DONATE",
+)
+
+#: The channels that sell the unit rather than its parts.
+RESALE_CHANNELS: Final[frozenset[str]] = frozenset({"RESELL_OPEN_BOX", "RESELL_REFURB"})
+
 
 @dataclass(frozen=True, slots=True)
 class InspectionSignals:
@@ -309,11 +323,11 @@ def channel_eligibility(
 
     eligibility: dict[str, tuple[bool, str | None]] = {}
 
-    for channel in ("RESELL_OPEN_BOX", "RESELL_REFURB", "RECYCLE", "DONATE"):
+    for channel in ELIGIBLE_CHANNELS:
         eligible = True
         reason: str | None = None
 
-        if activation_locked and channel in ("RESELL_OPEN_BOX", "RESELL_REFURB"):
+        if activation_locked and channel in RESALE_CHANNELS:
             eligible = False
             reason = "Activation lock present - resale channels are blocked."
 

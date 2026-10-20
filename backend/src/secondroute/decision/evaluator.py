@@ -23,11 +23,20 @@ import numpy as np
 from numpy.typing import NDArray
 
 from secondroute.condition.grades import GRADES, GradeDistribution, InspectionSignals
+from secondroute.core.logging import get_logger
 from secondroute.costs.models import CostKind
 from secondroute.costs.service import CostBook
-from secondroute.pricing.protocols import PriceDistribution, PriceSource
+from secondroute.pricing.protocols import (
+    PriceDistribution,
+    PriceSource,
+    PriceSourceNotFoundError,
+)
+
+logger = get_logger(__name__)
 
 __all__ = [
+    "DECISION_CHANNELS",
+    "PHASE2_CHANNELS",
     "ChannelEvaluation",
     "CostBreakdown",
     "EvaluationInput",
@@ -49,10 +58,23 @@ DETERMINISTIC_COSTS: Final[frozenset[str]] = frozenset(
     {CostKind.CHANNEL_FEE_PCT, CostKind.HOLDING_COST_PER_DAY}
 )
 
-#: Channels the Phase 2 decision engine can recommend.
+#: The channels the Phase 2 decision engine evaluated.
 PHASE2_CHANNELS: Final[tuple[str, ...]] = (
     "RESELL_OPEN_BOX",
     "RESELL_REFURB",
+    "RECYCLE",
+    "DONATE",
+)
+
+#: Every channel the engine can recommend.
+#:
+#: ``PARTS_HARVEST`` arrived in Phase 3 (F3.6). It is always eligible: there
+#: is always something to harvest, and the parts valuation decides whether it
+#: is worth doing.
+DECISION_CHANNELS: Final[tuple[str, ...]] = (
+    "RESELL_OPEN_BOX",
+    "RESELL_REFURB",
+    "PARTS_HARVEST",
     "RECYCLE",
     "DONATE",
 )
@@ -296,15 +318,25 @@ async def evaluate_channels(
             net_samples_by_channel.append(np.zeros(0, dtype=np.float64))
             continue
 
-        per_grade, components, price_sources, price_as_of = await _grade_net_samples(
-            evaluation_input,
-            price_source,
-            channel,
-            grade_probs,
-            samples=samples,
-            seed=seed,
-            as_of=as_of,
-        )
+        try:
+            per_grade, components, price_sources, price_as_of = await _grade_net_samples(
+                evaluation_input,
+                price_source,
+                channel,
+                grade_probs,
+                samples=samples,
+                seed=seed,
+                as_of=as_of,
+            )
+        except PriceSourceNotFoundError as exc:
+            # The source has no data for this channel. The channel is skipped
+            # rather than the whole decision failing: a missing price source
+            # is a reason not to recommend that channel, not a reason to
+            # recommend nothing.
+            logger.info("channel_skipped_no_price_data", channel=channel, reason=str(exc))
+            evaluations.append(_ineligible_evaluation(channel, f"No price data available: {exc}"))
+            net_samples_by_channel.append(np.zeros(0, dtype=np.float64))
+            continue
 
         mixed = _mix_grades(per_grade, grade_probs, samples=samples, seed=seed, channel=channel)
         breakdown = _expected_breakdown(components, grade_probs)

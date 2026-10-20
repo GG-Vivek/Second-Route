@@ -85,7 +85,7 @@ class TestDecisionApi:
         response = await client.post(f"/api/v1/units/{unit.id}/decide")
         data = response.json()
 
-        assert len(data["candidates"]) == 4
+        assert len(data["candidates"]) == 5  # 4 resale channels + parts harvest
         assert data["reasons"]
         assert data["action_steps"]
         assert data["data_freshness"]["is_synthetic"] is True

@@ -175,7 +175,7 @@ async def main() -> int:
         )
         check(
             "candidates are present",
-            len(decision["candidates"]) == 4,
+            len(decision["candidates"]) == 5,  # 4 resale channels + parts harvest
             str(len(decision["candidates"])),
         )
         check("reasons are present", len(decision["reasons"]) > 0)

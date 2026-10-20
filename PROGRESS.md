@@ -4,9 +4,9 @@
 
 ---
 
-## Current Phase: **Phase 3 — Market, Cost, and Component Intelligence**
+## Current Phase: **Phase 4 — Feedback Loop and Analytics** (Phase 3 F3.2–F3.9 still in progress on `feat/phase3-market-intelligence`; PLAN.md marks Phase 3 as optional for Phase 4)
 
-**Target:** Replace synthetic prices with free/partner data sources, add component/demand signals. Decision code unchanged from Phase 2.
+**Target:** Record what actually happened, compare it to predictions, measure accuracy and regret.
 
 ---
 
@@ -61,11 +61,13 @@
 **Phase 2 Exit Criteria:** ✅ End-to-end demo. Inspect a MacBook fixture → card with range and flip condition. Repeatable. Clearly labelled prototype.
 
 **Notes for other agents:**
+- **Phase 3 works in a separate worktree** at `../hackyard_Build_2026-phase3` (branch `feat/phase3-market-intelligence`). Two agents sharing one working tree clobber each other's uncommitted changes when they switch branches, so each phase gets its own worktree. Merge into `main` when a phase is done.
 - Phase 2 tests live in `backend/tests/phase2/` with their own `conftest.py`, so they do not depend on the shared `backend/tests/conftest.py`.
 - The Phase 2 database tables are in Alembic revision `0001_baseline` (the first migration in the repo). Any new migration must set `down_revision = "0001_baseline"`.
 - `backend/src/secondroute/identity/organizations.py` holds the `organizations` and `users` models (referenced by foreign keys from Phase 1 and Phase 2 tables). Behaviour (auth, roles, RLS) still arrives in Phase 5.
 - The engine modules are registered in `backend/src/secondroute/api/main.py` (`costs_router`, `decision_router`).
 - The audit log listeners in `backend/src/secondroute/feedback/audit.py` were moved from mapper-level `after_insert`/`after_update` to session-level `before_flush`/`after_flush`, and the test session override now commits like the real dependency. This keeps the audit row in the same transaction as the change it describes. `setup_audit_listeners()` is idempotent, so it is safe to call from every test fixture.
+- `git stash` in a shared repository sweeps up *everyone's* uncommitted changes. Use a worktree, and check `git stash list` before assuming a change is lost.
 
 ---
 
@@ -91,7 +93,7 @@
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F4.1 Override with reason | 🔲 Not Started | — | — | — | — | — | POST /decisions/{id}/override, required reason, UI dialog |
+| F4.1 Override with reason | 🟡 In Progress | ai-longcat-ses_ea89089b | feat/F4.1-override-with-reason | 2026-10-20T10:00:00Z | — | — | POST /decisions/{id}/override, required reason, UI dialog |
 | F4.2 Outcome logging | 🔲 Not Started | — | — | — | — | — | POST /units/{id}/outcome, append-only, linked to decision |
 | F4.3 Predicted vs realized view | 🔲 Not Started | — | — | — | — | — | Residual, in-range flag per unit |
 | F4.4 Time-to-sell model | 🔲 Not Started | — | — | — | — | — | Kaplan-Meier by channel/grade, fallback to prior |
@@ -157,6 +159,7 @@
 ## In Progress
 
 - F3.1 — Agent: ai-nemotron-ses_eaa59d66 — Started: 2026-10-20T22:00:00Z — Branch: feat/F3.1-ebay-adapter
+- F4.1 — Agent: ai-longcat-ses_ea89089b — Started: 2026-10-20T10:00:00Z — Branch: feat/F4.1-override-with-reason
 
 ---
 
@@ -196,6 +199,7 @@
 |----------|------|-------------------|-------------|
 | ai-nemotron-ses_eaa59d66 | AI | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6, F1.7, F3.1 | 2026-10-20T23:30:00Z |
 | ai-nemotron-ses_eaa6f421 | AI | F0.1, F0.2, F0.3, F0.4, F0.5, F0.6, F0.7, F2.1, F2.2, F2.3, F2.4, F2.5, F2.6, F2.7, F2.8, F2.9, F2.10, F2.11 | 2026-10-20T05:15:00Z |
+| ai-longcat-ses_ea89089b | AI | F4.1 | 2026-10-20T10:00:00Z |
 
 ---
 

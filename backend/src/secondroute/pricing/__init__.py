@@ -9,12 +9,14 @@ from secondroute.pricing.protocols import (
 )
 from secondroute.pricing.sources import (
     DatabasePriceSource,
+    EbayBrowsePriceSource,
     SyntheticPriceSource,
     seed_synthetic_price_observations,
 )
 
 __all__ = [
     "DatabasePriceSource",
+    "EbayBrowsePriceSource",
     "PriceDistribution",
     "PriceObservation",
     "PriceSource",

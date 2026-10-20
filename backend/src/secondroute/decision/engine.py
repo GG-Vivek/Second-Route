@@ -39,7 +39,7 @@ from secondroute.decision.confidence import (
     apply_confidence_gate,
 )
 from secondroute.decision.evaluator import (
-    PHASE2_CHANNELS,
+    DECISION_CHANNELS,
     ChannelEvaluation,
     EvaluationInput,
     EvaluationResult,
@@ -53,8 +53,10 @@ from secondroute.decision.explanations import (
     build_reasons,
 )
 from secondroute.decision.models import Decision, hash_snapshot
+from secondroute.decision.parts import build_parts_source
 from secondroute.decision.utility import certainty_equivalent, rank_channels
 from secondroute.instructions.templates import ActionStep, action_steps_for
+from secondroute.pricing.composite import CompositePriceSource
 from secondroute.pricing.protocols import PriceSource
 
 logger = get_logger(__name__)
@@ -171,7 +173,7 @@ async def run_decision(
     seed: int | None = None,
     threshold: float | None = None,
     as_of: datetime | None = None,
-    channels: tuple[str, ...] = PHASE2_CHANNELS,
+    channels: tuple[str, ...] = DECISION_CHANNELS,
     include_flip_conditions: bool = True,
 ) -> DecisionOutcome:
     """Run the decision engine for one unit.
@@ -392,6 +394,14 @@ async def decide_unit(
     effective_price_source = price_source
     if hasattr(price_source, "with_family"):
         effective_price_source = price_source.with_family(family)  # type: ignore[attr-defined]
+
+    # The parts channel has its own price source: the value of what is inside
+    # the unit, not the value of the unit. Everything else keeps the source
+    # the caller passed in.
+    parts_source = await build_parts_source(session, unit.id, inspection)
+    effective_price_source = CompositePriceSource(
+        {"PARTS_HARVEST": parts_source}, effective_price_source
+    )
 
     outcome = await run_decision(
         unit_id=unit.id,
