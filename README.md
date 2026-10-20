@@ -74,6 +74,8 @@ checks the whole card payload. It needs no network and no database server.
 
 ## Quick Start
 
+### With Docker
+
 ```bash
 # Clone and enter
 git clone <repo-url>
@@ -95,6 +97,56 @@ cd frontend
 npm install
 npm run dev
 ```
+
+The stack is then on <http://localhost:5173>.
+
+### Without Docker
+
+The backend needs PostgreSQL; Redis is optional (the health check reports
+"degraded" without it, and only the session store and the job queue use
+it). With PostgreSQL 16 and Node installed:
+
+```bash
+# 1. PostgreSQL, with the roles the application and the backup use
+brew services start postgresql@16
+createdb secondroute
+POSTGRES_USER=$(whoami) POSTGRES_DB=secondroute POSTGRES_PASSWORD=secondroute \
+  bash docker/postgres/01-create-app-role.sh
+
+# 2. The backend
+cd backend
+cp .env.example .env
+# Set DATABASE_URL to the application role, not the superuser:
+#   postgresql+asyncpg://secondroute_app:secondroute@127.0.0.1:5432/secondroute
+uv sync
+uv run alembic upgrade head
+uv run python scripts/load_skus.py        # the SKU catalogue
+uv run python scripts/seed_dev_org.py     # an organisation to act for
+uv run uvicorn secondroute.api.main:app --reload --port 8000
+
+# 3. The frontend (in another terminal)
+cd frontend
+npm install
+VITE_PROXY_TARGET=http://127.0.0.1:8000 npm run dev
+```
+
+The frontend is then on <http://localhost:5173>.
+
+### Which organisation a request acts for
+
+Every request acts for one organisation, and the row-level security
+policies refuse a write that names none. The authentication dependency
+takes the organisation from the verified token.
+
+Outside production the organisation can also be named with a header, so
+the application can be tried out without a login:
+
+```bash
+curl -H "X-Org-Id: <the id seed_dev_org.py printed>" \
+     http://127.0.0.1:8000/api/v1/units
+```
+
+In production the header is ignored: the only way in is a token.
 
 ### Database Migrations
 
