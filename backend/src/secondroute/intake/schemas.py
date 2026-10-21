@@ -144,6 +144,14 @@ class PhotoCreate(PhotoBase):
 class PhotoRead(PhotoBase):
     """Schema for reading a photo."""
 
+    published: bool = Field(
+        default=True,
+        description=(
+            "Whether the photograph may be shown on the public storefront. "
+            "A photograph of the label on the device carries the serial "
+            "number, so it is not."
+        ),
+    )
     id: UUID
     unit_id: UUID
     inspection_id: UUID

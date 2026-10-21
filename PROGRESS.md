@@ -4,14 +4,16 @@
 
 ---
 
-## Current Phase: **Phase 9 — Colours, cache and data** is complete.
+## Current Phase: **Phase 10 — The shop window** is complete.
 Phase 8 rebuilt the whole user interface on one design system and turned the
 decision card into a spatial decision console. Phase 9 measured the colours
 rather than eyeballing them, put the cache up, gave the application something
-to look at, and closed the defects that came out of it.
+to look at, and closed the defects that came out of it. Phase 10 built the
+other half of the product: a shop window, on its own port, that a buyer can
+look at without ever seeing the business.
 
-**Target:** the colours are measured, the cache is up, there is data and there
-are photographs, and the defects are closed.
+**Target:** a buyer can look at the stock, and nothing of the business's is in
+what they can read.
 
 ---
 
@@ -269,6 +271,24 @@ green on a laptop, and CI provides one.
 
 ---
 
+## Phase 10: The shop window
+
+| Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
+|---|---|---|---|---|---|---|---|
+| F10.1 The public listings | Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F10.1-public-listings | 2026-10-21T10:30:00Z | 2026-10-21T12:30:00Z | 89d65c4 | `GET /api/v1/public/listings` and the device's own page |
+| F10.2 The shop window | Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F10.2-the-shop-window | 2026-10-21T12:30:00Z | 2026-10-21T13:30:00Z | (this commit) | `frontend-public/`, on port 5174 |
+| F10.3 The window in the stack | Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F10.3-the-window-in-the-stack | 2026-10-21T13:30:00Z | 2026-10-21T13:30:00Z | (this commit) | The compose stack, the staging stack and the CI |
+
+**Notes on Phase 10**
+
+- **The design system is shared, not copied.** The tokens, the nineteen primitives, the theme provider and the Tailwind scale live in `frontend/src` and are reached through a path alias. The console is unchanged; a copy of the token set would have been a second token set that disagrees.
+- **The window is public.** There is no sign-in and no operator's surface behind it. `PUBLIC_ORG_ID` decides whose stock it shows, and a caller cannot choose.
+- **A photograph says whether it may be published.** One of the four angles the inspection form takes is a photograph of the label on the bottom of the device, and the label carries the serial number. The serial was not in the response, but it was in the picture.
+- **Fixed in F10.1, and it had always been broken:** the seed marked every unit sold as soon as the first one was sold, because it read the running total of the outcomes rather than the outcome of the unit. Nothing was ever left on the shelf.
+- **Fixed in F10.1, a trap worth knowing about:** a generator dependency that sits underneath another dependency is torn down as soon as the outer one returns, and the session dependency clears the organisation when it is torn down. The storefront therefore had a session with no organisation on it, and every row was refused.
+
+---
+
 ## In Progress
 
 - F8.0 Design decision and dependency licences — Agent: ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z — Started: 2026-10-21T00:00:00Z — Branch: feat/F8.0-design-decision-and-licences
@@ -389,9 +409,11 @@ green on a laptop, and CI provides one.
 | ADR-004 | Offline inspection storage and the fake-indexeddb test shim | Accepted | 2026-10-20 |
 | ADR-005 | The feedback loop analytics | Accepted | 2026-10-20 |
 | ADR-006 | The design system and the spatial decision console | Accepted | 2026-10-21 |
+| ADR-007 | The shop window is a separate application | Accepted | 2026-10-21 |
 
 ---
 
 *Last updated: 2026-10-21*
-*Next review: Phase 8 is open. F8.0 is in progress. The engine is not being changed by
-this phase, so the Phase 7 exit demo still stands.*
+*Next review: Phase 10 is complete. The engine is not changed by it. The two open
+questions are the login that nothing authenticates yet, and the basket the shop
+window does not have.*

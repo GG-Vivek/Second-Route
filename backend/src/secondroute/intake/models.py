@@ -11,6 +11,7 @@ from typing import Any, Optional
 
 from sqlalchemy import (
     Boolean,
+    text,
     Column,
     DateTime,
     Enum,
@@ -187,6 +188,12 @@ class Photo(Base):
     storage_path = Column(String(500), nullable=False)
     exif_stripped = Column(String(10), nullable=False, default="true")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    # Whether the photograph may be shown on the shop window.
+    #
+    # One of the four angles the inspection form takes is a photograph of
+    # the label on the bottom of the device, and the label carries the
+    # serial number. The serial is not the buyer's business.
+    published = Column(Boolean, nullable=False, default=True, server_default=text("true"))
 
     # Relationships
     unit = relationship("Unit", back_populates="photos")

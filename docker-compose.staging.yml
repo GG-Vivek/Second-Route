@@ -141,6 +141,23 @@ services:
     networks:
       - secondroute-network
 
+  # Builds the shop window into a volume that Caddy serves. It is a
+  # separate application from the operator's console and it is public.
+  storefront-build:
+    build:
+      context: .
+      dockerfile: frontend-public/Dockerfile.staging
+    container_name: secondroute-storefront-build
+    environment:
+      - VITE_API_BASE=/api/v1
+    volumes:
+      - storefront_static:/out
+    command: >
+      sh -c "npm run build && cp -r dist/. /out/ && touch /out/.build-complete"
+    restart: "no"
+    networks:
+      - secondroute-network
+
   backend:
     build:
       context: ./backend
@@ -191,13 +208,18 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       # The built frontend, served as static files.
       - frontend_static:/var/www/html:ro
+      # The built shop window, served as static files.
+      - storefront_static:/var/www/shop:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:
       - DOMAIN=${DOMAIN:?DOMAIN is required}
+      - SHOP_DOMAIN=${SHOP_DOMAIN:?SHOP_DOMAIN is required}
       - EMAIL=${EMAIL:?EMAIL is required}
     depends_on:
       frontend-build:
+        condition: service_completed_successfully
+      storefront-build:
         condition: service_completed_successfully
       backend:
         condition: service_healthy
@@ -243,6 +265,7 @@ volumes:
   caddy_data:
   caddy_config:
   frontend_static:
+  storefront_static:
 
 networks:
   secondroute-network:

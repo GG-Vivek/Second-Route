@@ -410,6 +410,9 @@ async def seed(
                     storage_path=stored.storage_path,
                     exif_stripped=str(stored.exif_stripped).lower(),
                     created_at=inspection.created_at + timedelta(minutes=rng.randint(1, 90)),
+                    # The photograph of the label carries the serial
+                    # number, and the serial is not on the shop window.
+                    published=angle != "label",
                 )
             )
             made["photos"] += 1

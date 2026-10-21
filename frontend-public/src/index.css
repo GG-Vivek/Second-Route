@@ -1,0 +1,36 @@
+/**
+ * The storefront's styles (Phase 10).
+ *
+ * The tokens, the base layer and the utilities are the operator
+ * application's, imported rather than copied. The shop window and the
+ * console have to look like one product, and a copy of the token set is
+ * a copy that drifts.
+ *
+ * Only the storefront's own rules are written here.
+ */
+
+@import '../../frontend/src/index.css';
+
+@layer components {
+  /**
+   * The window itself: a wide, quiet surface with the cards on it.
+   */
+  .storefront {
+    @apply min-h-screen bg-background text-foreground;
+  }
+
+  /**
+   * The photograph on a card.
+   *
+   * The photographs are of different shapes, so the frame is fixed and
+   * the picture is fitted into it. A device that is not the right shape
+   * is not cropped: the frame keeps its own proportions.
+   */
+  .listing-photo {
+    @apply aspect-[4/3] w-full overflow-hidden rounded-t-xl bg-surface-3;
+  }
+
+  .listing-photo img {
+    @apply size-full object-cover;
+  }
+}

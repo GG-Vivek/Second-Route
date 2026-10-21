@@ -15,6 +15,7 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.phase10.conftest import (
@@ -358,6 +359,38 @@ class TestOneDevice:
         data = response.json()
         assert data["grade"] == "B"
         assert data["condition"] == "Good"
+
+    @pytest.mark.asyncio
+    async def test_a_photograph_that_may_not_be_published_is_not_shown(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        on_sale: dict[str, Any],
+    ) -> None:
+        """The photograph of the label carries the serial number.
+
+        The serial is not on the window, so neither is the photograph of
+        the label it is on.
+        """
+        from secondroute.intake.models import Photo
+
+        photo = (
+            (await db_session.execute(select(Photo).where(Photo.unit_id == on_sale["unit"].id)))
+            .scalars()
+            .first()
+        )
+        assert photo is not None
+        photo.published = False
+        await db_session.flush()
+
+        response = await client.get(f"/api/v1/public/listings/{on_sale['unit'].id}")
+        assert response.status_code == 200
+        assert response.json()["photos"] == []
+
+        # It is still on the operator's own page.
+        operator = await client.get(f"/api/v1/units/{on_sale['unit'].id}/photos")
+        assert operator.status_code == 200
+        assert len(operator.json()) == 1
 
     @pytest.mark.asyncio
     async def test_a_device_that_does_not_exist_is_not_found(

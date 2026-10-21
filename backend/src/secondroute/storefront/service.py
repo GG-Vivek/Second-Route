@@ -168,6 +168,26 @@ def _price_for(decision: Decision, currency: str = "USD") -> ListingPriceRead | 
     return None
 
 
+def _published_photos(unit: Unit) -> list[Photo]:
+    """The photographs of a unit that may be shown on the window.
+
+    One of the four angles the inspection form takes is a photograph of
+    the label on the bottom of the device, and the label carries the
+    serial number. The serial is not on the shop window, so that
+    photograph is not either.
+
+    Args:
+        unit: The unit.
+
+    Returns:
+        The photographs, oldest first.
+    """
+    return sorted(
+        (photo for photo in unit.photos if photo.published),
+        key=lambda photo: photo.created_at,
+    )
+
+
 def _latest_inspection(unit: Unit) -> Inspection | None:
     """The most recent inspection of a unit.
 
@@ -271,7 +291,7 @@ def _listing(
     sku = unit.sku
     inspection = _latest_inspection(unit)
     grade = inspection.cosmetic_grade if inspection is not None else "C"
-    photos = sorted(unit.photos, key=lambda photo: photo.created_at)
+    photos = _published_photos(unit)
     return ListingRead(
         id=unit.id,
         title=_title(sku),
@@ -520,7 +540,7 @@ async def get_listing(
     listing = _listing(unit, decision, price)
     sku = unit.sku
     inspection = _latest_inspection(unit)
-    photos = sorted(unit.photos, key=lambda photo: photo.created_at)
+    photos = _published_photos(unit)
 
     return ListingDetailRead(
         **listing.model_dump(),

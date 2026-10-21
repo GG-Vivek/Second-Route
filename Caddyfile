@@ -47,6 +47,41 @@ localhost {
     }
 }
 
+# The shop window (Phase 10).
+#
+# It is a separate application on its own port, and it is public: there
+# is no sign-in and no operator's surface behind it.
+localhost:5174 {
+    # API routes -> backend
+    handle_path /api/* {
+        reverse_proxy backend:8000
+    }
+
+    # The photographs -> backend
+    handle /uploads/* {
+        reverse_proxy backend:8000
+    }
+
+    # The storefront
+    handle {
+        reverse_proxy storefront:5174
+    }
+
+    encode gzip zstd
+
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    log {
+        output stdout
+        format json
+    }
+}
+
 # Production configuration (activated when DOMAIN is set)
 {$DOMAIN:localhost} {
     # Only apply production config when DOMAIN != localhost
@@ -96,6 +131,53 @@ localhost {
         }
 
         # Automatic HTTPS via Let's Encrypt
+        tls {$EMAIL}
+    }
+}
+
+# The shop window in production.
+#
+# It is a different application and it is on a different host, so that
+# the operator's console and the public window can be secured, measured
+# and scaled separately.
+{$SHOP_DOMAIN:shop.localhost} {
+    @shop {
+        host {$SHOP_DOMAIN}
+    }
+
+    handle @shop {
+        # API routes -> backend
+        handle_path /api/* {
+            reverse_proxy backend:8000
+        }
+
+        # The photographs -> backend
+        handle /uploads/* {
+            reverse_proxy backend:8000
+        }
+
+        # The storefront's static files (built)
+        handle {
+            root * /var/www/shop
+            try_files {path} /index.html
+            file_server
+        }
+
+        encode gzip zstd
+
+        header {
+            Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+            X-Content-Type-Options "nosniff"
+            X-Frame-Options "DENY"
+            Referrer-Policy "strict-origin-when-cross-origin"
+            -Server
+        }
+
+        log {
+            output stdout
+            format json
+        }
+
         tls {$EMAIL}
     }
 }

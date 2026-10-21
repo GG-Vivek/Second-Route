@@ -1,0 +1,23 @@
+# The storefront's build context is the repository root, because it
+# shares the design system with the operator's application. Without
+# this the whole repository, node_modules and all, is sent to the
+# builder on every build.
+
+**/node_modules
+**/dist
+**/coverage
+**/test-results
+**/playwright-report
+
+.git
+.github
+
+# The backend and the machine learning directory are not part of the
+# storefront's build.
+backend
+ml
+data
+docs
+scripts
+keycloak
+docker

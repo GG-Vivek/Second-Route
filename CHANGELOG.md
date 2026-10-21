@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- A shop window: a separate application in `frontend-public/`, served on port 5174,
+  that shows the devices that are for sale with their photographs, their condition,
+  their test results and their price. It is public: there is no sign-in, and the
+  operator's console is not behind it.
+- A public listings endpoint, `GET /api/v1/public/listings` and
+  `GET /api/v1/public/listings/{id}`. A listing is a device the engine said to
+  sell, whose latest decision still says to sell it, and which has not gone. It
+  carries no serial, no return reason, no note, no cost, no confidence and no
+  organisation.
+- A photograph now says whether it may be published. One of the four angles the
+  inspection form takes is a photograph of the label on the bottom of the device,
+  and the label carries the serial number: the serial was not in the response, but
+  it was in the picture.
+- ADR-007 records why the shop window is a separate application rather than a
+  second shell on the console, and what it costs.
+- The storefront has its own lint, its own tests, its own visual regression suite
+  and its own jobs in the CI. The staging stack builds it into its own volume and
+  Caddy serves it from its own host.
 - A design system and a spatial decision console are now planned as Phase 8. ADR-006
   records the decision, the pmndrs token set, the react-three-fiber dependency
   versions and their licences, and the rule that the 3D view is an enhancement over an
@@ -25,6 +43,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   built application with the API answered from fixtures, so it needs no backend.
 
 ### Changed
+- The build plan now carries Phase 10 and the risks it comes with: a public
+  endpoint that leaks a field of the business's own, a shop window that drifts
+  from the console, and a photograph of a serial number.
+- The seed marks every unit sold as soon as the first one was sold, because it
+  read the running total of the outcomes rather than the outcome of the unit.
+  Nothing was ever left on the shelf, so the window was empty. The status of a
+  unit now follows what was done with it.
 - The build plan now carries Phase 8 and the risks it comes with: a view that shows a
   plausible but wrong shape, a canvas that silently renders nothing, and a design
   system that drifts.
@@ -40,6 +65,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The cache is optional, and a dependency that is not configured is not a failure.
 
 ### Fixed
+- A generator dependency that sits underneath another dependency is torn down as
+  soon as the outer one returns, and the session dependency clears the
+  organisation when it is torn down. The storefront had a session with no
+  organisation on it, and every row was refused.
+- The window function over the decisions dragged the decisions table into the
+  outer query as well, where it had no join condition. Every listing was
+  multiplied by the number of decisions. It reads the columns of an inner query
+  now.
+- The health page read the object the source-health endpoint answers with as
+  though it were a list, and fell into the error boundary. The page is at
+  `/status` now, because the front end's page and the back end's health
+  endpoint were both at `/health` and the proxy sent that path to the back end.
 - The tenant-isolation policies on two tables were never evaluated, because a policy
   only binds the owner of a table when `FORCE ROW LEVEL SECURITY` is set. One
   organisation could read and write another's calibration versions and regret

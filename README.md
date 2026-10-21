@@ -153,6 +153,24 @@ npm run dev
 
 The frontend is then on <http://localhost:5173>.
 
+### The shop window
+
+There are two applications. The one above is the operator's console. The shop
+window is a separate application, on its own port, that shows the devices that
+are for sale to anybody at all: no sign-in, and none of the business's own
+business on it.
+
+```bash
+# 4. The shop window (in another terminal)
+cd frontend-public
+npm install
+cp .env.example .env                     # VITE_PROXY_TARGET=http://127.0.0.1:8000
+npm run dev
+```
+
+It is then on <http://localhost:5174>. ADR-007 records why it is a separate
+application rather than a second page of the console.
+
 > **All the paths above are relative to the repository root.** The role
 > script in particular only exists at `docker/postgres/01-create-app-role.sh`
 > from the root, so running it from `backend/` fails with
@@ -223,10 +241,16 @@ cd backend && .venv/bin/python -m pytest tests/ -q
 # The frontend
 cd frontend && npm run test:run
 
+# The shop window
+cd frontend-public && npm run test:run
+
 # The visual regression suite. It needs no backend: every API call is
 # answered with a fixture, so a screenshot never depends on what happens
 # to be in the database.
 cd frontend && npx playwright install chromium && npm run test:e2e
+
+# The shop window's visual suite
+cd frontend-public && npx playwright install chromium && npm run test:e2e
 ```
 
 The visual baselines are per platform. The ones for a platform that has never

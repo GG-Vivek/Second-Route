@@ -524,6 +524,45 @@ This plan splits SecondRoute into **8 phases** (0 to 7). Each phase is an indepe
 
 ---
 
+## Phase 10: The shop window
+
+**Goal:** a buyer can look at the stock without ever seeing the business.
+
+**Requires:** Phases 2, 8 and 9.
+
+**Why this phase exists:** every surface built so far is for staff. The decision card, the landscape, the analytics and the backtest all answer questions an operator asks. The answers a buyer asks — what is for sale, what does it look like, what does it cost, does it work — are in the data already, and nobody had assembled them into anything a person could read.
+
+The shop window is not the console with the serial number hidden. It is a different audience, a different set of data and a different shape, and the operator's console is the wrong place to build it.
+
+### F10.1 The public listings
+- `GET /api/v1/public/listings` and `GET /api/v1/public/listings/{id}` are readable by anybody. There is no sign-in.
+- A listing is a device the engine said to sell, whose latest decision said to sell it, and which has not gone.
+- The listing carries the name, the condition, the photographs, the tests, the accessories and the price. It carries no serial, no return reason, no note, no cost, no confidence and no organisation.
+- The price is the expected sale price, and it says where it came from and when it was current.
+- The tenant is the one the deployment names. A caller cannot choose it.
+- A photograph says whether it may be published, because one of the angles the inspection takes is a photograph of the label, and the label carries the serial number.
+
+**Accept:** a field of the business's own that appears in a listing is a failing test.
+
+### F10.2 The shop window
+- A separate application, on its own port, with its own build and its own tests.
+- The design system is shared with the console rather than copied: the tokens, the primitives, the theme provider and the Tailwind scale.
+- The window shows the devices, the photographs, the condition, the price and the test results, and says that the price is an estimate.
+- The synthetic prices are called out as synthetic, on the page and on the device.
+
+**Accept:** the two applications look like one product; the window works without a sign-in; the console is unchanged.
+
+### F10.3 The window in the stack
+- The development stack serves it on its own port; the staging stack builds it into its own volume and serves it from its own host.
+- The CI runs its lint, its tests and its visual suite.
+- ADR-007 records the decision and the alternatives.
+
+**Accept:** `docker compose up` serves the window; the CI is green.
+
+**Phase 10 exit:** a buyer can look at the stock, and nothing of the business's is in what they can read.
+
+---
+
 ## Appendix A: Technology stack
 
 | Layer | Choice | License |

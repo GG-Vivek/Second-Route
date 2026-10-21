@@ -1,0 +1,30 @@
+# The storefront image for the staging stack (Phase 10).
+#
+# The development image runs the Vite dev server, which recompiles on
+# every request and is not something to put in front of users. This one
+# builds the bundle once and leaves it in /out, where the stack's volume
+# picks it up and Caddy serves it as static files.
+#
+# The build context is the repository root, because the storefront shares
+# the design system with the operator's application.
+FROM node:20-alpine
+
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+COPY frontend-public/package*.json ./frontend-public/
+
+WORKDIR /app/frontend-public
+RUN npm ci
+
+WORKDIR /app
+COPY frontend-public ./frontend-public
+COPY frontend/src ./frontend/src
+COPY frontend/tailwind.config.js ./frontend/tailwind.config.js
+COPY frontend/public ./frontend/public
+
+WORKDIR /app/frontend-public
+RUN npm run build
+
+CMD ["sh", "-c", "echo 'the stack copies dist/ into the shared volume'"]
