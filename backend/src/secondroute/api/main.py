@@ -245,8 +245,31 @@ async def row_level_security_handler(request: Request, exc: ProgrammingError) ->
     )
 
 
+def health_status(database_ok: bool, redis_state: str) -> str:
+    """Whether the service is healthy, given the state of its dependencies.
+
+    A dependency that is not configured is not a failure. A dependency that
+    is configured and broken is.
+
+    Args:
+        database_ok: Whether the database answered.
+        redis_state: One of ``ok``, ``failed`` or ``not_configured``.
+
+    Returns:
+        ``healthy`` or ``degraded``.
+    """
+    degraded = not database_ok or redis_state == "failed"
+    return "degraded" if degraded else "healthy"
+
+
 # Health check endpoint
+#
+# It answers at the root as well as under the versioned prefix. The root
+# is where a load balancer and a container health check look, and it
+# cannot be the application's own page: the front end has a page at
+# ``/health`` too, and the two cannot both have it.
 @app.get("/health", tags=["Health"])
+@app.get(f"{settings.API_PREFIX}/health", tags=["Health"], include_in_schema=False)
 async def health_check() -> dict:
     """
     Health check endpoint.
@@ -278,9 +301,7 @@ async def health_check() -> dict:
         except Exception:
             redis_state = "failed"
 
-    # Only a dependency that is configured and broken degrades the service.
-    degraded = not db_healthy or redis_state == "failed"
-    status = "degraded" if degraded else "healthy"
+    status = health_status(db_healthy, redis_state)
 
     return {
         "status": status,

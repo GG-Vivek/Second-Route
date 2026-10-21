@@ -35,7 +35,8 @@ export function HealthPage() {
   })
 
   const health = healthQuery.data
-  const sources = sourcesQuery.data ?? []
+  const sourceHealth = sourcesQuery.data
+  const sources = sourceHealth?.sources ?? []
 
   return (
     <div className="space-y-8">
@@ -101,8 +102,22 @@ export function HealthPage() {
 
       {/* The sources. */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
           <CardTitle>The data sources</CardTitle>
+          {sourceHealth && sourceHealth.summary.total > 0 && (
+            <span className="flex flex-wrap items-center gap-2 text-xs">
+              <Badge variant="lime">{sourceHealth.summary.fresh} fresh</Badge>
+              {sourceHealth.summary.stale > 0 && (
+                <Badge variant="yellow">{sourceHealth.summary.stale} stale</Badge>
+              )}
+              {sourceHealth.summary.missing > 0 && (
+                <Badge variant="outline">{sourceHealth.summary.missing} missing</Badge>
+              )}
+              {sourceHealth.summary.errors > 0 && (
+                <Badge variant="destructive">{sourceHealth.summary.errors} errors</Badge>
+              )}
+            </span>
+          )}
         </CardHeader>
         <CardContent>
           {sourcesQuery.isLoading ? (

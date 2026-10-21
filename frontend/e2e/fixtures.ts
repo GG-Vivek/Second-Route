@@ -401,7 +401,7 @@ const PREDICTED_VS_REALIZED = {
  * that wrong hands the page a shape it cannot read.
  */
 export function fixtureFor(pathname: string): unknown {
-  if (pathname === '/health') {
+  if (pathname === '/health' || pathname === '/api/v1/health') {
     return {
       status: 'healthy',
       version: '0.1.0',

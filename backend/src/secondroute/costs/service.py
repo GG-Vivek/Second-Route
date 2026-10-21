@@ -160,26 +160,42 @@ async def load_cost_book(
     return CostBook(entries=entries)
 
 
-async def seed_default_costs(session: AsyncSession) -> int:
-    """Insert the default cost rows if the table is empty.
+async def seed_default_costs(session: AsyncSession, org_id: Any | None = None) -> int:
+    """Insert the default cost rows for an organisation.
+
+    The rows belong to the organisation, because the cost book is
+    something an organisation can adjust: the defaults are the floor and
+    a row in the table overrides one value for one organisation. A row
+    with no organisation would be shared, and the tenant-isolation policy
+    refuses those, so the endpoint that seeds the costs could not write
+    anything at all.
 
     The operation is idempotent.
 
     Args:
         session: Database session.
+        org_id: The organisation the rows belong to. Nothing is written
+            without one.
 
     Returns:
         The number of rows inserted.
     """
-    existing = await session.execute(select(CostTable.id).limit(1))
+    if org_id is None:
+        logger.info("cost_tables_not_seeded_without_an_organisation")
+        return 0
+
+    existing = await session.execute(
+        select(CostTable.id).where(CostTable.org_id == org_id).limit(1)
+    )
     if existing.scalar_one_or_none() is not None:
-        logger.info("cost_tables_already_seeded")
+        logger.info("cost_tables_already_seeded", org_id=str(org_id))
         return 0
 
     inserted = 0
     for seed in default_cost_seeds():
         session.add(
             CostTable(
+                org_id=org_id,
                 kind=seed.kind,
                 key=seed.key,
                 value=seed.value,
@@ -190,5 +206,5 @@ async def seed_default_costs(session: AsyncSession) -> int:
         inserted += 1
 
     await session.flush()
-    logger.info("default_costs_seeded", rows=inserted)
+    logger.info("default_costs_seeded", rows=inserted, org_id=str(org_id))
     return inserted

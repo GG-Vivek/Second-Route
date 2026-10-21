@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from secondroute.core.db import get_session
+from secondroute.core.db import current_org_uuid, get_session
 from secondroute.costs.models import CostKind, CostTable
 from secondroute.costs.schemas import CostCreate, CostListRead, CostRead, CostUpdate
 from secondroute.costs.service import seed_default_costs
@@ -207,7 +207,7 @@ async def seed_defaults(session: SessionDep) -> dict[str, int]:
     Returns:
         How many rows were inserted.
     """
-    inserted = await seed_default_costs(session)
+    inserted = await seed_default_costs(session, current_org_uuid())
     return {"inserted": inserted}
 
 

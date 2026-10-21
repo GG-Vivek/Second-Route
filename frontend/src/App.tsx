@@ -32,7 +32,7 @@ export function App() {
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route index element={<HomePage />} />
-            <Route path="health" element={<HealthPage />} />
+            <Route path="status" element={<HealthPage />} />
             <Route path="units" element={<UnitsListPage />} />
             <Route path="units/:id" element={<UnitDetailPage />} />
             <Route path="intake/new" element={<NewIntakePage />} />

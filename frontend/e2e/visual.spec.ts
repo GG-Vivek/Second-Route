@@ -8,6 +8,10 @@ import { fixtureFor } from './fixtures'
  * database is a screenshot that fails on somebody else's machine.
  */
 async function stubApi(page: Page) {
+  // The general handler first and the specific one second, because
+  // Playwright checks the routes in the reverse order they were added. The
+  // other way round the catch-all would answer for the health of the
+  // sources as well.
   await page.route('**/api/**', async (route) => {
     const url = new URL(route.request().url())
     await route.fulfill({
@@ -16,11 +20,11 @@ async function stubApi(page: Page) {
       body: JSON.stringify(fixtureFor(url.pathname)),
     })
   })
-  await page.route('**/health', async (route) => {
+  await page.route('**/api/v1/health', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(fixtureFor('/health')),
+      body: JSON.stringify(fixtureFor('/api/v1/health')),
     })
   })
 }
@@ -56,7 +60,7 @@ const ROUTES: [string, string][] = [
   ['intake', '/intake/new'],
   ['analytics', '/analytics'],
   ['backtest', '/backtest'],
-  ['health', '/health'],
+  ['status', '/status'],
 ]
 
 test.describe('the critical routes', () => {

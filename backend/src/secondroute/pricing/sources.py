@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import datetime, timedelta, timezone, UTC
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any, Optional, Sequence
 from uuid import UUID
 
@@ -287,9 +287,19 @@ async def seed_synthetic_price_observations(
 
     inserted = 0
     for sku_id, family in sku_ids:
+        # The generator has more than one profile for most families: the
+        # same model with a larger drive is worth more, and the prices
+        # are generated for the family rather than for the model. Two of
+        # those profiles can round to the same price for the same cell,
+        # and a cell may only hold one observation for a price.
+        seen: set[tuple[str, str, float]] = set()
         for row in observations:
             if row.family != family:
                 continue
+            key = (row.grade, row.channel, float(row.price))
+            if key in seen:
+                continue
+            seen.add(key)
             session.add(
                 PriceObservation(
                     sku_id=sku_id,
@@ -298,10 +308,14 @@ async def seed_synthetic_price_observations(
                     price=row.price,
                     currency=row.currency,
                     source="synthetic",
-                    observed_at=row.observed_at,
+                    # The column has no time zone, and the rest of the
+                    # application writes naive UTC. The generator makes
+                    # aware timestamps, and passing them straight in was
+                    # refused by the driver.
+                    observed_at=row.observed_at.astimezone(UTC).replace(tzinfo=None),
                     weight=row.weight,
                     is_synthetic=True,
-                    as_of=row.observed_at.date(),
+                    as_of=row.observed_at.astimezone(UTC).date(),
                 )
             )
             inserted += 1

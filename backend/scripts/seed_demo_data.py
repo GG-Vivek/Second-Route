@@ -21,11 +21,13 @@ import asyncio
 import random
 import sys
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
+# The synthetic generator lives in ``ml/`` at the root of the repository.
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "ml"))
 
 from sqlalchemy import delete, select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -200,8 +202,102 @@ async def _reset(session: AsyncSession, org_id: uuid.UUID) -> None:
         )
         await session.execute(delete(Decision).where(Decision.id.in_(decisions)))
     await session.execute(delete(Unit).where(Unit.org_id == org_id))
+
+    # The sources the seed made have to go as well, or the next run finds
+    # them already there and leaves them as they are.
+    from secondroute.costs.models import CostTable
+    from secondroute.ingest.models import ComponentPrice
+    from secondroute.pricing.models import PriceObservation
+
+    await session.execute(delete(ComponentPrice).where(ComponentPrice.org_id == org_id))
+    await session.execute(delete(CostTable).where(CostTable.org_id == org_id))
+    await session.execute(delete(PriceObservation).where(PriceObservation.source == "synthetic"))
+
     await session.flush()
     logger.info("demo_data_reset", org_id=str(org_id))
+
+
+async def _seed_the_sources(
+    session: AsyncSession,
+    skus: list[SKU],
+    org_id: uuid.UUID,
+    *,
+    seed_value: int,
+) -> dict[str, int]:
+    """Give the system something to have learned prices from.
+
+    The health of the data sources is worked out from the rows that are
+    in them. With every one of them empty there is no source to report,
+    and the page that says whether the data is fresh has nothing to say.
+
+    The price observations are the ones the engine reads, so the decisions
+    are made against them rather than against the analytic fallback.
+
+    Args:
+        session: The database session.
+        skus: The catalogue.
+        org_id: The organisation the data belongs to.
+        seed_value: The seed, so the data is the same every time.
+
+    Returns:
+        What was created.
+    """
+    from secondroute.costs.service import seed_default_costs
+    from secondroute.ingest.models import ComponentPrice
+    from secondroute.pricing.sources import seed_synthetic_price_observations
+
+    made = {"price_observations": 0, "cost_rows": 0, "component_prices": 0}
+
+    sku_ids = [(sku.id, sku.family) for sku in skus]
+    made["price_observations"] = await seed_synthetic_price_observations(
+        session,
+        sku_ids,
+        seed=seed_value,
+        observations_per_cell=8,
+        # The generator defaults to the end of a window that ended months
+        # ago, which would leave the price source stale. The point of
+        # seeding it is that the engine has something current to read.
+        as_of=datetime.now(UTC),
+    )
+
+    made["cost_rows"] = await seed_default_costs(session, org_id)
+
+    # A component price that is old enough to be stale, so that the page
+    # shows what a stale source looks like rather than only the healthy
+    # case.
+    existing = (
+        (await session.execute(select(ComponentPrice).where(ComponentPrice.org_id == org_id)))
+        .scalars()
+        .first()
+    )
+    if existing is None:
+        for component, price in (
+            ("display", 185.0),
+            ("battery", 95.0),
+            ("ssd", 48.0),
+            ("keyboard", 62.0),
+        ):
+            # The freshness of a source is worked out from when it was
+            # stored, so the row is dated back to make the source stale.
+            # A page that only ever shows healthy sources does not say
+            # what an unhealthy one looks like.
+            stored = datetime.utcnow() - timedelta(days=12)
+            session.add(
+                ComponentPrice(
+                    org_id=org_id,
+                    component_type=component,
+                    price_per_unit=price,
+                    unit="USD",
+                    source="parts_supplier",
+                    as_of=stored,
+                    created_at=stored,
+                    confidence_weight=0.8,
+                )
+            )
+            made["component_prices"] += 1
+    await session.flush()
+
+    return made
 
 
 async def seed(
@@ -244,6 +340,7 @@ async def seed(
         "overrides": 0,
         "outcomes": 0,
     }
+    made.update(await _seed_the_sources(session, skus, org_id, seed_value=seed_value))
     now = datetime.utcnow()
 
     for index in range(count):

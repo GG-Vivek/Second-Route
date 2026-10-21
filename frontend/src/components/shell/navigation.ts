@@ -52,7 +52,7 @@ export const navigation: NavItem[] = [
   },
   {
     name: 'Health',
-    href: '/health',
+    href: '/status',
     icon: HeartPulse,
     description: 'The services, the data sources and their freshness.',
   },
