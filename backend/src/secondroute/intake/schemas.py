@@ -147,6 +147,20 @@ class PhotoRead(PhotoBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PhotoStoredRead(BaseModel):
+    """A photograph that has been stored, without its metadata."""
+
+    storage_path: str = Field(description="The path the photograph is served from.")
+    exif_stripped: bool = Field(
+        default=True,
+        description="Always true. The stored file carries no metadata.",
+    )
+    width: int = Field(description="The width of the stored image, in pixels.")
+    height: int = Field(description="The height of the stored image, in pixels.")
+    size_bytes: int = Field(description="The size of the stored file.")
+    content_type: str = Field(description="The type of the stored file.")
+
+
 class UnitDetailRead(UnitRead):
     """Schema for unit detail with inspections and photos."""
 

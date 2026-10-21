@@ -40,6 +40,13 @@ export default defineConfig(({ mode }) => {
           target: apiTarget,
           changeOrigin: true,
         },
+        // The photographs. Without this the development server answers
+        // with the page itself, and the browser is given a document where
+        // it asked for an image.
+        '/uploads': {
+          target: apiTarget,
+          changeOrigin: true,
+        },
       },
     },
     build: {

@@ -7,12 +7,17 @@ Provides unit intake and inspection record endpoints.
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from secondroute.core.db import current_org_uuid, get_session
+from secondroute.intake.images import (
+    ImageTooLarge,
+    ImageTypeNotAllowed,
+    store_photo,
+)
 from secondroute.intake.models import (
     Unit,
     Inspection,
@@ -29,6 +34,7 @@ from secondroute.intake.schemas import (
     InspectionRead,
     PhotoCreate,
     PhotoRead,
+    PhotoStoredRead,
     UnitStatusUpdate,
 )
 
@@ -299,6 +305,55 @@ async def list_inspections(
     )
     inspections = result.scalars().all()
     return [InspectionRead.model_validate(i) for i in inspections]
+
+
+@router.post(
+    "/photos/upload",
+    response_model=PhotoStoredRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Store a photograph without its metadata",
+)
+async def upload_photo(
+    file: UploadFile = File(...),
+) -> PhotoStoredRead:
+    """
+    Store a photograph, with the metadata taken off it.
+
+    The photograph is decoded and written out again, so that nothing about
+    the camera, the moment or the place survives in the file. The result
+    says where the photograph is and how big it is; it is not yet attached
+    to a unit.
+
+    Args:
+        file: The photograph.
+
+    Returns:
+        Where the photograph was stored and what it is.
+
+    Raises:
+        HTTPException: 413 when the photograph is too large, 415 when it is
+            not an accepted image type.
+    """
+    content = await file.read()
+    try:
+        stored = store_photo(content, content_type=file.content_type)
+    except ImageTooLarge as exc:
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)
+        ) from exc
+    except ImageTypeNotAllowed as exc:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)
+        ) from exc
+
+    return PhotoStoredRead(
+        storage_path=stored.storage_path,
+        exif_stripped=stored.exif_stripped,
+        width=stored.width,
+        height=stored.height,
+        size_bytes=stored.size_bytes,
+        content_type=stored.content_type,
+    )
 
 
 @router.post(

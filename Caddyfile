@@ -17,6 +17,11 @@ localhost {
         reverse_proxy backend:8000
     }
 
+    # The photographs -> backend
+    handle /uploads/* {
+        reverse_proxy backend:8000
+    }
+
     # Frontend (Vite dev server) -> frontend
     handle {
         reverse_proxy frontend:5173
@@ -57,6 +62,11 @@ localhost {
 
         # Health check -> backend
         handle /health {
+            reverse_proxy backend:8000
+        }
+
+        # The photographs -> backend
+        handle /uploads/* {
             reverse_proxy backend:8000
         }
 
