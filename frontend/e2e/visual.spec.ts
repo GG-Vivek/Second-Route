@@ -25,6 +25,25 @@ async function stubApi(page: Page) {
   })
 }
 
+/**
+ * Put the theme in place before the page loads.
+ *
+ * The theme is a stored choice, not the colour scheme of the operating
+ * system, so the project name has to be turned into one. Without this
+ * both projects would photograph the same page.
+ *
+ * The choice is seeded once per tab and not on every load, so that a test
+ * can change the theme and reload to see whether the change was kept.
+ */
+test.beforeEach(async ({ page }, testInfo) => {
+  const theme = testInfo.project.name === 'light' ? 'light' : 'dark'
+  await page.addInitScript((value) => {
+    if (window.sessionStorage.getItem('theme-seeded')) return
+    window.sessionStorage.setItem('theme-seeded', 'yes')
+    window.localStorage.setItem('secondroute-theme', value)
+  }, theme)
+})
+
 /** Wait for the page to settle: no spinner left, no layout still moving. */
 async function settle(page: Page) {
   await page.waitForLoadState('networkidle')
@@ -157,5 +176,16 @@ test.describe('the theme', () => {
       document.documentElement.classList.contains('dark')
     )
     expect(afterReload).toBe(afterFirst)
+  })
+
+  test('the two themes really are different', async ({ page }, testInfo) => {
+    await stubApi(page)
+    await page.goto('/')
+    await settle(page)
+
+    const isDark = await page.evaluate(() =>
+      document.documentElement.classList.contains('dark')
+    )
+    expect(isDark).toBe(testInfo.project.name === 'dark')
   })
 })
