@@ -224,23 +224,37 @@ class TestCostApi:
     @pytest.mark.asyncio
     async def test_seed_defaults_is_idempotent(self, db_session: AsyncSession) -> None:
         """Seeding twice adds nothing the second time."""
-        first = await seed_default_costs(db_session)
-        second = await seed_default_costs(db_session)
+        org_id = uuid4()
+        first = await seed_default_costs(db_session, org_id)
+        second = await seed_default_costs(db_session, org_id)
         assert first > 0
         assert second == 0
 
     @pytest.mark.asyncio
+    async def test_seeding_without_an_organisation_writes_nothing(
+        self, db_session: AsyncSession
+    ) -> None:
+        """The costs belong to an organisation, so there is nowhere to put them without one.
+
+        The tenant-isolation policy refuses a row with no organisation, so
+        the endpoint that seeds the costs could not write anything at all
+        while it wrote them without one.
+        """
+        assert await seed_default_costs(db_session, None) == 0
+
+    @pytest.mark.asyncio
     async def test_load_cost_book_reads_the_rows(self, db_session: AsyncSession) -> None:
         """The cost book is built from the table."""
-        await seed_default_costs(db_session)
-        book = await load_cost_book(db_session)
+        org_id = uuid4()
+        await seed_default_costs(db_session, org_id)
+        book = await load_cost_book(db_session, org_id)
         assert book.get(CostKind.FIXED_FEE, "RESELL_OPEN_BOX") > 0
         assert book.source_for(CostKind.FIXED_FEE, "RESELL_OPEN_BOX") is not None
 
     @pytest.mark.asyncio
     async def test_list_costs_endpoint(self, client: AsyncClient, db_session: AsyncSession) -> None:
         """The list endpoint returns the seeded rows."""
-        await seed_default_costs(db_session)
+        await seed_default_costs(db_session, uuid4())
         response = await client.get("/api/v1/costs")
         assert response.status_code == 200
         data = response.json()
