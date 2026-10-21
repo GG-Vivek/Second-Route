@@ -1,209 +1,201 @@
-import React, { useEffect, useState } from 'react'
-import { CheckCircle, XCircle, AlertCircle, Loader2, RefreshCw, Server, Database, HardDrive } from 'lucide-react'
-import { api } from '@/api/client'
+import { useQuery } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+import { formatDistanceToNow } from 'date-fns'
+import { AlertCircle, CheckCircle2, Clock, Database, FlaskConical, Server, TriangleAlert } from 'lucide-react'
+import { getHealth, getSourceHealth } from '@/api/health'
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Skeleton,
+} from '@/components/ui'
 
-interface HealthResponse {
-  status: 'healthy' | 'degraded'
-  version: string
-  environment: string
-  checks: {
-    database: 'ok' | 'failed'
-    redis: 'ok' | 'failed'
-  }
-}
-
+/**
+ * The health of the system.
+ *
+ * Two things are on this page: whether the service is up, and whether the
+ * data behind the decisions is fresh. The second one matters more, because
+ * a stale source does not stop the engine, it only quietly lowers the
+ * confidence of everything the engine says.
+ */
 export function HealthPage() {
-  const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const healthQuery = useQuery({
+    queryKey: ['health'],
+    queryFn: getHealth,
+    refetchInterval: 30000,
+  })
 
-  const fetchHealth = async () => {
-    try {
-      setLoading(true)
-      const data = await api.get<HealthResponse>('/health')
-      setHealth(data)
-      setError(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch health')
-      setHealth(null)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const sourcesQuery = useQuery({
+    queryKey: ['sources', 'health'],
+    queryFn: getSourceHealth,
+  })
 
-  useEffect(() => {
-    fetchHealth()
-  }, [])
-
-  const getOverallStatusBadge = (status: 'healthy' | 'degraded' | null) => {
-    if (!status) return null
-    return status === 'healthy' ? (
-      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
-        <CheckCircle className="h-4 w-4" />
-        Healthy
-      </span>
-    ) : (
-      <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-800">
-        <AlertCircle className="h-4 w-4" />
-        Degraded
-      </span>
-    )
-  }
+  const health = healthQuery.data
+  const sources = sourcesQuery.data ?? []
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">System Health</h1>
-          <p className="text-muted-foreground mt-1">
-            Detailed health status of all SecondRoute services
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          {getOverallStatusBadge(health?.status ?? null)}
-          <button
-            onClick={fetchHealth}
-            disabled={loading}
-            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-accent disabled:opacity-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        </div>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Health</h1>
+        <p className="mt-1 text-muted-foreground">
+          Whether the service is up, and whether the data behind the decisions is fresh.
+        </p>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
-          <p className="font-medium">Error fetching health data</p>
-          <p className="text-sm mt-1">{error}</p>
-        </div>
-      )}
+      {/* The service. */}
+      <Card>
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
+          <CardTitle>The service</CardTitle>
+          {healthQuery.isLoading ? (
+            <Skeleton className="h-5 w-20" />
+          ) : healthQuery.isError ? (
+            <Badge variant="destructive">Unreachable</Badge>
+          ) : (
+            <Badge variant={health?.status === 'healthy' ? 'lime' : 'yellow'}>
+              {health?.status === 'healthy' ? (
+                <CheckCircle2 className="size-3" aria-hidden="true" />
+              ) : (
+                <AlertCircle className="size-3" aria-hidden="true" />
+              )}
+              {health?.status ?? 'unknown'}
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent>
+          {healthQuery.isLoading ? (
+            <Skeleton className="h-16" />
+          ) : healthQuery.isError ? (
+            <p className="text-sm text-destructive">
+              The service could not be reached. Check that the API is running.
+            </p>
+          ) : (
+            <>
+              <ul className="grid gap-4 sm:grid-cols-3">
+                <Service
+                  icon={<Server className="size-4" />}
+                  name="The API"
+                  ok={health?.status === 'healthy'}
+                  detail={`${health?.environment ?? 'unknown'}, version ${health?.version ?? '—'}`}
+                />
+                <Service
+                  icon={<Database className="size-4" />}
+                  name="The database"
+                  ok={health?.checks.database === 'ok'}
+                  detail={health?.checks.database === 'ok' ? 'Connected' : 'Not reachable'}
+                />
+                <Service
+                  icon={<Clock className="size-4" />}
+                  name="The queue"
+                  ok={health?.checks.redis === 'ok'}
+                  detail={health?.checks.redis === 'ok' ? 'Connected' : 'Not reachable'}
+                />
+              </ul>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <ServiceCard
-          name="API Server"
-          icon={<Server className="h-6 w-6" />}
-          status={health?.status === 'healthy' ? 'ok' : health?.status === 'degraded' ? 'degraded' : 'loading'}
-          detail="FastAPI application server"
-          checks={[
-            { name: 'Process', status: health?.status !== 'degraded' ? 'ok' : 'degraded' },
-            { name: 'Memory', status: 'ok' },
-            { name: 'CPU', status: 'ok' },
-          ]}
-        />
-
-        <ServiceCard
-          name="PostgreSQL Database"
-          icon={<Database className="h-6 w-6" />}
-          status={health?.checks.database ?? 'loading'}
-          detail="Primary data store (PostgreSQL 16)"
-          checks={[
-            { name: 'Connection', status: health?.checks.database ?? 'loading' },
-            { name: 'Migrations', status: 'ok' },
-            { name: 'Pool', status: 'ok' },
-          ]}
-        />
-
-        <ServiceCard
-          name="Redis Cache"
-          icon={<HardDrive className="h-6 w-6" />}
-          status={health?.checks.redis ?? 'loading'}
-          detail="Caching & job queue (Redis 7)"
-          checks={[
-            { name: 'Connection', status: health?.checks.redis ?? 'loading' },
-            { name: 'Memory', status: 'ok' },
-            { name: 'Persistence', status: 'ok' },
-          ]}
-        />
-      </div>
-
-      <div className="rounded-lg border bg-card p-6">
-        <h2 className="text-lg font-semibold mb-4">System Information</h2>
-        <dl className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div>
-            <dt className="text-sm text-muted-foreground">Version</dt>
-            <dd className="font-mono text-lg">{health?.version ?? '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-muted-foreground">Environment</dt>
-            <dd className="font-mono text-lg capitalize">{health?.environment ?? '—'}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-muted-foreground">Database</dt>
-            <dd className="font-mono text-lg">{health?.checks.database === 'ok' ? 'Connected' : 'Disconnected'}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-muted-foreground">Cache</dt>
-            <dd className="font-mono text-lg">{health?.checks.redis === 'ok' ? 'Connected' : 'Disconnected'}</dd>
-          </div>
-        </dl>
-      </div>
+      {/* The sources. */}
+      <Card>
+        <CardHeader>
+          <CardTitle>The data sources</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sourcesQuery.isLoading ? (
+            <Skeleton className="h-32" />
+          ) : sources.length === 0 ? (
+            <EmptyState
+              title="No sources have reported yet"
+              description="A source appears here the first time it says something."
+            />
+          ) : (
+            <ul className="divide-y divide-border">
+              {sources.map((source) => (
+                <li key={`${source.kind}:${source.source}`} className="flex flex-wrap items-center gap-3 py-3">
+                  <span className="w-32 shrink-0 truncate font-mono text-sm">{source.source}</span>
+                  <Badge variant="secondary">{source.kind}</Badge>
+                  {source.is_synthetic && (
+                    <Badge variant="yellow">
+                      <FlaskConical className="size-3" aria-hidden="true" />
+                      Synthetic
+                    </Badge>
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {source.last_update
+                      ? `last spoke ${formatDistanceToNow(new Date(source.last_update), { addSuffix: true })}`
+                      : 'has never spoken'}
+                  </span>
+                  {source.error_count > 0 && (
+                    <span className="text-xs text-destructive">
+                      {source.error_count} error(s)
+                    </span>
+                  )}
+                  <span className="ml-auto">
+                    <SourceBadge status={source.status} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
-function ServiceCard({
-  name,
+function Service({
   icon,
-  status,
+  name,
+  ok,
   detail,
-  checks,
 }: {
+  icon: ReactNode
   name: string
-  icon: React.ReactNode
-  status: 'ok' | 'failed' | 'degraded' | 'loading'
+  ok: boolean
   detail: string
-  checks: Array<{ name: string; status: 'ok' | 'failed' | 'degraded' | 'loading' }>
 }) {
-  const getStatusColor = (s: string) => {
-    switch (s) {
-      case 'ok':
-        return 'text-green-500'
-      case 'failed':
-        return 'text-red-500'
-      case 'degraded':
-        return 'text-yellow-500'
-      default:
-        return 'text-muted-foreground'
-    }
-  }
-
-  const getStatusIcon = (s: string) => {
-    switch (s) {
-      case 'ok':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />
-      case 'degraded':
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />
-      default:
-        return <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
-    }
-  }
-
   return (
-    <div className="rounded-lg border bg-card p-6 shadow-sm">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">{icon}</div>
-          <div>
-            <h3 className="text-lg font-semibold">{name}</h3>
-            <p className="text-sm text-muted-foreground">{detail}</p>
-          </div>
-        </div>
-        <div className={getStatusColor(status)}>
-          {getStatusIcon(status)}
-        </div>
-      </div>
+    <li className="flex items-start gap-3">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">{name}</span>
+        <span className="block truncate text-xs text-muted-foreground">{detail}</span>
+      </span>
+      {ok ? (
+        <CheckCircle2 className="size-4 shrink-0 text-lime" aria-label="Up" />
+      ) : (
+        <AlertCircle className="size-4 shrink-0 text-destructive" aria-label="Down" />
+      )}
+    </li>
+  )
+}
 
-      <div className="mt-4 space-y-2">
-        {checks.map((check) => (
-          <div key={check.name} className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{check.name}</span>
-            <span className={getStatusColor(check.status)}>{getStatusIcon(check.status)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+function SourceBadge({ status }: { status: 'fresh' | 'stale' | 'missing' }) {
+  if (status === 'fresh') {
+    return (
+      <Badge variant="lime">
+        <CheckCircle2 className="size-3" aria-hidden="true" />
+        Fresh
+      </Badge>
+    )
+  }
+  if (status === 'stale') {
+    return (
+      <Badge variant="yellow">
+        <TriangleAlert className="size-3" aria-hidden="true" />
+        Stale
+      </Badge>
+    )
+  }
+  return (
+    <Badge variant="outline">
+      <AlertCircle className="size-3" aria-hidden="true" />
+      Missing
+    </Badge>
   )
 }

@@ -16,6 +16,7 @@ import {
   getOverrideRate,
   getRegretOverTime,
 } from '@/api/decision'
+import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 
 export function AnalyticsPage() {
   const [kind, setKind] = useState<DataKind>('synthetic')
@@ -48,8 +49,8 @@ export function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12" data-testid="analytics-loading">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
+      <div className="flex items-center justify-center py-24" data-testid="analytics-loading">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden="true" />
         <span className="ml-2 text-sm text-muted-foreground">Loading the analytics...</span>
       </div>
     )
@@ -58,10 +59,10 @@ export function AnalyticsPage() {
   if (error) {
     return (
       <div
-        className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm"
+        className="flex items-center gap-2 rounded-4xl border border-destructive/40 bg-destructive/5 p-4 text-sm"
         data-testid="analytics-error"
       >
-        <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" />
+        <AlertCircle className="size-4 text-destructive" aria-hidden="true" />
         The analytics could not be loaded.
       </div>
     )
@@ -76,13 +77,9 @@ export function AnalyticsPage() {
     <div className="space-y-6">
       <AnalyticsHeader kind={kind} onKindChange={setKind} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-2">
         <NorthStarPanel
-          section={
-            kind === 'synthetic'
-              ? (northStar?.synthetic ?? EMPTY_NORTH_STAR)
-              : (northStar?.real ?? EMPTY_NORTH_STAR)
-          }
+          section={kind === 'synthetic' ? (northStar?.synthetic ?? EMPTY_NORTH_STAR) : (northStar?.real ?? EMPTY_NORTH_STAR)}
           kind={kind}
           baselineChannel={northStar?.baseline_channel ?? 'RECYCLE'}
         />
@@ -105,29 +102,33 @@ export function AnalyticsPage() {
         />
       </div>
 
-      <section aria-labelledby="export-heading" className="rounded-lg border bg-card p-4">
-        <h2 id="export-heading" className="font-semibold">
-          Export
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          The exports carry the snapshot hash and the model version, so they can be
-          checked against the data they came from.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {(['decisions', 'overrides', 'outcomes'] as const).map((entity) => (
-            <a
-              key={entity}
-              href={exportUrl(entity)}
-              download
-              className="inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium hover:bg-accent"
-              data-testid={`export-${entity}`}
-            >
-              <Download className="h-4 w-4" aria-hidden="true" />
-              {entity}
-            </a>
-          ))}
-        </div>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Export</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            The exports carry the snapshot hash and the model version, so they can be checked
+            against the data they came from.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(['decisions', 'overrides', 'outcomes'] as const).map((entity) => (
+              <Button
+                key={entity}
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  window.location.href = exportUrl(entity)
+                }}
+                data-testid={`export-${entity}`}
+              >
+                <Download className="size-4" aria-hidden="true" />
+                {entity}
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

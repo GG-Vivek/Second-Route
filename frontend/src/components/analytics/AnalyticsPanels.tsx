@@ -1,4 +1,13 @@
 import { useMemo } from 'react'
+import {
+  CartesianGrid,
+  ReferenceLine,
+  ResponsiveContainer,
+  Scatter,
+  ScatterChart,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { BarChart3, FlaskConical, TrendingUp } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { formatMoney, formatPercent } from '@/types/decision'
@@ -8,6 +17,7 @@ import type {
   OverrideRateSection,
   RegretBucket,
 } from '@/types/decision'
+import { Badge, Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger } from '@/components/ui'
 
 /** Which kind of data a panel is showing. */
 export type DataKind = 'synthetic' | 'real'
@@ -21,21 +31,18 @@ interface DataKindBadgeProps {
 export function DataKindBadge({ kind, className }: DataKindBadgeProps) {
   const synthetic = kind === 'synthetic'
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium',
-        synthetic ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800',
-        className
-      )}
+    <Badge
+      variant={synthetic ? 'yellow' : 'lime'}
+      className={className}
       data-testid={`data-kind-${kind}`}
     >
       {synthetic ? (
-        <FlaskConical className="h-3 w-3" aria-hidden="true" />
+        <FlaskConical className="size-3" aria-hidden="true" />
       ) : (
-        <TrendingUp className="h-3 w-3" aria-hidden="true" />
+        <TrendingUp className="size-3" aria-hidden="true" />
       )}
       {synthetic ? 'Synthetic data' : 'Real data'}
-    </span>
+    </Badge>
   )
 }
 
@@ -45,60 +52,62 @@ interface NorthStarPanelProps {
   baselineChannel: string
 }
 
-/** The north star: the net recovered per return, above the baseline. */
+/**
+ * The north star.
+ *
+ * The value recovered from a return, against what the baseline policy
+ * would have recovered from the same return.
+ */
 export function NorthStarPanel({
   section,
   kind,
   baselineChannel,
 }: NorthStarPanelProps) {
   return (
-    <section
-      aria-labelledby={`north-star-${kind}`}
-      className="rounded-lg border bg-card p-4"
-      data-testid={`north-star-${kind}`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={`north-star-${kind}`} className="font-semibold">
-          North star
-        </h3>
+    <Card aria-labelledby={`north-star-${kind}`} data-testid={`north-star-${kind}`}>
+      <CardHeader className="flex-row items-center justify-between gap-3">
+        <CardTitle>North star</CardTitle>
         <DataKindBadge kind={kind} />
-      </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          The net recovered per return, against the {baselineChannel} baseline.
+        </p>
 
-      <p className="mt-1 text-sm text-muted-foreground">
-        The net recovered per return, against the {baselineChannel} baseline.
-      </p>
+        <dl className="mt-4 grid gap-4 sm:grid-cols-3">
+          <div>
+            <dt className="text-xs text-muted-foreground">Net recovered per return</dt>
+            <dd className="font-mono text-2xl font-semibold" data-testid="net-recovered">
+              {formatMoney(section.net_recovered_per_return)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Baseline per return</dt>
+            <dd className="font-mono text-2xl font-semibold">
+              {formatMoney(section.baseline_per_return)}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">Above baseline per return</dt>
+            <dd
+              className={cn(
+                'font-mono text-2xl font-semibold',
+                section.above_baseline_per_return >= 0 ? 'text-lime' : 'text-destructive'
+              )}
+              data-testid="above-baseline"
+            >
+              {formatMoney(section.above_baseline_per_return)}
+            </dd>
+          </div>
+        </dl>
 
-      <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div>
-          <dt className="text-xs text-muted-foreground">Net recovered per return</dt>
-          <dd className="font-mono text-xl font-semibold" data-testid="net-recovered">
-            {formatMoney(section.net_recovered_per_return)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">Baseline per return</dt>
-          <dd className="font-mono text-xl font-semibold">{formatMoney(section.baseline_per_return)}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">Above baseline per return</dt>
-          <dd
-            className={cn(
-              'font-mono text-xl font-semibold',
-              section.above_baseline_per_return >= 0 ? 'text-emerald-600' : 'text-red-600'
-            )}
-            data-testid="above-baseline"
-          >
-            {formatMoney(section.above_baseline_per_return)}
-          </dd>
-        </div>
-      </dl>
-
-      <p className="mt-3 text-xs text-muted-foreground">
-        {section.returns_count} returns. The baseline was tried for{' '}
-        {section.observed_baseline_count} of them and taken from the model for{' '}
-        {section.estimated_baseline_count}.
-      </p>
-    </section>
+        <p className="mt-3 text-xs text-muted-foreground">
+          {section.returns_count} returns. The baseline was tried for{' '}
+          {section.observed_baseline_count} of them and taken from the model for{' '}
+          {section.estimated_baseline_count}.
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -107,7 +116,13 @@ interface RegretChartProps {
   kind: DataKind
 }
 
-/** The mean regret of every period. */
+/**
+ * The regret of every period.
+ *
+ * The chart shows the mean regret; the list underneath it carries the
+ * observed and the estimated counts, which is the difference between a
+ * number that was measured and a number that was modelled.
+ */
 export function RegretChart({ buckets, kind }: RegretChartProps) {
   const largest = useMemo(
     () => Math.max(...buckets.map((bucket) => bucket.mean_regret), 0),
@@ -115,48 +130,43 @@ export function RegretChart({ buckets, kind }: RegretChartProps) {
   )
 
   return (
-    <section
-      aria-labelledby={`regret-over-time-${kind}`}
-      className="rounded-lg border bg-card p-4"
-      data-testid={`regret-over-time-${kind}`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={`regret-over-time-${kind}`} className="font-semibold">
-          Regret over time
-        </h3>
+    <Card aria-labelledby={`regret-over-time-${kind}`} data-testid={`regret-over-time-${kind}`}>
+      <CardHeader className="flex-row items-center justify-between gap-3">
+        <CardTitle>Regret over time</CardTitle>
         <DataKindBadge kind={kind} />
-      </div>
-
-      {buckets.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground" data-testid="no-regret-buckets">
-          No regret has been recorded yet.
-        </p>
-      ) : (
-        <ul className="mt-4 space-y-2">
-          {buckets.map((bucket) => (
-            <li key={bucket.period} className="flex items-center gap-3">
-              <span className="w-20 shrink-0 font-mono text-xs text-muted-foreground">
-                {bucket.period}
-              </span>
-              <span className="h-3 flex-1 overflow-hidden rounded bg-muted">
-                <span
-                  className="block h-full bg-primary"
-                  style={{
-                    width: largest > 0 ? `${(bucket.mean_regret / largest) * 100}%` : '0%',
-                  }}
-                />
-              </span>
-              <span className="w-24 shrink-0 text-right font-mono text-xs">
-                {formatMoney(bucket.mean_regret)}
-                <span className="block text-muted-foreground">
-                  {bucket.observed_count} observed, {bucket.estimated_count} estimated
+      </CardHeader>
+      <CardContent>
+        {buckets.length === 0 ? (
+          <p className="py-8 text-sm text-muted-foreground" data-testid="no-regret-buckets">
+            No regret has been recorded yet.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {buckets.map((bucket) => (
+              <li key={bucket.period} className="flex items-center gap-3">
+                <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
+                  {bucket.period}
                 </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+                <span className="h-3 flex-1 overflow-hidden rounded-full bg-muted">
+                  <span
+                    className="block h-full rounded-full bg-primary"
+                    style={{
+                      width: largest > 0 ? `${(bucket.mean_regret / largest) * 100}%` : '0%',
+                    }}
+                  />
+                </span>
+                <span className="w-28 shrink-0 text-right font-mono text-xs">
+                  {formatMoney(bucket.mean_regret)}
+                  <span className="block text-muted-foreground">
+                    {bucket.observed_count} observed, {bucket.estimated_count} estimated
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -166,64 +176,111 @@ interface CalibrationChartProps {
   ece: number
 }
 
-/** The reliability curve: the predicted confidence against the observed rate. */
+/**
+ * The reliability curve.
+ *
+ * A prediction of 0.8 should be right about eighty percent of the time.
+ * The line is what that looks like when the engine is well calibrated,
+ * and the gap between the line and the points is the expected calibration
+ * error.
+ */
 export function CalibrationChart({ bins, kind, ece }: CalibrationChartProps) {
+  const points = useMemo(
+    () =>
+      bins.map((bin) => ({
+        predicted: bin.mean_predicted,
+        observed: bin.observed_frequency,
+        count: bin.count,
+      })),
+    [bins]
+  )
+
   return (
-    <section
-      aria-labelledby={`calibration-${kind}`}
-      className="rounded-lg border bg-card p-4"
-      data-testid={`calibration-${kind}`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={`calibration-${kind}`} className="font-semibold">
-          Calibration
-        </h3>
+    <Card aria-labelledby={`calibration-${kind}`} data-testid={`calibration-${kind}`}>
+      <CardHeader className="flex-row items-center justify-between gap-3">
+        <CardTitle>Calibration</CardTitle>
         <DataKindBadge kind={kind} />
-      </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          Expected calibration error:{' '}
+          <span className="font-mono font-semibold" data-testid="ece">
+            {ece.toFixed(4)}
+          </span>
+        </p>
 
-      <p className="mt-1 text-sm text-muted-foreground">
-        Expected calibration error:{' '}
-        <span className="font-mono font-semibold" data-testid="ece">
-          {ece.toFixed(4)}
-        </span>
-      </p>
+        {bins.length === 0 ? (
+          <p className="py-8 text-sm text-muted-foreground">Nothing to measure yet.</p>
+        ) : (
+          <>
+            <div className="mt-4 h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart margin={{ top: 8, right: 8, bottom: 8, left: -16 }}>
+                  <CartesianGrid stroke="rgb(var(--border))" strokeDasharray="3 5" />
+                  <XAxis
+                    type="number"
+                    dataKey="predicted"
+                    domain={[0, 1]}
+                    tick={{ fontSize: 11, fill: 'rgb(var(--muted-foreground))' }}
+                    tickFormatter={(value: number) => value.toFixed(1)}
+                    stroke="rgb(var(--border))"
+                  />
+                  <YAxis
+                    type="number"
+                    dataKey="observed"
+                    domain={[0, 1]}
+                    tick={{ fontSize: 11, fill: 'rgb(var(--muted-foreground))' }}
+                    tickFormatter={(value: number) => value.toFixed(1)}
+                    stroke="rgb(var(--border))"
+                  />
+                  <ReferenceLine
+                    segment={[
+                      { x: 0, y: 0 },
+                      { x: 1, y: 1 },
+                    ]}
+                    stroke="rgb(var(--muted-foreground))"
+                    strokeDasharray="4 4"
+                  />
+                  <Scatter data={points} fill="rgb(var(--primary))" />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
 
-      {bins.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">Nothing to measure yet.</p>
-      ) : (
-        <table className="mt-4 w-full text-sm">
-          <caption className="sr-only">The reliability curve</caption>
-          <thead>
-            <tr className="text-left text-xs text-muted-foreground">
-              <th scope="col" className="py-1">
-                Confidence
-              </th>
-              <th scope="col" className="py-1">
-                Predicted
-              </th>
-              <th scope="col" className="py-1">
-                Observed
-              </th>
-              <th scope="col" className="py-1">
-                Count
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {bins.map((bin) => (
-              <tr key={`${bin.lower}-${bin.upper}`} className="border-t">
-                <td className="py-1 font-mono text-xs">
-                  {bin.lower.toFixed(1)} - {bin.upper.toFixed(1)}
-                </td>
-                <td className="py-1 font-mono text-xs">{bin.mean_predicted.toFixed(2)}</td>
-                <td className="py-1 font-mono text-xs">{bin.observed_frequency.toFixed(2)}</td>
-                <td className="py-1 font-mono text-xs">{bin.count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
+            <table className="mt-4 w-full text-sm">
+              <caption className="sr-only">The reliability curve</caption>
+              <thead>
+                <tr className="text-left text-xs text-muted-foreground">
+                  <th scope="col" className="py-1">
+                    Confidence
+                  </th>
+                  <th scope="col" className="py-1">
+                    Predicted
+                  </th>
+                  <th scope="col" className="py-1">
+                    Observed
+                  </th>
+                  <th scope="col" className="py-1">
+                    Count
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {bins.map((bin) => (
+                  <tr key={`${bin.lower}-${bin.upper}`} className="border-t">
+                    <td className="py-1 font-mono text-xs">
+                      {bin.lower.toFixed(1)} - {bin.upper.toFixed(1)}
+                    </td>
+                    <td className="py-1 font-mono text-xs">{bin.mean_predicted.toFixed(2)}</td>
+                    <td className="py-1 font-mono text-xs">{bin.observed_frequency.toFixed(2)}</td>
+                    <td className="py-1 font-mono text-xs">{bin.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -234,41 +291,51 @@ interface OverrideRatePanelProps {
 
 /** The override rate and the reasons behind it. */
 export function OverrideRatePanel({ section, kind }: OverrideRatePanelProps) {
+  const largest = useMemo(
+    () => Math.max(...section.by_reason.map((reason) => reason.count), 0),
+    [section.by_reason]
+  )
+
   return (
-    <section
-      aria-labelledby={`override-rate-${kind}`}
-      className="rounded-lg border bg-card p-4"
-      data-testid={`override-rate-${kind}`}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id={`override-rate-${kind}`} className="font-semibold">
-          Override rate
-        </h3>
+    <Card aria-labelledby={`override-rate-${kind}`} data-testid={`override-rate-${kind}`}>
+      <CardHeader className="flex-row items-center justify-between gap-3">
+        <CardTitle>Override rate</CardTitle>
         <DataKindBadge kind={kind} />
-      </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">
+          <span className="font-mono font-semibold" data-testid="override-rate">
+            {formatPercent(section.override_rate)}
+          </span>{' '}
+          of {section.decisions_count} decisions were overridden.
+        </p>
 
-      <p className="mt-1 text-sm text-muted-foreground">
-        <span className="font-mono font-semibold" data-testid="override-rate">
-          {formatPercent(section.override_rate)}
-        </span>{' '}
-        of {section.decisions_count} decisions were overridden.
-      </p>
-
-      {section.by_reason.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">No overrides were recorded.</p>
-      ) : (
-        <ul className="mt-4 space-y-2">
-          {section.by_reason.map((reason) => (
-            <li key={reason.reason} className="flex items-center justify-between gap-3 text-sm">
-              <span className="truncate">{reason.reason}</span>
-              <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                {reason.count} ({formatPercent(reason.share)})
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+        {section.by_reason.length === 0 ? (
+          <p className="py-8 text-sm text-muted-foreground">No overrides were recorded.</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {section.by_reason.map((reason) => (
+              <li key={reason.reason} className="space-y-1">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="truncate">{reason.reason}</span>
+                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                    {reason.count} ({formatPercent(reason.share)})
+                  </span>
+                </div>
+                <span className="block h-2 overflow-hidden rounded-full bg-muted">
+                  <span
+                    className="block h-full rounded-full bg-primary"
+                    style={{
+                      width: largest > 0 ? `${(reason.count / largest) * 100}%` : '0%',
+                    }}
+                  />
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -284,34 +351,23 @@ export function AnalyticsHeader({ kind, onKindChange }: AnalyticsHeaderProps) {
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <BarChart3 className="h-5 w-5" aria-hidden="true" />
+          <BarChart3 className="size-5" aria-hidden="true" />
           Analytics
         </h2>
         <p className="text-sm text-muted-foreground">
           The synthetic and the real data are shown separately and are never added together.
         </p>
       </div>
-      <div
-        className="flex rounded-lg border p-1"
-        role="group"
-        aria-label="Which data to show"
+      <Tabs
+        value={kind}
+        onValueChange={(value) => onKindChange(value as DataKind)}
+        className="space-y-0"
       >
-        {(['synthetic', 'real'] as DataKind[]).map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => onKindChange(option)}
-            aria-pressed={kind === option}
-            className={cn(
-              'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-              kind === option ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
-            )}
-            data-testid={`kind-${option}`}
-          >
-            {option === 'synthetic' ? 'Synthetic' : 'Real'}
-          </button>
-        ))}
-      </div>
+        <TabsList>
+          <TabsTrigger value="synthetic">Synthetic</TabsTrigger>
+          <TabsTrigger value="real">Real</TabsTrigger>
+        </TabsList>
+      </Tabs>
     </div>
   )
 }

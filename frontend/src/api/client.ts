@@ -108,3 +108,15 @@ class ApiClient {
 }
 
 export const api = new ApiClient()
+
+/**
+ * A client for the endpoints that live at the root of the service.
+ *
+ * The health check is one of them. It is not under the versioned API
+ * prefix, because a proxy or a load balancer has to be able to ask
+ * whether the service is up without knowing which version it is running.
+ */
+export const rootApi = axios.create({
+  baseURL: '/',
+  timeout: 10000,
+})

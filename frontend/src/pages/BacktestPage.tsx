@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, FlaskConical, Loader2, ShieldCheck, ShieldAlert } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { FlaskConical, Loader2, ShieldAlert, ShieldCheck } from 'lucide-react'
+import { format } from 'date-fns'
+import { Button, Callout, Card, CardContent, CardHeader, CardTitle, Field, inputClass } from '@/components/ui'
 import { createBacktest, listBacktests, type BacktestRun } from '@/api/backtest'
 import { formatMoney } from '@/types/decision'
 
@@ -9,10 +10,11 @@ import { formatMoney } from '@/types/decision'
 const CHANNELS = ['LIQUIDATE', 'RESELL', 'RECYCLE', 'PARTS_HARVEST', 'DONATE']
 
 /**
- * Show the bootstrap interval as a band around the point estimate.
+ * The interval of a backtest.
  *
- * The band is scaled to the wider of the interval and a small floor, so a
- * tight interval is still visible and a wide one does not overflow.
+ * The band is the interval and the mark is the point estimate. The
+ * interval is what decides whether the number can be quoted: a difference
+ * whose interval includes zero is not a difference.
  */
 function IntervalBar({
   point,
@@ -42,14 +44,14 @@ function IntervalBar({
           aria-hidden="true"
         />
         <div
-          className="absolute top-1.5 h-5 w-0.5 bg-foreground"
+          className="absolute top-1.5 h-5 w-px bg-foreground"
           style={{ left: `${position(point)}%` }}
           aria-hidden="true"
         />
       </div>
       <div className="flex items-center justify-between font-mono text-xs text-muted-foreground">
         <span>{formatMoney(lower)}</span>
-        <span>{formatMoney(point)}</span>
+        <span className="text-foreground">{formatMoney(point)}</span>
         <span>{formatMoney(upper)}</span>
       </div>
     </div>
@@ -63,131 +65,126 @@ function RunReport({ run }: { run: BacktestRun }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border bg-card p-6 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold">{run.name}</h2>
+      <Card>
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
+          <CardTitle>{run.name}</CardTitle>
           <span className="text-sm text-muted-foreground">
             {run.decision_count} decision(s) compared
           </span>
-        </div>
-
-        <dl className="grid gap-4 sm:grid-cols-3">
-          <div>
-            <dt className="text-xs text-muted-foreground">Engine mean net</dt>
-            <dd className="font-mono text-lg">
-              {report?.mean_engine_net !== null && report?.mean_engine_net !== undefined
-                ? formatMoney(report.mean_engine_net)
-                : '-'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Baseline mean net</dt>
-            <dd className="font-mono text-lg">
-              {report?.mean_baseline_net !== null && report?.mean_baseline_net !== undefined
-                ? formatMoney(report.mean_baseline_net)
-                : '-'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted-foreground">Mean difference</dt>
-            <dd className="font-mono text-lg">
-              {report?.mean_difference !== null && report?.mean_difference !== undefined
-                ? formatMoney(report.mean_difference)
-                : '-'}
-            </dd>
-          </div>
-        </dl>
-
-        {interval ? (
-          <div className="space-y-2">
-            <div className="flex items-baseline justify-between">
-              <span className="text-sm font-medium">
-                Difference per unit, {Math.round(interval.confidence * 100)}% interval
-              </span>
-              <span className="font-mono text-sm text-muted-foreground">
-                {interval.excludes_zero ? 'excludes zero' : 'includes zero'}
-              </span>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <dl className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <dt className="text-xs text-muted-foreground">Engine mean net</dt>
+              <dd className="font-mono text-2xl font-semibold">
+                {report?.mean_engine_net !== null && report?.mean_engine_net !== undefined
+                  ? formatMoney(report.mean_engine_net)
+                  : '-'}
+              </dd>
             </div>
-            <IntervalBar
-              point={interval.point_estimate}
-              lower={interval.lower}
-              upper={interval.upper}
-            />
-            <p className="text-xs text-muted-foreground">
-              {interval.method}, {interval.samples} resamples, seed {interval.seed}, n ={' '}
-              {interval.n}.
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 text-sm">
-            No interval could be computed. There are too few comparable decisions for the
-            difference to be summarised with a confidence interval, so only the point estimate
-            is shown.
-          </div>
-        )}
+            <div>
+              <dt className="text-xs text-muted-foreground">Baseline mean net</dt>
+              <dd className="font-mono text-2xl font-semibold">
+                {report?.mean_baseline_net !== null && report?.mean_baseline_net !== undefined
+                  ? formatMoney(report.mean_baseline_net)
+                  : '-'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Mean difference</dt>
+              <dd className="font-mono text-2xl font-semibold text-lime">
+                {report?.mean_difference !== null && report?.mean_difference !== undefined
+                  ? formatMoney(report.mean_difference)
+                  : '-'}
+              </dd>
+            </div>
+          </dl>
 
-        <div className="flex flex-wrap gap-4 border-t pt-4 text-sm">
-          <span>
-            <span className="text-muted-foreground">Baseline: </span>
-            {report?.baseline_name ?? run.baseline_name}
-            {run.baseline_channel ? ` (${run.baseline_channel})` : ''}
-          </span>
-          {report?.win_rate !== null && report?.win_rate !== undefined && (
-            <span>
-              <span className="text-muted-foreground">Engine better on: </span>
-              {Math.round(report.win_rate * 100)}% of units
-            </span>
+          {interval ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-3">
+                <span className="text-sm font-medium">
+                  Difference per unit, {Math.round(interval.confidence * 100)}% interval
+                </span>
+                <span className="font-mono text-sm text-muted-foreground">
+                  {interval.excludes_zero ? 'excludes zero' : 'includes zero'}
+                </span>
+              </div>
+              <IntervalBar
+                point={interval.point_estimate}
+                lower={interval.lower}
+                upper={interval.upper}
+              />
+              <p className="text-xs text-muted-foreground">
+                {interval.method}, {interval.samples} resamples, seed {interval.seed}, n ={' '}
+                {interval.n}.
+              </p>
+            </div>
+          ) : (
+            <Callout tone="warning" title="No interval could be computed">
+              <p>
+                There are too few comparable decisions for the difference to be summarised with
+                a confidence interval, so only the point estimate is shown.
+              </p>
+            </Callout>
           )}
-        </div>
-      </div>
+
+          <div className="flex flex-wrap gap-4 border-t pt-4 text-sm">
+            <span>
+              <span className="text-muted-foreground">Baseline: </span>
+              {report?.baseline_name ?? run.baseline_name}
+              {run.baseline_channel ? ` (${run.baseline_channel})` : ''}
+            </span>
+            {report?.win_rate !== null && report?.win_rate !== undefined && (
+              <span>
+                <span className="text-muted-foreground">Engine better on: </span>
+                {Math.round(report.win_rate * 100)}% of units
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {lookahead && (
-        <div
-          className={
+        <Callout
+          tone={lookahead.has_leak ? 'caution' : 'tip'}
+          title={
             lookahead.has_leak
-              ? 'rounded-lg border border-red-200 bg-red-50 p-4 text-red-800'
-              : 'rounded-lg border border-green-200 bg-green-50 p-4 text-green-900'
+              ? 'This backtest was refused: it used data from the future.'
+              : 'No look-ahead: every source was dated before the decision that used it.'
+          }
+          icon={
+            lookahead.has_leak ? (
+              <ShieldAlert className="size-4" aria-hidden="true" />
+            ) : (
+              <ShieldCheck className="size-4" aria-hidden="true" />
+            )
           }
         >
-          <div className="flex items-start gap-3">
-            {lookahead.has_leak ? (
-              <ShieldAlert className="h-5 w-5 flex-shrink-0 mt-0.5" />
-            ) : (
-              <ShieldCheck className="h-5 w-5 flex-shrink-0 mt-0.5" />
-            )}
-            <div>
-              <p className="font-medium">
-                {lookahead.has_leak
-                  ? 'This backtest was refused: it used data from the future.'
-                  : 'No look-ahead: every source was dated before the decision that used it.'}
-              </p>
-              {lookahead.findings.length > 0 && (
-                <ul className="mt-2 list-disc pl-5 text-sm">
-                  {lookahead.findings.map((finding) => (
-                    <li key={`${finding.decision_id}:${finding.field}`}>
-                      <span className="font-mono">{finding.field}</span>: {finding.detail}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
+          {lookahead.findings.length > 0 && (
+            <ul className="mt-2 list-disc pl-5 space-y-1">
+              {lookahead.findings.map((finding) => (
+                <li key={`${finding.decision_id}:${finding.field}`}>
+                  <span className="font-mono">{finding.field}</span>: {finding.detail}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Callout>
       )}
 
       {report?.warnings && report.warnings.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
-          <p className="font-medium">Read this before quoting the number</p>
-          <ul className="mt-2 list-disc pl-5 text-sm">
+        <Callout tone="warning" title="Read this before quoting the number">
+          <ul className="mt-2 list-disc pl-5 space-y-1">
             {report.warnings.map((warning) => (
               <li key={warning}>{warning}</li>
             ))}
           </ul>
-        </div>
+        </Callout>
       )}
 
       {report?.skipped && report.skipped.length > 0 && (
-        <details className="rounded-lg border bg-card p-4">
+        <details className="rounded-2xl border bg-card p-4">
           <summary className="cursor-pointer text-sm font-medium">
             {report.skipped.length} decision(s) left out of the comparison
           </summary>
@@ -243,114 +240,110 @@ export function BacktestPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Historical backtest</h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="mt-1 text-muted-foreground">
           Replays past decisions using only what was known at the time, and compares the engine
           against the partner&apos;s baseline policy.
         </p>
       </div>
 
-      <div className="rounded-lg border bg-card p-6 shadow-sm">
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="min-w-[220px] flex-1">
-            <label htmlFor="org-id" className="mb-1 block text-xs font-medium text-muted-foreground">
-              Organisation id
-            </label>
-            <input
-              id="org-id"
-              value={orgId}
-              onChange={(event) => setOrgId(event.target.value)}
-              placeholder="00000000-0000-0000-0000-000000000000"
-              className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"
-            />
+      <Card>
+        <CardContent className="flex flex-wrap items-end gap-4 pt-6">
+          <div className="min-w-[14rem] flex-1">
+            <Field label="Organisation id">
+              {({ id }) => (
+                <input
+                  id={id}
+                  value={orgId}
+                  onChange={(event) => setOrgId(event.target.value)}
+                  placeholder="00000000-0000-0000-0000-000000000000"
+                  className={inputClass}
+                />
+              )}
+            </Field>
           </div>
-          <div>
-            <label
-              htmlFor="baseline-channel"
-              className="mb-1 block text-xs font-medium text-muted-foreground"
-            >
-              Baseline channel
-            </label>
-            <select
-              id="baseline-channel"
-              value={baselineChannel}
-              onChange={(event) => setBaselineChannel(event.target.value)}
-              className="h-9 rounded-lg border border-input bg-background px-3 text-sm"
-            >
-              {CHANNELS.map((channel) => (
-                <option key={channel} value={channel}>
-                  {channel}
-                </option>
-              ))}
-            </select>
+          <div className="min-w-[12rem]">
+            <Field label="Baseline channel">
+              {({ id }) => (
+                <select
+                  id={id}
+                  value={baselineChannel}
+                  onChange={(event) => setBaselineChannel(event.target.value)}
+                  className={inputClass}
+                >
+                  {CHANNELS.map((channel) => (
+                    <option key={channel} value={channel}>
+                      {channel}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </Field>
           </div>
-          <Button
-            onClick={() => runMutation.mutate()}
-            disabled={!orgId || runMutation.isPending}
-          >
+          <Button onClick={() => runMutation.mutate()} disabled={!orgId || runMutation.isPending}>
             {runMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <>
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Running...
+              </>
             ) : (
-              <FlaskConical className="mr-2 h-4 w-4" />
+              <>
+                <FlaskConical className="size-4" aria-hidden="true" />
+                Run backtest
+              </>
             )}
-            Run backtest
           </Button>
-        </div>
-        {errorMessage && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
-            <span>{errorMessage}</span>
-          </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
+
+      {errorMessage && (
+        <Callout tone="caution" title="The backtest was refused">
+          <p>{errorMessage}</p>
+        </Callout>
+      )}
 
       {activeRun && <RunReport run={activeRun} />}
 
       {runsQuery.data && runsQuery.data.length > 0 && (
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">Previous runs</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-xs text-muted-foreground">
-                  <th className="py-2 pr-4 font-medium">Name</th>
-                  <th className="py-2 pr-4 font-medium">Baseline</th>
-                  <th className="py-2 pr-4 font-medium">Decisions</th>
-                  <th className="py-2 pr-4 font-medium">Difference</th>
-                  <th className="py-2 pr-4 font-medium">Interval</th>
-                  <th className="py-2 font-medium">Run</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runsQuery.data.map((run) => (
-                  <tr key={run.id} className="border-b last:border-0">
-                    <td className="py-2 pr-4">{run.name}</td>
-                    <td className="py-2 pr-4">
-                      {run.baseline_name}
-                      {run.baseline_channel ? ` (${run.baseline_channel})` : ''}
-                    </td>
-                    <td className="py-2 pr-4 font-mono">{run.decision_count}</td>
-                    <td className="py-2 pr-4 font-mono">
-                      {run.mean_difference === null ? '-' : formatMoney(run.mean_difference)}
-                    </td>
-                    <td className="py-2 pr-4 font-mono">
-                      {run.ci_lower === null || run.ci_upper === null
-                        ? '-'
-                        : `${formatMoney(run.ci_lower)} to ${formatMoney(run.ci_upper)}`}
-                    </td>
-                    <td className="py-2">
-                      <button
-                        onClick={() => setActiveRun(run)}
-                        className="text-primary underline-offset-2 hover:underline"
-                      >
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Previous runs</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y divide-border">
+              {runsQuery.data.map((run) => (
+                <li key={run.id} className="flex flex-wrap items-center gap-4 py-3">
+                  <span className="font-medium">{run.name}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {run.baseline_name}
+                    {run.baseline_channel ? ` (${run.baseline_channel})` : ''}
+                  </span>
+                  <span className="font-mono text-sm text-muted-foreground">
+                    {run.decision_count} decisions
+                  </span>
+                  <span className="font-mono text-sm">
+                    {run.mean_difference === null
+                      ? '-'
+                      : formatMoney(run.mean_difference)}
+                  </span>
+                  <span className="font-mono text-sm text-muted-foreground">
+                    {run.ci_lower === null || run.ci_upper === null
+                      ? '-'
+                      : `${formatMoney(run.ci_lower)} to ${formatMoney(run.ci_upper)}`}
+                  </span>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {format(new Date(run.created_at), 'PP')}
+                  </span>
+                  <button
+                    onClick={() => setActiveRun(run)}
+                    className="ml-auto text-sm font-medium text-primary hover:underline"
+                  >
+                    View
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

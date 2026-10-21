@@ -1,258 +1,280 @@
-import React, { useEffect, useState } from 'react'
-import { CheckCircle, XCircle, AlertCircle, Loader2, Server, Database, HardDrive } from 'lucide-react'
-import { api } from '@/api/client'
+import { useQuery } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  CircleDashed,
+  Database,
+  Gauge,
+  Loader2,
+  Package,
+  Server,
+  Sparkles,
+  TrendingUp,
+} from 'lucide-react'
+import { cn } from '@/utils/cn'
+import { getHealth } from '@/api/health'
+import { getNorthStar } from '@/api/decision'
+import { formatMoney } from '@/types/decision'
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Skeleton,
+} from '@/components/ui'
 
-interface HealthResponse {
-  status: 'healthy' | 'degraded'
-  version: string
-  environment: string
-  checks: {
-    database: 'ok' | 'failed'
-    redis: 'ok' | 'failed'
-  }
-}
-
+/**
+ * The dashboard.
+ *
+ * The north star is the number the whole product exists to move: the value
+ * recovered from a return, against what the partner would have recovered
+ * without it. Everything else on the page is either the state of the
+ * system or the work waiting to be done.
+ */
 export function HomePage() {
-  const [health, setHealth] = useState<HealthResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const healthQuery = useQuery({
+    queryKey: ['health'],
+    queryFn: getHealth,
+    refetchInterval: 30000,
+  })
 
-  useEffect(() => {
-    async function fetchHealth() {
-      try {
-        setLoading(true)
-        const data = await api.get<HealthResponse>('/health')
-        setHealth(data)
-        setError(null)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch health')
-        setHealth(null)
-      } finally {
-        setLoading(false)
-      }
-    }
+  const northStarQuery = useQuery({
+    queryKey: ['analytics', 'north-star'],
+    queryFn: getNorthStar,
+  })
 
-    fetchHealth()
-    const interval = setInterval(fetchHealth, 30000) // Refresh every 30s
-    return () => clearInterval(interval)
-  }, [])
+  const northStar = northStarQuery.data
+  const synthetic = northStar?.synthetic
+  const real = northStar?.real
 
-  const getOverallStatusIcon = (status: 'healthy' | 'degraded' | null) => {
-    if (!status || loading) return <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-    return status === 'healthy' ? (
-      <CheckCircle className="h-8 w-8 text-green-500" />
-    ) : (
-      <AlertCircle className="h-8 w-8 text-yellow-500" />
-    )
-  }
+  // The real numbers are the ones that count. The synthetic ones are shown
+  // only when there is nothing else, and always labelled.
+  const headline = real && real.returns_count > 0 ? real : synthetic
+  const isSynthetic = !(real && real.returns_count > 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">SecondRoute Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Decision engine for returned electronics
+        <h1 className="text-3xl font-bold tracking-tight">The dashboard</h1>
+        <p className="mt-1 text-muted-foreground">
+          What the engine recovered, and what is waiting to be done.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {/* Overall Status Card */}
-        <div className="md:col-span-2">
-          <div className="rounded-lg border bg-card p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">System Status</h2>
-                <p className="text-muted-foreground mt-1">
-                  Real-time health monitoring of all services
+      {/* The north star. */}
+      <section aria-labelledby="north-star-heading" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="north-star-heading" className="text-lg font-semibold">
+            The north star
+          </h2>
+          {isSynthetic && (
+            <Badge variant="yellow">
+              <Sparkles className="size-3" aria-hidden="true" />
+              Synthetic data
+            </Badge>
+          )}
+        </div>
+
+        {northStarQuery.isLoading ? (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[0, 1, 2].map((index) => (
+              <Skeleton key={index} className="h-28" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="gap-1">
+                <CardTitle className="text-sm font-normal text-muted-foreground">
+                  Net recovered per return
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="font-mono text-3xl font-semibold" data-testid="net-recovered">
+                  {formatMoney(headline?.net_recovered_per_return ?? 0)}
                 </p>
-              </div>
-              <div className={health?.status === 'healthy' ? 'text-green-500' : 'text-yellow-500'}>
-                {getOverallStatusIcon(health?.status ?? null)}
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-4 text-sm">
-              <span className={health?.status === 'healthy' ? 'text-green-600 font-medium' : 'text-yellow-600 font-medium'}>
-                {health?.status?.toUpperCase() ?? 'LOADING...'}
-              </span>
-              <span className="text-muted-foreground">
-                Version: {health?.version ?? '—'}
-              </span>
-              <span className="text-muted-foreground">
-                Env: {health?.environment ?? '—'}
-              </span>
-            </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {headline?.returns_count ?? 0} returns
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="gap-1">
+                <CardTitle className="text-sm font-normal text-muted-foreground">
+                  The baseline
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="font-mono text-3xl font-semibold">
+                  {formatMoney(headline?.baseline_per_return ?? 0)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  What {northStar?.baseline_channel ?? 'the baseline'} would have given
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="gap-1">
+                <CardTitle className="text-sm font-normal text-muted-foreground">
+                  Above the baseline
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p
+                  className={cn(
+                    'font-mono text-3xl font-semibold',
+                    (headline?.above_baseline_per_return ?? 0) >= 0
+                      ? 'text-lime'
+                      : 'text-destructive'
+                  )}
+                  data-testid="above-baseline"
+                >
+                  {formatMoney(headline?.above_baseline_per_return ?? 0)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">per return</p>
+              </CardContent>
+            </Card>
           </div>
-        </div>
+        )}
+      </section>
 
-        {/* Quick Stats Card */}
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <h3 className="font-semibold">Quick Actions</h3>
-          <div className="mt-4 space-y-2">
-            <LinkCard
-              title="New Return Intake"
-              description="Log a returned unit"
-              href="/intake"
-              icon={<Server className="h-4 w-4" />}
-              disabled={true}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* The work waiting. */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>The work</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <QuickAction
+              href="/intake/new"
+              icon={<Package className="size-4" />}
+              title="Log a return"
+              description="A unit that has come back and nobody has written down yet."
             />
-            <LinkCard
-              title="View Inspections"
-              description="Browse inspection records"
-              href="/inspections"
-              icon={<Database className="h-4 w-4" />}
-              disabled={true}
+            <QuickAction
+              href="/units"
+              icon={<Gauge className="size-4" />}
+              title="Inspect and decide"
+              description="The units that are waiting for an inspection or a decision."
             />
-            <LinkCard
-              title="Decision Engine"
-              description="Get disposition recommendations"
-              href="/decisions"
-              icon={<HardDrive className="h-4 w-4" />}
-              disabled={true}
+            <QuickAction
+              href="/analytics"
+              icon={<TrendingUp className="size-4" />}
+              title="See how the engine is doing"
+              description="What it recovered, and how often it was wrong."
             />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* The state of the system. */}
+        <Card>
+          <CardHeader>
+            <CardTitle>The system</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {healthQuery.isLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                Checking...
+              </div>
+            ) : healthQuery.isError ? (
+              <div className="flex items-start gap-2 text-sm text-destructive">
+                <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                The service could not be reached.
+              </div>
+            ) : (
+              <ul className="space-y-3">
+                <ServiceRow
+                  icon={<Server className="size-4" />}
+                  name="The API"
+                  ok={healthQuery.data?.status === 'healthy'}
+                  detail={`${healthQuery.data?.environment ?? 'unknown'}, version ${healthQuery.data?.version ?? '—'}`}
+                />
+                <ServiceRow
+                  icon={<Database className="size-4" />}
+                  name="The database"
+                  ok={healthQuery.data?.checks.database === 'ok'}
+                  detail={healthQuery.data?.checks.database === 'ok' ? 'Connected' : 'Not reachable'}
+                />
+                <ServiceRow
+                  icon={<CircleDashed className="size-4" />}
+                  name="The queue"
+                  ok={healthQuery.data?.checks.redis === 'ok'}
+                  detail={healthQuery.data?.checks.redis === 'ok' ? 'Connected' : 'Not reachable'}
+                />
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      {/* Service Health Details */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Service Health</h2>
-        <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Service</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Details</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              <ServiceRow
-                name="API Server"
-                icon={<Server className="h-4 w-4" />}
-                status={health?.status === 'healthy' ? 'ok' : health?.status === 'degraded' ? 'degraded' : 'loading'}
-                detail="FastAPI application server"
-              />
-              <ServiceRow
-                name="PostgreSQL Database"
-                icon={<Database className="h-4 w-4" />}
-                status={health?.checks.database ?? 'loading'}
-                detail="Primary data store"
-              />
-              <ServiceRow
-                name="Redis Cache"
-                icon={<HardDrive className="h-4 w-4" />}
-                status={health?.checks.redis ?? 'loading'}
-                detail="Caching & job queue"
-              />
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
-          <p className="font-medium">Error fetching health data</p>
-          <p className="text-sm mt-1">{error}</p>
-        </div>
-      )}
     </div>
   )
 }
 
-function ServiceRow({
-  name,
+function QuickAction({
+  href,
   icon,
-  status,
-  detail,
+  title,
+  description,
 }: {
-  name: string
-  icon: React.ReactNode
-  status: 'ok' | 'failed' | 'degraded' | 'loading'
-  detail: string
+  href: string
+  icon: ReactNode
+  title: string
+  description: string
 }) {
-  const getStatusBadge = () => {
-    switch (status) {
-      case 'ok':
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-            <CheckCircle className="h-3 w-3" />
-            Healthy
-          </span>
-        )
-      case 'failed':
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-            <XCircle className="h-3 w-3" />
-            Failed
-          </span>
-        )
-      case 'degraded':
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-            <AlertCircle className="h-3 w-3" />
-            Degraded
-          </span>
-        )
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Checking...
-          </span>
-        )
-    }
-  }
-
   return (
-    <tr className="hover:bg-muted/50">
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">{icon}</div>
-          <div>
-            <p className="font-medium">{name}</p>
-            <p className="text-sm text-muted-foreground">{detail}</p>
-          </div>
-        </div>
-      </td>
-      <td className="px-4 py-3">{getStatusBadge()}</td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">
-        {status === 'ok' && 'Operational'}
-        {status === 'failed' && 'Connection failed'}
-        {status === 'degraded' && 'Partial functionality'}
-        {status === 'loading' && 'Checking...'}
-      </td>
-    </tr>
+    <Link
+      to={href}
+      className="group flex items-start gap-3 rounded-2xl border bg-card p-4 transition-colors hover:border-outline hover:bg-accent/40"
+    >
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 text-sm font-medium">
+          {title}
+          <ArrowRight
+            className="size-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
+        </span>
+        <span className="mt-0.5 block text-sm text-muted-foreground">{description}</span>
+      </span>
+    </Link>
   )
 }
 
-function LinkCard({
-  title,
-  description,
-  href,
+function ServiceRow({
   icon,
-  disabled,
+  name,
+  ok,
+  detail,
 }: {
-  title: string
-  description: string
-  href: string
-  icon: React.ReactNode
-  disabled?: boolean
+  icon: ReactNode
+  name: string
+  ok: boolean
+  detail: string
 }) {
   return (
-    <a
-      href={href}
-      className={`flex items-center gap-3 rounded-lg p-3 transition-colors ${
-        disabled
-          ? 'text-muted-foreground bg-muted/50 cursor-not-allowed'
-          : 'hover:bg-accent text-foreground'
-      }`}
-      aria-disabled={disabled}
-    >
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">{icon}</div>
-      <div>
-        <p className="font-medium text-sm">{title}</p>
-        <p className="text-xs text-muted-foreground">{description}</p>
-      </div>
-    </a>
+    <li className="flex items-center gap-3">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium">{name}</span>
+        <span className="block truncate text-xs text-muted-foreground">{detail}</span>
+      </span>
+      {ok ? (
+        <CheckCircle2 className="size-4 shrink-0 text-lime" aria-label="Up" />
+      ) : (
+        <AlertCircle className="size-4 shrink-0 text-destructive" aria-label="Down" />
+      )}
+    </li>
   )
 }
