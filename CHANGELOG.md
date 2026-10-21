@@ -28,6 +28,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The build plan now carries Phase 8 and the risks it comes with: a view that shows a
   plausible but wrong shape, a canvas that silently renders nothing, and a design
   system that drifts.
+- The coloured badges follow the Material Design 3 pattern: the brand tone is the
+  background and the tone that belongs on it is the text. Every badge was unreadable
+  in the dark theme; a bright yellow with white text on it is a ratio of about one
+  and a half to one.
+- There is a way to put a photograph in, and the photograph is written out again from
+  its pixels, so that nothing about the camera, the moment or the place survives in
+  it. There is a seed that makes a workload to look at: forty units, their
+  inspections, four photographs each, the decisions the engine made, the overrides
+  and the outcomes.
+- The cache is optional, and a dependency that is not configured is not a failure.
+
+### Fixed
+- The tenant-isolation policies on two tables were never evaluated, because a policy
+  only binds the owner of a table when `FORCE ROW LEVEL SECURITY` is set. One
+  organisation could read and write another's calibration versions and regret
+  measurements, and recalibrating deactivated every other organisation's active
+  version.
+- The database enums had drifted from the models. Four return reasons, two order
+  channels and four unit statuses were refused by the database, and the intake form
+  offered all of them.
+- The offline queue wrote with `crypto.randomUUID`, which only exists in a secure
+  context, so on a machine on a plain address the offline path was dead. A rejected
+  entry was written as failed and then never read, so it was posted again on every
+  reconnect, for ever.
+- The two dialogs declared themselves modal and never moved the focus into
+  themselves, trapped the tab key or gave the focus back.
+- A commit cleared the organisation, because the setting is transaction-local.
+- A failed query was shown as a number of zero on the dashboard and the health page.
+- The audit row for a create recorded the new row's identifier and timestamps as
+  null.
+- The notes on the intake form were collected and thrown away, because there was
+  nowhere to put them. There is somewhere now.
+- The photographs were not served: the development server and the proxy both
+  answered a request for an image with the page itself.
+- The visual regression suite was photographing the dark theme twice.
 - Every surface uses the new design system: the dashboard, the unit list, the unit
   detail, the two forms, the decision card, the analytics and the backtest.
 - The fonts ship with the application. The Google Fonts link is gone, because a

@@ -29,6 +29,7 @@ This plan splits SecondRoute into **8 phases** (0 to 7). Each phase is an indepe
 | 6 | Learning loop | 5 | Shadow models, exploration, photo assist | Model improves from outcomes |
 | 7 | Ecosystem and expansion | 6 | Second category, fraud signals, partner APIs | Product line expansion |
 | 8 | Product surface | 2, 4 | One design system, one spatial decision console | A surface worth using |
+| 9 | Colours, cache and data | 8 | Measured contrast, real data, closed defects | An application worth using |
 
 **Note on Phase 3:** it is optional for Phase 4 and Phase 5. Phase 5 can start with synthetic prices if the partner shares sold data directly, but Phase 3 is strongly recommended before any pilot that makes money claims.
 
@@ -481,6 +482,45 @@ This plan splits SecondRoute into **8 phases** (0 to 7). Each phase is an indepe
 - **Accept:** the whole application is navigable by keyboard alone; the reduced-motion preference disables the non-essential motion.
 
 **Phase 8 exit:** the application has one design system, one decision console, and a test suite that proves both.
+
+---
+
+## Phase 9: The colours, the cache and the data
+
+**Goal:** the interface reads, the application has something in it, and the defects that Phase 8 uncovered are closed.
+
+**Requires:** Phase 8.
+
+**Why this phase exists:** Phase 8 rebuilt the surface. Looking at it with real data in it, and with the colour pairs measured rather than eyeballed, turned up more than the rebuild had fixed.
+
+### F9.1 The colour grading
+- Every pair of colours the interface draws is measured against the 4.5 to one that body text needs and the 3 to one that the boundary of a control needs.
+- The badges follow the Material Design 3 pattern: the brand tone is the background and the tone that belongs on it is the text.
+- The boundary of a control is separated from the hairline between two panels, because a divider is decoration and does not have to be read.
+
+**Accept:** every pair passes; a pair that fails is a failing test.
+
+### F9.2 The cache
+- The dependency that was reported as unreachable is installed, running, and reported correctly.
+- A dependency that is not configured is not a failure, and is not called a queue.
+
+**Accept:** the service reports itself healthy, and a machine with no cache is not degraded for the want of one.
+
+### F9.3 The photographs and the data
+- There is a way to put a photograph in, and the photograph is written out again from its pixels so that nothing about the camera, the moment or the place survives in it.
+- There is a workload to look at: units, inspections, photographs, the decisions the engine made, the overrides and the outcomes.
+
+**Accept:** a photograph that carries a camera, a moment and a place comes out with none of them, and the application has a workload in it.
+
+### F9.4 The defects
+- The isolation binds on every table that has a policy.
+- The offline path works on a machine that is not a secure context, and a rejected entry is not sent for ever.
+- The two dialogs trap the focus and give it back.
+- A failure is never shown as a number of zero.
+
+**Accept:** every defect has a test that fails without the fix.
+
+**Phase 9 exit:** the colours are measured, the cache is up, there is data and there are photographs, and the defects are closed.
 
 ---
 

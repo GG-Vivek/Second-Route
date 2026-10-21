@@ -4,11 +4,14 @@
 
 ---
 
-## Current Phase: **Phase 8 — Product surface** is complete.
-Phases 0 to 7 were complete before it. Phase 8 rebuilt the whole user interface on
-one design system and turned the decision card into a spatial decision console.
+## Current Phase: **Phase 9 — Colours, cache and data** is complete.
+Phase 8 rebuilt the whole user interface on one design system and turned the
+decision card into a spatial decision console. Phase 9 measured the colours
+rather than eyeballing them, put the cache up, gave the application something
+to look at, and closed the defects that came out of it.
 
-**Target:** one design system, one decision console, and a test suite that proves both.
+**Target:** the colours are measured, the cache is up, there is data and there
+are photographs, and the defects are closed.
 
 ---
 
@@ -225,7 +228,28 @@ green on a laptop, and CI provides one.
 | F8.7 Dashboard, health, analytics and backtest surfaces | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.7-dash-and-analytics | 2026-10-21T08:40:00Z | 2026-10-21T09:40:00Z | 2cfbf67 | The north star, the reliability curve, the data sources, the health fix |
 | F8.8 Motion, accessibility and the visual regression suite | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.8-motion-and-a11y | 2026-10-21T09:40:00Z | 2026-10-21T10:40:00Z | 192461e | The Playwright suite, the keyboard pass, the CI job, 24 end-to-end tests |
 
-**Phase 8 Exit Criteria:** ✅ One design system, one decision console, and a test suite that proves both. 169 frontend unit tests, 24 end-to-end tests, 896 backend tests.
+**Phase 8 Exit Criteria:** ✅ One design system, one decision console, and a test suite that proves both. 169 frontend unit tests, 26 end-to-end tests, 896 backend tests.
+
+---
+
+## Phase 9: The colours, the cache and the data
+
+| Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
+|---------|--------|-------|--------|---------|-----------|--------|-------|
+| F9.1 The colour grading | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.5-channel-landscape | 2026-10-21T11:00:00Z | 2026-10-21T12:20:00Z | 5c807ed | The MD3 on-pattern for the badges, 44 measured pairs |
+| F9.2 The cache | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.5-channel-landscape | 2026-10-21T12:20:00Z | 2026-10-21T12:40:00Z | 42971d7 | Redis installed and running, three states told apart |
+| F9.3 The photographs and the data | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.5-channel-landscape | 2026-10-21T12:40:00Z | 2026-10-21T13:30:00Z | 543ad4b | The upload, the EXIF stripping, the seed, the proxies |
+| F9.4 The defects | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.5-channel-landscape | 2026-10-21T13:30:00Z | 2026-10-21T15:00:00Z | 71b0b28, 34f3487, d7426c3 | Fifteen defects, the isolation among them |
+
+**Phase 9 Exit Criteria:** ✅ The colours are measured, the cache is up, there is data and there are photographs, and the defects are closed. 169 frontend unit tests, 26 end-to-end tests, 910 backend tests.
+
+**Notes for other agents:**
+- **The isolation did not bind on two tables.** A policy only applies to the owner of a table when `FORCE ROW LEVEL SECURITY` is set, and the application role owns every table. Migration `0013_force_rls` fixes it, and the test that checks the migrations against the models would not have caught it: the gap was between the policy and the role, not between the model and the schema.
+- **The database enums had drifted from the models.** A native enum on PostgreSQL only holds the values it was created with, and the baseline created the three intake enums before the models grew. Four return reasons, two order channels and four unit statuses were refused by the database, and the intake form offered all of them. The test suite could not see it, because SQLite treats a native enum as a string with a hint attached.
+- **The `set_session_org_id` setting is transaction-local.** A commit clears it. Anything the request does after the commit runs with no tenant. `commit_with_tenant` puts it back.
+- **A relationship that is loaded on demand raises in an asynchronous session** when it is touched outside a greenlet, which becomes a five hundred in the middle of a request. The intake relationships are loaded with the unit now.
+- **The photographs are served from `/uploads`.** The development server and the proxy in front of the stack both have to route it, or the browser is given the page itself where it asked for an image.
+- **The demonstration data is cleared by `python scripts/seed_demo_data.py --reset`.** The reset names the organisation first; without it the policies match nothing and the delete does nothing.
 
 **Phase 8 Exit Criteria:** One design system, one decision console, and a test suite that proves both.
 
