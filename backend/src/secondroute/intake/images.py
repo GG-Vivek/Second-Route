@@ -103,9 +103,7 @@ def store_photo(content: bytes, *, content_type: str | None = None) -> StoredIma
     # A photograph with an alpha channel cannot become a JPEG, so it stays
     # a PNG. Everything else is written as a JPEG, which is smaller and
     # which every browser reads.
-    has_alpha = image.mode in ("RGBA", "LA") or (
-        image.mode == "P" and "transparency" in image.info
-    )
+    has_alpha = image.mode in ("RGBA", "LA") or (image.mode == "P" and "transparency" in image.info)
     if has_alpha:
         stored_type = "image/png"
         extension = ".png"

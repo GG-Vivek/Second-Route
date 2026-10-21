@@ -7,6 +7,7 @@ Main FastAPI application with all routes, middleware, and lifecycle events.
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
+import uuid
 from typing import Any
 
 from fastapi import FastAPI, Request, status
@@ -19,6 +20,7 @@ from secondroute.core.config import settings
 from secondroute.core.db import close_db, init_db, set_current_org_id
 from secondroute.feedback.audit import setup_audit_listeners
 from secondroute.core.logging import (
+    generate_request_id,
     bind_request_context,
     clear_request_context,
     get_logger,
@@ -156,10 +158,29 @@ def _development_org_header_allowed() -> bool:
 
 @app.middleware("http")
 async def resolve_organisation(request: Request, call_next: Any) -> Any:
-    """Establish which organisation the request acts for."""
+    """Establish which organisation the request acts for.
+
+    A value that is not an identifier is refused with a four hundred. It
+    used to be passed straight through to the database, which cast it, and
+    a request with a made-up organisation in the header ended in a five
+    hundred.
+    """
     if _development_org_header_allowed():
         org_id = request.headers.get(DEV_ORG_HEADER, "").strip()
         if org_id:
+            try:
+                uuid.UUID(org_id)
+            except ValueError:
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={
+                        "error": "invalid_organisation",
+                        "message": (
+                            f"The {DEV_ORG_HEADER} header is not an organisation identifier."
+                        ),
+                        "request_id": get_request_id(),
+                    },
+                )
             set_current_org_id(org_id)
     return await call_next(request)
 
@@ -168,20 +189,27 @@ async def resolve_organisation(request: Request, call_next: Any) -> Any:
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Handle all unhandled exceptions."""
+    # The handler for an unhandled exception runs outside the middleware
+    # that sets the identifier, so there may not be one. A five hundred
+    # without an identifier cannot be matched to the logs.
+    request_id = get_request_id() or generate_request_id()
+
     logger.exception(
         "unhandled_exception",
         path=request.url.path,
         method=request.method,
         exc_type=type(exc).__name__,
         exc_message=str(exc),
+        request_id=request_id,
     )
     return JSONResponse(
         status_code=500,
         content={
             "error": "internal_server_error",
             "message": "An unexpected error occurred",
-            "request_id": get_request_id(),
+            "request_id": request_id,
         },
+        headers={"X-Request-ID": request_id},
     )
 
 

@@ -89,6 +89,7 @@ class Unit(Base):
     order_channel: Mapped[OrderChannel] = mapped_column(
         Enum(OrderChannel, name="order_channel_enum"), nullable=False
     )
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[UnitStatus] = mapped_column(
         Enum(UnitStatus, name="unit_status_enum"),
         nullable=False,

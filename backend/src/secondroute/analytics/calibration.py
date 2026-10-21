@@ -23,7 +23,7 @@ from uuid import UUID
 import structlog
 
 from secondroute.analytics.models import CalibrationVersion
-from secondroute.core.db import Base  # noqa: F401  (registers the table)
+from secondroute.core.db import Base, commit_with_tenant  # noqa: F401  (Base registers the table)
 
 logger = structlog.get_logger(__name__)
 
@@ -385,7 +385,7 @@ class CalibrationService:
             if other.is_active and other.version != name:
                 other.is_active = False
 
-        await session.commit()
+        await commit_with_tenant(session)
         await session.refresh(record)
         logger.info(
             "calibration.recalibrated", version=name, ece_before=ece_before, ece_after=ece_after

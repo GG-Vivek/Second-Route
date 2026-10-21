@@ -21,7 +21,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from secondroute.core.config import settings
-from secondroute.core.db import get_session
+from secondroute.core.db import commit_with_tenant, current_org_uuid, get_session
+from secondroute.core.logging import get_logger
 from secondroute.decision.distribution import DEFAULT_BIN_COUNT, build_distribution
 from secondroute.decision.engine import (
     DECISION_MODEL_VERSION,
@@ -51,6 +52,8 @@ from secondroute.pricing.sources import DatabasePriceSource, SyntheticPriceSourc
 router = APIRouter(tags=["Decisions"])
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+
+logger = get_logger(__name__)
 
 
 def _price_source(session: AsyncSession) -> PriceSource:
@@ -206,7 +209,7 @@ async def explain_decision(
         is_synthetic=bool(decision.data_freshness.get("is_synthetic", False)),
     )
     session.add(row)
-    await session.commit()
+    await commit_with_tenant(session)
     await session.refresh(row)
 
     return ExplanationRead(

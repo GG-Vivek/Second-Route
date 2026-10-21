@@ -398,6 +398,18 @@ def _build_audit_values(item: PendingAudit, session: Session) -> Optional[dict[s
 
     org_id = _resolve_org_id(session, item.instance)
 
+    payload = item.payload
+    if item.action is AuditAction.CREATE:
+        # The column defaults - the identifier, the creation time, the
+        # status - are applied during the flush. The payload was captured
+        # before it, so it says that the record was created with no
+        # identifier and no time. It is read again here, where the record
+        # is whole.
+        payload = {
+            "action": AuditAction.CREATE.value,
+            "data": get_full_payload(type(item.instance), item.instance),
+        }
+
     return {
         "id": uuid.uuid4(),
         "org_id": org_id,
@@ -405,7 +417,7 @@ def _build_audit_values(item: PendingAudit, session: Session) -> Optional[dict[s
         "action": item.action.value,
         "entity": item.entity_name,
         "entity_id": str(entity_id),
-        "payload_json": item.payload,
+        "payload_json": payload,
         "created_at": datetime.utcnow(),
     }
 

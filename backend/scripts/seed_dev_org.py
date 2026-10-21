@@ -50,13 +50,13 @@ async def main() -> None:
                 await session.refresh(org)
 
             user_result = await session.execute(
-                select(User).where(User.email == "dev@secondroute.local")
+                select(User).where(User.email == "dev@secondroute.dev")
             )
             user = user_result.scalars().first()
             if user is None:
                 user = User(
                     org_id=org.id,
-                    email="dev@secondroute.local",
+                    email="dev@secondroute.dev",
                     role=ROLE_INSPECTOR,
                 )
                 session.add(user)

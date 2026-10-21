@@ -35,7 +35,7 @@ from secondroute.analytics.schemas import (
     TimeToSellRead,
 )
 from secondroute.analytics.time_to_sell import DEFAULT_MIN_SAMPLE, TimeToSellService
-from secondroute.core.db import get_session
+from secondroute.core.db import commit_with_tenant, get_session
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -210,7 +210,7 @@ async def record_unit_regret(
 
     measurements = [estimate.as_measurement(org_id=org_id) for estimate in estimates]
     session.add_all(measurements)
-    await session.commit()
+    await commit_with_tenant(session)
     for measurement in measurements:
         await session.refresh(measurement)
 

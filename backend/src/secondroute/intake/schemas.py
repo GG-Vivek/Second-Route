@@ -19,6 +19,11 @@ class UnitBase(BaseModel):
     serial: Optional[str] = Field(None, max_length=100, description="Serial number (optional)")
     return_reason_code: ReturnReasonCode = Field(..., description="Reason for return")
     order_channel: OrderChannel = Field(..., description="Original sales channel")
+    notes: Optional[str] = Field(
+        None,
+        max_length=4000,
+        description="What the person who took the return in wants the next person to know.",
+    )
 
 
 class UnitCreate(UnitBase):

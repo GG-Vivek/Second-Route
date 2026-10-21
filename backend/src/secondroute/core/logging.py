@@ -4,8 +4,10 @@ Structured logging configuration using structlog.
 Provides JSON-formatted logs with consistent fields.
 """
 
+import contextvars
 import logging
 import sys
+import uuid
 from typing import Any
 
 import structlog
@@ -91,7 +93,6 @@ class LoggerMixin:
 
 
 # Context variable for request ID
-import contextvars
 
 request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="")
 
@@ -104,6 +105,15 @@ def set_request_id(request_id: str) -> None:
 def get_request_id() -> str:
     """Get request ID from context variable."""
     return request_id_var.get()
+
+
+def generate_request_id() -> str:
+    """Return a new request identifier.
+
+    Used where there is no identifier yet, so that a failure can still be
+    matched to the logs.
+    """
+    return uuid.uuid4().hex
 
 
 def bind_request_context(**kwargs: Any) -> None:

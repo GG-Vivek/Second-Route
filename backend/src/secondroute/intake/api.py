@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from secondroute.core.config import settings
 from secondroute.core.db import current_org_uuid, get_session
 from secondroute.intake.images import (
     ImageTooLarge,
@@ -79,6 +80,7 @@ async def create_unit(
         serial=unit_data.serial,
         return_reason_code=unit_data.return_reason_code,
         order_channel=unit_data.order_channel,
+        notes=unit_data.notes,
         status=UnitStatus.RECEIVED,
         # The unit belongs to the organisation the request acts for. The
         # row-level security policy checks it on the way in, so a request
@@ -307,6 +309,32 @@ async def list_inspections(
     return [InspectionRead.model_validate(i) for i in inspections]
 
 
+async def _read_up_to(file: UploadFile, limit: int) -> bytes:
+    """Read a file, refusing it once it is larger than the limit.
+
+    Args:
+        file: The file to read.
+        limit: How many bytes to allow.
+
+    Returns:
+        The bytes of the file.
+
+    Raises:
+        ImageTooLarge: When the file is larger than the limit.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(64 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > limit:
+            raise ImageTooLarge(f"The photograph is larger than the {limit} byte limit.")
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
 @router.post(
     "/photos/upload",
     response_model=PhotoStoredRead,
@@ -334,13 +362,13 @@ async def upload_photo(
         HTTPException: 413 when the photograph is too large, 415 when it is
             not an accepted image type.
     """
-    content = await file.read()
     try:
+        # The size is checked while the file is read, so that a photograph
+        # larger than the limit is refused without being held in memory.
+        content = await _read_up_to(file, settings.MAX_UPLOAD_SIZE)
         stored = store_photo(content, content_type=file.content_type)
     except ImageTooLarge as exc:
-        raise HTTPException(
-            status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail=str(exc)) from exc
     except ImageTypeNotAllowed as exc:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail=str(exc)
@@ -393,10 +421,19 @@ async def create_photo(
             detail="Inspection not found for this unit",
         )
 
+    # The path has to be one the application serves. Without this a
+    # record could name any path at all.
+    storage_path = photo_data.storage_path.strip()
+    if not storage_path.startswith("/uploads/") or ".." in storage_path:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A photograph has to be at a path the application serves.",
+        )
+
     photo = Photo(
         unit_id=unit_id,
         inspection_id=photo_data.inspection_id,
-        storage_path=photo_data.storage_path,
+        storage_path=storage_path,
         exif_stripped=str(photo_data.exif_stripped).lower(),
     )
     session.add(photo)

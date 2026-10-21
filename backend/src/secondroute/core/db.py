@@ -173,7 +173,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
         await set_session_org_id(session, get_current_org_id())
         try:
             yield session
-            await session.commit()
+            await commit_with_tenant(session)
         except Exception:
             await session.rollback()
             raise
@@ -187,6 +187,21 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 def async_session_factory() -> async_sessionmaker:
     """Get the async session factory."""
     return _require_session_maker()
+
+
+async def commit_with_tenant(session: AsyncSession) -> None:
+    """Commit, and keep the organisation.
+
+    The organisation setting is transaction-local, so a commit clears it.
+    Anything the request does after the commit would then run with no
+    organisation, and the row-level security policies would refuse the
+    writes. The setting is put back.
+
+    Args:
+        session: The session to commit.
+    """
+    await session.commit()
+    await set_session_org_id(session, get_current_org_id())
 
 
 def get_current_org_id() -> str | None:
