@@ -49,6 +49,9 @@ export function CheckboxGroup({
             key={option.key}
             className={cn(
               'group/card flex cursor-pointer items-center gap-3 rounded-2xl border p-3 transition-colors',
+              // The input is inside the label, so the focus has to be read
+              // from the label rather than from a sibling.
+              'has-[:focus-visible]:border-ring has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/40',
               checked
                 ? 'border-primary bg-primary/5 text-foreground'
                 : 'border-border bg-card hover:border-outline hover:bg-accent/40'
@@ -61,7 +64,7 @@ export function CheckboxGroup({
               onChange={(event) =>
                 onChange({ ...value, [option.key]: event.target.checked })
               }
-              className="peer sr-only"
+              className="sr-only"
             />
             <span
               className={cn(

@@ -62,6 +62,9 @@ export function RadioCards<T extends string>({
             className={cn(
               'group/card relative flex cursor-pointer items-center gap-3 rounded-2xl border p-4',
               'transition-colors',
+              // The input is inside the label, so the focus has to be read
+              // from the label rather than from a sibling.
+              'has-[:focus-visible]:border-ring has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/40',
               selected
                 ? 'border-primary bg-primary/5 text-foreground'
                 : 'border-border bg-card text-foreground hover:border-outline hover:bg-accent/40',
@@ -75,7 +78,7 @@ export function RadioCards<T extends string>({
               checked={selected}
               disabled={option.disabled}
               onChange={() => onChange(option.value)}
-              className="peer sr-only"
+              className="sr-only"
             />
             {option.icon && (
               <span

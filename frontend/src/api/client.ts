@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
-import { getRequestId } from '@/utils/requestId'
+import { beginRequest } from '@/utils/requestId'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
@@ -52,11 +52,11 @@ class ApiClient {
     // Request interceptor
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
-        // Add request ID for tracing
-        const requestId = getRequestId()
-        if (requestId) {
-          config.headers['X-Request-ID'] = requestId
-        }
+        // Every request carries an identifier, so that it can be found in
+        // the logs of the browser and of the server at the same time.
+        const requestId = beginRequest()
+        config.headers['X-Request-ID'] = requestId
+
         // Name the tenant, when there is one to name.
         const orgId = getOrgId()
         if (orgId) {

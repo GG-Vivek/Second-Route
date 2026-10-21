@@ -20,6 +20,7 @@ import { getNorthStar } from '@/api/decision'
 import { formatMoney } from '@/types/decision'
 import {
   Badge,
+  Callout,
   Card,
   CardContent,
   CardHeader,
@@ -85,6 +86,12 @@ export function HomePage() {
               <Skeleton key={index} className="h-28" />
             ))}
           </div>
+        ) : northStarQuery.isError ? (
+          // A failed query is not a number of zero. Saying so would be a
+          // claim about the business that nothing supports.
+          <Callout tone="caution" title="The north star could not be loaded">
+            <p>The engine did not answer. The figures are not shown rather than shown as zero.</p>
+          </Callout>
         ) : (
           <div className="grid gap-4 sm:grid-cols-3">
             <Card>

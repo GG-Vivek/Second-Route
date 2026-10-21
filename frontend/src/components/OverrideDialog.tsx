@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
-import { X, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { createOverride } from '@/api/decision'
 import { channelLabel } from '@/types/decision'
+import { Button, Dialog, Field, selectClass, textareaClass } from '@/components/ui'
 
 interface OverrideDialogProps {
   decisionId: string
@@ -44,8 +45,6 @@ export function OverrideDialog({
     }
   }, [open, recommendedChannel])
 
-  if (!open) return null
-
   const trimmedReason = reason.trim()
   const canSubmit = trimmedReason.length > 0 && chosenChannel.length > 0 && !submitting
 
@@ -68,13 +67,13 @@ export function OverrideDialog({
         onClose()
       }, 1200)
     } catch (err) {
-      const apiError = err as { response?: { status?: number; data?: { detail?: unknown } } }
+      const apiError = err as { response?: { status?: number } }
       if (apiError.response?.status === 422) {
         setError('A reason is required to override a decision.')
       } else if (apiError.response?.status === 404) {
-        setError('Decision not found.')
+        setError('That decision no longer exists.')
       } else {
-        setError('Failed to record the override. Please try again.')
+        setError('The override could not be recorded. Please try again.')
       }
     } finally {
       setSubmitting(false)
@@ -84,52 +83,28 @@ export function OverrideDialog({
   const isRecommended = chosenChannel === recommendedChannel
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="override-dialog-title"
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="Override recommendation"
+      description={`The engine recommended ${channelLabel(
+        recommendedChannel
+      )}. Record what you actually did and why.`}
     >
-      <div className="w-full max-w-lg rounded-lg border bg-card p-6 shadow-xl">
-        <div className="mb-4 flex items-start justify-between">
-          <div>
-            <h2 id="override-dialog-title" className="text-lg font-semibold">
-              Override recommendation
-            </h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              The engine recommended{' '}
-              <span className="font-medium text-foreground">
-                {channelLabel(recommendedChannel)}
-              </span>
-              . Record what you actually did and why.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 hover:bg-accent"
-            aria-label="Close dialog"
-          >
-            <X className="h-4 w-4" />
-          </button>
+      {success ? (
+        <div className="flex items-center gap-2 rounded-2xl bg-tip-container p-4 text-on-tip-container">
+          <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
+          <span className="text-sm">Override recorded.</span>
         </div>
-
-        {success ? (
-          <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
-            <CheckCircle className="h-5 w-5 flex-shrink-0" />
-            <span className="text-sm">Override recorded.</span>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Channel selection */}
-            <div>
-              <label htmlFor="override-channel" className="mb-1 block text-sm font-medium">
-                Channel used <span className="text-red-500">*</span>
-              </label>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Field label="Channel used" required>
+            {({ id }) => (
               <select
-                id="override-channel"
+                id={id}
                 value={chosenChannel}
                 onChange={(e) => setChosenChannel(e.target.value)}
-                className="w-full rounded-lg border bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+                className={cn(selectClass)}
               >
                 {availableChannels.map((channel) => (
                   <option key={channel} value={channel}>
@@ -138,73 +113,61 @@ export function OverrideDialog({
                   </option>
                 ))}
               </select>
-              {isRecommended && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  You are keeping the recommended channel. The reason is still required so the
-                  outcome can be compared.
-                </p>
-              )}
-            </div>
+            )}
+          </Field>
 
-            {/* Reason */}
-            <div>
-              <label htmlFor="override-reason" className="mb-1 block text-sm font-medium">
-                Reason <span className="text-red-500">*</span>
-              </label>
+          {isRecommended && (
+            <p className="text-xs text-muted-foreground">
+              You are keeping the recommended channel. The reason is still required so the
+              outcome can be compared.
+            </p>
+          )}
+
+          <Field
+            label="Reason"
+            required
+            hint="This reason feeds the regret and calibration analysis. Be specific."
+          >
+            {({ id, describedBy }) => (
               <textarea
-                id="override-reason"
+                id={id}
+                aria-describedby={describedBy}
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={4}
                 placeholder="Why was the recommendation overridden?"
-                className={cn(
-                  'w-full rounded-lg border bg-background px-3 py-2',
-                  'focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
-                  'placeholder:text-muted-foreground'
-                )}
+                className={cn(textareaClass)}
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                This reason feeds the regret and calibration analysis. Be specific.
-              </p>
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
-              </div>
             )}
+          </Field>
 
-            <div className="flex justify-end gap-2 border-t pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!canSubmit}
-                className={cn(
-                  'rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground',
-                  'hover:bg-primary/90 transition-colors',
-                  'disabled:cursor-not-allowed disabled:opacity-50'
-                )}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                    Recording...
-                  </>
-                ) : (
-                  'Record override'
-                )}
-              </button>
+          {error && (
+            <div
+              className="flex items-center gap-2 rounded-2xl bg-caution-container p-3 text-on-caution-container"
+              role="alert"
+            >
+              <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
+              <span className="text-sm">{error}</span>
             </div>
-          </form>
-        )}
-      </div>
-    </div>
+          )}
+
+          <div className="flex justify-end gap-2 border-t pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!canSubmit}>
+              {submitting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  Recording...
+                </>
+              ) : (
+                'Record override'
+              )}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Dialog>
   )
 }

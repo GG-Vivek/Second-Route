@@ -49,6 +49,8 @@ export interface Unit {
   received_at: string
   return_reason_code: ReturnReasonCode
   order_channel: OrderChannel
+  /** What the person who took the return in wants the next person to know. */
+  notes: string | null
   status: UnitStatus
   sku?: SKU
 }
@@ -88,6 +90,7 @@ export interface CreateUnitRequest {
   serial?: string
   return_reason_code: ReturnReasonCode
   order_channel: OrderChannel
+  notes?: string
 }
 
 export interface CreateInspectionRequest {

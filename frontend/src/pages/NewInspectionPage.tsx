@@ -270,7 +270,9 @@ export function NewInspectionPage() {
           <h1 className="text-3xl font-bold tracking-tight">New Inspection</h1>
           <p className="mt-1 text-muted-foreground">
             {unit
-              ? `${unit.sku?.family} ${unit.sku?.model_name} - ${unit.serial ?? 'no serial'}`
+              ? unit.sku
+                ? `${unit.sku.family} ${unit.sku.model_name} - ${unit.serial ?? 'no serial'}`
+                : `Unknown model - ${unit.serial ?? 'no serial'}`
               : 'Loading...'}
           </p>
         </div>
@@ -449,7 +451,7 @@ export function NewInspectionPage() {
             Working offline
           </span>
         )}
-        <Button type="submit" disabled={submitting} className="ml-auto">
+        <Button type="submit" disabled={submitting || queued} className="ml-auto">
           {submitting ? (
             <>
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />

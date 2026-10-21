@@ -64,9 +64,9 @@ export function NorthStarPanel({
   baselineChannel,
 }: NorthStarPanelProps) {
   return (
-    <Card aria-labelledby={`north-star-${kind}`} data-testid={`north-star-${kind}`}>
+    <Card aria-labelledby={`north-star-title-${kind}`} data-testid={`north-star-${kind}`}>
       <CardHeader className="flex-row items-center justify-between gap-3">
-        <CardTitle>North star</CardTitle>
+        <CardTitle id={`north-star-title-${kind}`}>North star</CardTitle>
         <DataKindBadge kind={kind} />
       </CardHeader>
       <CardContent>
@@ -130,9 +130,9 @@ export function RegretChart({ buckets, kind }: RegretChartProps) {
   )
 
   return (
-    <Card aria-labelledby={`regret-over-time-${kind}`} data-testid={`regret-over-time-${kind}`}>
+    <Card aria-labelledby={`regret-over-time-title-${kind}`} data-testid={`regret-over-time-${kind}`}>
       <CardHeader className="flex-row items-center justify-between gap-3">
-        <CardTitle>Regret over time</CardTitle>
+        <CardTitle id={`regret-over-time-title-${kind}`}>Regret over time</CardTitle>
         <DataKindBadge kind={kind} />
       </CardHeader>
       <CardContent>
@@ -196,9 +196,9 @@ export function CalibrationChart({ bins, kind, ece }: CalibrationChartProps) {
   )
 
   return (
-    <Card aria-labelledby={`calibration-${kind}`} data-testid={`calibration-${kind}`}>
+    <Card aria-labelledby={`calibration-title-${kind}`} data-testid={`calibration-${kind}`}>
       <CardHeader className="flex-row items-center justify-between gap-3">
-        <CardTitle>Calibration</CardTitle>
+        <CardTitle id={`calibration-title-${kind}`}>Calibration</CardTitle>
         <DataKindBadge kind={kind} />
       </CardHeader>
       <CardContent>
@@ -297,9 +297,9 @@ export function OverrideRatePanel({ section, kind }: OverrideRatePanelProps) {
   )
 
   return (
-    <Card aria-labelledby={`override-rate-${kind}`} data-testid={`override-rate-${kind}`}>
+    <Card aria-labelledby={`override-rate-title-${kind}`} data-testid={`override-rate-${kind}`}>
       <CardHeader className="flex-row items-center justify-between gap-3">
-        <CardTitle>Override rate</CardTitle>
+        <CardTitle id={`override-rate-title-${kind}`}>Override rate</CardTitle>
         <DataKindBadge kind={kind} />
       </CardHeader>
       <CardContent>

@@ -167,6 +167,17 @@ export function UnitDetailPage() {
         />
       </div>
 
+      {unit.notes && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes from the intake</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{unit.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* The tabs. */}
       <Tabs defaultValue="inspection">
         <TabsList>

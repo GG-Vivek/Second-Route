@@ -47,6 +47,10 @@ export function useFocusTrap(active: boolean, onEscape?: () => void) {
     // Wait a tick so that the content of the overlay has been laid out and
     // its controls exist before the first one is focused.
     const frame = requestAnimationFrame(() => {
+      // Only move the focus if it is not already inside the overlay. The
+      // reader may have clicked a field before the frame ran, and taking
+      // the focus back would move it out from under them.
+      if (node.contains(document.activeElement)) return
       const first = focusable()[0] ?? node
       first.focus()
     })

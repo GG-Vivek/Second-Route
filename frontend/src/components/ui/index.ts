@@ -32,6 +32,10 @@ export {
 export { CodeBlock, type CodeBlockProps } from './code-block'
 export { Dialog, type DialogProps } from './dialog'
 export {
+  ErrorBoundary,
+  type ErrorBoundaryProps,
+} from './error-boundary'
+export {
   Field,
   inputClass,
   selectClass,

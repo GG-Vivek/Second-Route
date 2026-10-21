@@ -46,14 +46,19 @@ export function AppShell({ children }: AppShellProps) {
         id: 'theme',
         label:
           preference === 'system'
-            ? 'Follow the system theme'
+            ? 'Use the dark theme'
             : preference === 'dark'
               ? 'Use the light theme'
-              : 'Use the dark theme',
+              : 'Follow the system theme',
         hint: 'Change how the application looks.',
         icon: SunMoon,
         action: () => {
-          setPreference(preference === 'system' ? 'dark' : preference === 'dark' ? 'light' : 'system')
+          // The label says what the command will do, so the command has to
+          // do what the label says. The two used to disagree, and the
+          // theme would go the other way from what was written on it.
+          setPreference(
+            preference === 'system' ? 'dark' : preference === 'dark' ? 'light' : 'system'
+          )
         },
         keywords: ['theme', 'dark', 'light', 'system', 'appearance'],
       },

@@ -13,6 +13,7 @@
  */
 
 import { QUEUE_STORE, getOfflineDb } from './db'
+import { newId } from '@/utils/id'
 import { createInspection } from '@/api/intake'
 import type { CreateInspectionRequest } from '@/types/intake'
 import type { QueuedInspection, SyncResult, SyncSummary } from './types'
@@ -43,7 +44,7 @@ export async function enqueueInspection(
 ): Promise<QueuedInspection> {
   const db = await getOfflineDb()
   const entry: QueuedInspection = {
-    id: crypto.randomUUID(),
+    id: newId(),
     unitId,
     payload,
     createdAt: new Date().toISOString(),
@@ -133,6 +134,16 @@ export async function syncQueue(send?: InspectionSender): Promise<SyncSummary> {
 
   const entries = await listQueue()
   for (const entry of entries) {
+    // An entry the server has already refused is not tried again. It
+    // stays in the queue so that the inspector can see it and throw it
+    // away, but sending it again on every sync would be a request per
+    // entry per reconnect, for ever, against a server that has already
+    // said no.
+    if (entry.status === 'failed') {
+      summary.rejected += 1
+      continue
+    }
+
     const result = await syncEntry(entry, sender)
 
     if (result.status === 'synced') {

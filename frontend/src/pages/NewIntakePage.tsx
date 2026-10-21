@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Check, Loader2, Search } from 'lucide-react'
 import { cn } from '@/utils/cn'
@@ -52,6 +52,9 @@ export function NewIntakePage() {
 
   const [serialLookupLoading, setSerialLookupLoading] = useState(false)
   const [serialLookupError, setSerialLookupError] = useState<string | null>(null)
+  // Counts the lookups, so that a slow answer cannot overwrite a newer
+  // one.
+  const lookupCounter = useRef(0)
 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -95,15 +98,22 @@ export function NewIntakePage() {
       return
     }
 
+    // Every keystroke asks the server. The answers can come back in a
+    // different order from the questions, and the older one must not
+    // overwrite the newer one, or the unit is logged against a model that
+    // does not match the serial in the box.
+    const asked = ++lookupCounter.current
     setSerialLookupLoading(true)
     try {
       const result = await lookupSKUBySerial(value)
+      if (asked !== lookupCounter.current) return
       setSelectedSKU({
         value: result.sku.id,
         label: `${result.sku.family} ${result.sku.model_name} (${result.sku.year}) - ${result.sku.storage_gb}/${result.sku.ram_gb} ${result.sku.color}`,
         sku: result.sku,
       })
     } catch (error: unknown) {
+      if (asked !== lookupCounter.current) return
       const apiError = error as { response?: { status: number } }
       if (apiError.response?.status === 404) {
         setSerialLookupError('No matching model was found for that serial. Choose one by hand.')
@@ -112,7 +122,9 @@ export function NewIntakePage() {
         setSerialLookupError('The serial could not be looked up.')
       }
     } finally {
-      setSerialLookupLoading(false)
+      if (asked === lookupCounter.current) {
+        setSerialLookupLoading(false)
+      }
     }
   }, [])
 
@@ -224,7 +236,7 @@ export function NewIntakePage() {
                   <input
                     id={id}
                     type="text"
-                    value={selectedSKU ? selectedSKU.label : ''}
+                    value={selectedSKU ? selectedSKU.label : skuQuery}
                     onFocus={() => setShowSKUDropdown(true)}
                     onChange={(event) => {
                       setSkuQuery(event.target.value)

@@ -5,6 +5,7 @@ import { AlertCircle, CheckCircle2, Clock, Database, FlaskConical, Server, Trian
 import { getHealth, getSourceHealth, type DependencyState } from '@/api/health'
 import {
   Badge,
+  Callout,
   Card,
   CardContent,
   CardHeader,
@@ -106,6 +107,13 @@ export function HealthPage() {
         <CardContent>
           {sourcesQuery.isLoading ? (
             <Skeleton className="h-32" />
+          ) : sourcesQuery.isError ? (
+            <Callout tone="caution" title="The data sources could not be loaded">
+              <p>
+                The engine did not answer. No source is reported, which is not the same as no
+                source having spoken.
+              </p>
+            </Callout>
           ) : sources.length === 0 ? (
             <EmptyState
               title="No sources have reported yet"

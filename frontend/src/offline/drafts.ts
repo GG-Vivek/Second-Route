@@ -7,6 +7,7 @@
  * server.
  */
 
+import { newId } from '@/utils/id'
 import { DRAFT_STORE, getOfflineDb } from './db'
 import type { InspectionDraft, InspectionFormValues } from './types'
 
@@ -43,7 +44,7 @@ export async function saveDraft(
   const existing = id ? await db.get(DRAFT_STORE, id) : await getDraft(unitId)
 
   const draft: InspectionDraft = {
-    id: existing?.id ?? crypto.randomUUID(),
+    id: existing?.id ?? newId(),
     unitId,
     values,
     updatedAt: new Date().toISOString(),

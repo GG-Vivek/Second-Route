@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react'
-import { X, Loader2, AlertCircle, CheckCircle, ClipboardCheck } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { AlertCircle, CheckCircle2, ClipboardCheck, Loader2 } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { createOutcome } from '@/api/decision'
 import { channelLabel } from '@/types/decision'
+import { Button, Dialog, Field, inputClass, selectClass } from '@/components/ui'
 
 interface OutcomeDialogProps {
   unitId: string
@@ -57,8 +58,6 @@ export function OutcomeDialog({
     }
   }, [open, recommendedChannel])
 
-  if (!open) return null
-
   const num = (value: string) => Number(value)
   const valid =
     salePrice !== '' &&
@@ -106,7 +105,7 @@ export function OutcomeDialog({
       } else if (apiError.response?.status === 422) {
         setError('Check the numbers: they must be zero or greater.')
       } else {
-        setError('Failed to record the outcome. Please try again.')
+        setError('The outcome could not be recorded. Please try again.')
       }
     } finally {
       setSubmitting(false)
@@ -118,52 +117,28 @@ export function OutcomeDialog({
       ? num(salePrice) - num(fees) - num(repair) - num(logistics)
       : null
 
-  const fieldClass =
-    'w-full rounded-lg border bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="outcome-dialog-title"
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="Record the outcome"
+      description="What actually happened. These numbers are compared against the prediction."
     >
-      <div className="w-full max-w-lg rounded-lg border bg-card p-6 shadow-xl">
-        <div className="mb-4 flex items-start justify-between">
-          <div>
-            <h2 id="outcome-dialog-title" className="text-lg font-semibold">
-              Record the outcome
-            </h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              What actually happened. These numbers are compared against the prediction.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 hover:bg-accent"
-            aria-label="Close dialog"
-          >
-            <X className="h-4 w-4" />
-          </button>
+      {success ? (
+        <div className="flex items-center gap-2 rounded-2xl bg-tip-container p-4 text-on-tip-container">
+          <CheckCircle2 className="size-5 shrink-0" aria-hidden="true" />
+          <span className="text-sm">Outcome recorded.</span>
         </div>
-
-        {success ? (
-          <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
-            <CheckCircle className="h-5 w-5 flex-shrink-0" />
-            <span className="text-sm">Outcome recorded.</span>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="outcome-channel" className="mb-1 block text-sm font-medium">
-                  Channel used <span className="text-red-500">*</span>
-                </label>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Channel used" required>
+              {({ id }) => (
                 <select
-                  id="outcome-channel"
+                  id={id}
                   value={channel}
                   onChange={(e) => setChannel(e.target.value)}
-                  className={fieldClass}
+                  className={cn(selectClass)}
                 >
                   {availableChannels.map((option) => (
                     <option key={option} value={option}>
@@ -172,17 +147,16 @@ export function OutcomeDialog({
                     </option>
                   ))}
                 </select>
-              </div>
+              )}
+            </Field>
 
-              <div>
-                <label htmlFor="outcome-final-status" className="mb-1 block text-sm font-medium">
-                  Final status <span className="text-red-500">*</span>
-                </label>
+            <Field label="Final status" required>
+              {({ id }) => (
                 <select
-                  id="outcome-final-status"
+                  id={id}
                   value={finalStatus}
                   onChange={(e) => setFinalStatus(e.target.value)}
-                  className={fieldClass}
+                  className={cn(selectClass)}
                 >
                   {FINAL_STATUSES.map((status) => (
                     <option key={status} value={status}>
@@ -190,130 +164,119 @@ export function OutcomeDialog({
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
+              )}
+            </Field>
+          </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="outcome-sale-price" className="mb-1 block text-sm font-medium">
-                  Sale price <span className="text-red-500">*</span>
-                </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Sale price" required>
+              {({ id }) => (
                 <input
-                  id="outcome-sale-price"
+                  id={id}
                   type="number"
                   min="0"
                   step="0.01"
                   value={salePrice}
                   onChange={(e) => setSalePrice(e.target.value)}
-                  className={fieldClass}
+                  className={inputClass}
                 />
-              </div>
-              <div>
-                <label htmlFor="outcome-fees" className="mb-1 block text-sm font-medium">
-                  Fees <span className="text-red-500">*</span>
-                </label>
+              )}
+            </Field>
+            <Field label="Fees" required>
+              {({ id }) => (
                 <input
-                  id="outcome-fees"
+                  id={id}
                   type="number"
                   min="0"
                   step="0.01"
                   value={fees}
                   onChange={(e) => setFees(e.target.value)}
-                  className={fieldClass}
+                  className={inputClass}
                 />
-              </div>
-              <div>
-                <label htmlFor="outcome-repair" className="mb-1 block text-sm font-medium">
-                  Repair cost <span className="text-red-500">*</span>
-                </label>
+              )}
+            </Field>
+            <Field label="Repair cost" required>
+              {({ id }) => (
                 <input
-                  id="outcome-repair"
+                  id={id}
                   type="number"
                   min="0"
                   step="0.01"
                   value={repair}
                   onChange={(e) => setRepair(e.target.value)}
-                  className={fieldClass}
+                  className={inputClass}
                 />
-              </div>
-              <div>
-                <label htmlFor="outcome-logistics" className="mb-1 block text-sm font-medium">
-                  Logistics cost <span className="text-red-500">*</span>
-                </label>
+              )}
+            </Field>
+            <Field label="Logistics cost" required>
+              {({ id }) => (
                 <input
-                  id="outcome-logistics"
+                  id={id}
                   type="number"
                   min="0"
                   step="0.01"
                   value={logistics}
                   onChange={(e) => setLogistics(e.target.value)}
-                  className={fieldClass}
+                  className={inputClass}
                 />
-              </div>
-              <div>
-                <label htmlFor="outcome-days" className="mb-1 block text-sm font-medium">
-                  Days to disposition <span className="text-red-500">*</span>
-                </label>
+              )}
+            </Field>
+            <Field label="Days to disposition" required>
+              {({ id }) => (
                 <input
-                  id="outcome-days"
+                  id={id}
                   type="number"
                   min="0"
                   step="1"
                   value={days}
                   onChange={(e) => setDays(e.target.value)}
-                  className={fieldClass}
+                  className={inputClass}
                 />
-              </div>
-              <div className="flex items-end">
-                <div className="w-full rounded-lg bg-muted p-3">
-                  <p className="text-xs text-muted-foreground">Realized net</p>
-                  <p className="font-mono text-lg font-semibold" data-testid="outcome-net-preview">
-                    {netPreview === null ? '—' : `$${netPreview.toFixed(2)}`}
-                  </p>
-                </div>
+              )}
+            </Field>
+            <div className="flex items-end">
+              <div className="w-full rounded-2xl bg-muted p-3">
+                <p className="text-xs text-muted-foreground">Realized net</p>
+                <p
+                  className="font-mono text-lg font-semibold"
+                  data-testid="outcome-net-preview"
+                >
+                  {netPreview === null ? '—' : `$${netPreview.toFixed(2)}`}
+                </p>
               </div>
             </div>
+          </div>
 
-            {error && (
-              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-red-800">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 border-t pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!valid || submitting}
-                className={cn(
-                  'rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground',
-                  'hover:bg-primary/90 transition-colors',
-                  'disabled:cursor-not-allowed disabled:opacity-50'
-                )}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                    Recording...
-                  </>
-                ) : (
-                  <>
-                    <ClipboardCheck className="mr-2 inline h-4 w-4" />
-                    Record outcome
-                  </>
-                )}
-              </button>
+          {error && (
+            <div
+              className="flex items-center gap-2 rounded-2xl bg-caution-container p-3 text-on-caution-container"
+              role="alert"
+            >
+              <AlertCircle className="size-4 shrink-0" aria-hidden="true" />
+              <span className="text-sm">{error}</span>
             </div>
-          </form>
-        )}
-      </div>
-    </div>
+          )}
+
+          <div className="flex justify-end gap-2 border-t pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!valid || submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  Recording...
+                </>
+              ) : (
+                <>
+                  <ClipboardCheck className="size-4" aria-hidden="true" />
+                  Record outcome
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Dialog>
   )
 }

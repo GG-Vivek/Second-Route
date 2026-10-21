@@ -13,6 +13,7 @@ import {
   getUnitPredictedVsRealized,
 } from '@/api/decision'
 import { Button } from '@/components/ui/button'
+import { Callout } from '@/components/ui/callout'
 import type { RiskProfile } from '@/types/decision'
 
 const RISK_PROFILES: RiskProfile[] = ['conservative', 'balanced', 'aggressive']
@@ -23,6 +24,8 @@ export function DecisionPage() {
   const [activeDecisionId, setActiveDecisionId] = useState<string | null>(null)
   const [outcomeOpen, setOutcomeOpen] = useState(false)
   const [outcomeMessage, setOutcomeMessage] = useState<string | null>(null)
+  const [runError, setRunError] = useState<string | null>(null)
+  const [running, setRunning] = useState(false)
 
   const decisionsQuery = useQuery({
     queryKey: ['unit-decisions', unitId],
@@ -98,21 +101,44 @@ export function DecisionPage() {
 
           <Button
             type="button"
+            disabled={running}
             onClick={() => {
+              // The engine call is the main action of this page. If it
+              // fails, say so: swallowing the error left the page looking
+              // as though the request were still in flight.
+              setRunError(null)
+              setRunning(true)
               createDecision(unitId, { risk_profile: riskProfile })
                 .then((decision) => {
                   setActiveDecisionId(decision.id)
                   void decisionsQuery.refetch()
                 })
-                .catch(() => undefined)
+                .catch(() => {
+                  setRunError(
+                    'The decision could not be run. The engine did not answer. Try again.'
+                  )
+                })
+                .finally(() => {
+                  setRunning(false)
+                })
             }}
             data-testid="run-decision"
           >
-            <Play className="h-4 w-4" aria-hidden="true" />
-            Run decision
+            {running ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Play className="h-4 w-4" aria-hidden="true" />
+            )}
+            {running ? 'Running...' : 'Run decision'}
           </Button>
         </div>
       </div>
+
+      {runError && (
+        <Callout tone="caution" title="The decision could not be run">
+          <p>{runError}</p>
+        </Callout>
+      )}
 
       {showSpinner && (
         <div className="flex items-center gap-2 text-muted-foreground">
