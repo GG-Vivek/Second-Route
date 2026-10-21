@@ -196,4 +196,4 @@ test-results/
 .turbo/
 
 # Build outputs
-*.tgz
+*.tgzbackend/uploads/

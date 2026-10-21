@@ -167,6 +167,11 @@ async def _reset(session: AsyncSession, org_id: uuid.UUID) -> None:
     """Remove the demonstration data so that it can be made again."""
     from secondroute.decision.models import Decision
 
+    # The organisation has to be set before anything is deleted. The
+    # row-level security policies read it, and without it the delete
+    # matches nothing and the old data stays exactly where it was.
+    await set_session_org_id(session, str(org_id))
+
     decisions = (
         (await session.execute(select(Decision.id).where(Decision.org_id == org_id)))
         .scalars()
@@ -252,6 +257,9 @@ async def seed(
             serial=_serial(rng, index),
             return_reason_code=_weighted(rng, REASONS),
             order_channel=_weighted(rng, CHANNELS),
+            # What the person who took the return in wants the next person
+            # to know.
+            notes=rng.choice(NOTES) or None,
             status=UnitStatus.RECEIVED,
             received_at=received,
         )
@@ -333,10 +341,7 @@ async def seed(
         # And some of them are sold, so that the analytics have something
         # to measure.
         if rng.random() < 0.72:
-            candidates = {
-                candidate["channel"]: candidate
-                for candidate in decision.candidates
-            }
+            candidates = {candidate["channel"]: candidate for candidate in decision.candidates}
             channel = decision.recommended_channel
             expected = candidates.get(channel, {}).get("p50", 0.0)
             sale_price = max(0.0, rng.gauss(expected, max(40.0, abs(expected) * 0.12)))
