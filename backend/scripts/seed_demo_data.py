@@ -121,6 +121,19 @@ NOTES = [
 #: The final states a unit can reach.
 FINAL_STATES = ["sold", "sold", "sold", "sold", "recycled", "donated", "scrapped"]
 
+#: What the unit becomes once the channel has been carried out. The
+#: status of a unit is what was done with it, not what was intended for
+#: it: a device that was recycled is recycled, whatever the engine said
+#: at the time.
+STATUS_BY_CHANNEL = {
+    "RESELL_OPEN_BOX": UnitStatus.SOLD,
+    "RESELL_REFURB": UnitStatus.SOLD,
+    "RECYCLE": UnitStatus.RECYCLED,
+    "PARTS_HARVEST": UnitStatus.RECYCLED,
+    "DONATE": UnitStatus.DONATED,
+    "HOLD": UnitStatus.DECIDED,
+}
+
 
 def _weighted(rng: random.Random, options: list[tuple[object, int]]) -> object:
     """Choose one of the options, in proportion to its weight."""
@@ -437,7 +450,12 @@ async def seed(
 
         # And some of them are sold, so that the analytics have something
         # to measure.
-        if rng.random() < 0.72:
+        #
+        # The rest stay on the shelf. The storefront shows what is still
+        # for sale, so a demonstration that sold everything would leave
+        # the window empty.
+        carried_out = False
+        if rng.random() < 0.38:
             candidates = {candidate["channel"]: candidate for candidate in decision.candidates}
             channel = decision.recommended_channel
             expected = candidates.get(channel, {}).get("p50", 0.0)
@@ -457,8 +475,15 @@ async def seed(
                 )
             )
             made["outcomes"] += 1
+            carried_out = True
 
-        unit.status = UnitStatus.SOLD if made["outcomes"] else UnitStatus.INSPECTED
+        # The status of this unit, not the number of units that have been
+        # dealt with. Reading the running total made every unit sold as
+        # soon as the first one was.
+        if carried_out:
+            unit.status = STATUS_BY_CHANNEL.get(channel, UnitStatus.SOLD)
+        else:
+            unit.status = UnitStatus.DECIDED
         await session.flush()
 
     await session.commit()

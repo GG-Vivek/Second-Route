@@ -333,7 +333,12 @@ from secondroute.ingest.api import component_router
 from secondroute.ingest.api import router as ingest_router
 from secondroute.analytics.api import router as analytics_router
 from secondroute.analytics.export_api import router as export_router
+from secondroute.storefront import storefront_router
 # from secondroute.api import condition, admin
+
+# The shop window. It is public: no sign-in, and the organisation is
+# the one the deployment names rather than the one the caller does.
+app.include_router(storefront_router, prefix=API_PREFIX)
 
 app.include_router(identity_router, prefix=API_PREFIX)
 app.include_router(intake_router, prefix=API_PREFIX)

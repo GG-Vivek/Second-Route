@@ -71,6 +71,20 @@ class Settings(BaseSettings):
         description="Allowed CORS origins",
     )
 
+    # The public storefront (Phase 10).
+    #
+    # The shop window shows one organisation's stock, and the organisation
+    # is named by the deployment rather than by the caller: a shop window
+    # does not take the customer's word for whose stock it is showing.
+    PUBLIC_ORG_ID: str = Field(
+        default="",
+        description=(
+            "The organisation the public storefront shows. Empty means the "
+            "organisation the request names, which outside production is "
+            "the development header."
+        ),
+    )
+
     # File Storage
     UPLOAD_DIR: str = "/app/uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10 MB
