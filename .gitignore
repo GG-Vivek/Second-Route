@@ -196,4 +196,8 @@ test-results/
 .turbo/
 
 # Build outputs
-*.tgzbackend/uploads/
+*.tgz
+
+# The photographs that the development upload directory holds.
+backend/uploads/
+
