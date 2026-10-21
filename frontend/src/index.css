@@ -50,25 +50,32 @@
 
     /* Hairlines. The rings do the edge work, not the shadows. */
     --border: 198 200 184; /* #c6c8b8 */
-    --input: 198 200 184; /* #c6c8b8 */
+    --input: 118 120 107; /* #76786b */
     --ring: 80 102 0; /* #506600 */
     --outline: 118 120 107; /* #76786b */
 
     /* The seven brand accents. */
     --lime: 80 102 0; /* #506600 */
     --lime-container: 202 245 67; /* #caf543 */
+    --on-lime: 255 255 255; /* #ffffff */
     --teal: 0 108 69; /* #006c45 */
     --teal-container: 0 247 163; /* #00f7a3 */
+    --on-teal: 255 255 255; /* #ffffff */
     --cyan: 0 104 118; /* #006876 */
     --cyan-container: 43 220 246; /* #2bdcf6 */
+    --on-cyan: 255 255 255; /* #ffffff */
     --purple: 155 0 190; /* #9b00be */
     --purple-container: 184 51 218; /* #b833da */
+    --on-purple: 255 255 255; /* #ffffff */
     --orange: 124 88 0; /* #7c5800 */
     --orange-container: 255 192 67; /* #ffc043 */
+    --on-orange: 255 255 255; /* #ffffff */
     --yellow: 91 100 0; /* #5b6400 */
     --yellow-container: 235 255 15; /* #ebff0f */
+    --on-yellow: 255 255 255; /* #ffffff */
     --red: 183 0 78; /* #b7004e */
     --red-container: 218 43 102; /* #da2b66 */
+    --on-red: 255 255 255; /* #ffffff */
 
     /* The five callout roles. The containers read the same in both themes. */
     --note: 0 96 159; /* #00609f */
@@ -138,24 +145,31 @@
     --destructive-foreground: 87 0 33; /* #570021 */
 
     --border: 70 72 60; /* #46483c */
-    --input: 70 72 60; /* #46483c */
+    --input: 144 146 132; /* #909284 */
     --ring: 200 242 64; /* #c8f240 */
     --outline: 144 146 132; /* #909284 */
 
     --lime: 200 242 64; /* #c8f240 */
     --lime-container: 200 242 64; /* #c8f240 */
+    --on-lime: 40 53 0; /* #283500 */
     --teal: 214 255 228; /* #d6ffe4 */
     --teal-container: 0 247 163; /* #00f7a3 */
+    --on-teal: 0 56 36; /* #003824 */
     --cyan: 170 240 255; /* #aaf0ff */
     --cyan-container: 43 220 246; /* #2bdcf6 */
+    --on-cyan: 0 54 60; /* #00363c */
     --purple: 244 174 255; /* #f4aeff */
     --purple-container: 217 86 249; /* #d956f9 */
+    --on-purple: 43 10 48; /* #2b0a30 */
     --orange: 255 227 183; /* #ffe3b7 */
     --orange-container: 255 192 67; /* #ffc043 */
+    --on-orange: 41 26 0; /* #291a00 */
     --yellow: 255 255 255; /* #ffffff */
     --yellow-container: 219 238 0; /* #dbee00 */
+    --on-yellow: 65 73 0; /* #414900 */
     --red: 255 177 192; /* #ffb1c0 */
     --red-container: 255 77 130; /* #ff4d82 */
+    --on-red: 105 0 5; /* #690005 */
 
     --note: 157 202 255; /* #9dcaff */
     --tip: 151 216 104; /* #97d868 */

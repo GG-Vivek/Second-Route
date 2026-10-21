@@ -24,19 +24,24 @@ export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
  * Twenty pixels tall with a 22px radius, so it reads as a lozenge rather
  * than as a hairline tag. The prefix of a badge may be dimmed by wrapping
  * it in a span with `opacity-70`.
+ *
+ * The coloured badges use the brand tone as the background and the tone
+ * that belongs on it as the text. The bright container tones cannot carry
+ * text: in the dark theme a bright yellow with white text on it is a ratio
+ * of about one and a half to one, which is not a colour anybody can read.
  */
 const VARIANTS: Record<BadgeVariant, string> = {
   default: 'bg-primary text-primary-foreground',
   secondary: 'bg-secondary text-secondary-foreground',
   outline: 'border border-border text-foreground',
   destructive: 'bg-destructive/10 text-destructive dark:bg-destructive/20',
-  lime: 'bg-lime-container text-on-primary-container',
-  teal: 'bg-teal-container text-teal',
-  cyan: 'bg-cyan-container text-cyan',
-  purple: 'bg-purple-container text-purple',
-  orange: 'bg-orange-container text-orange',
-  yellow: 'bg-yellow-container text-yellow',
-  red: 'bg-red-container text-red',
+  lime: 'bg-lime text-lime-on',
+  teal: 'bg-teal text-teal-on',
+  cyan: 'bg-cyan text-cyan-on',
+  purple: 'bg-purple text-purple-on',
+  orange: 'bg-orange text-orange-on',
+  yellow: 'bg-yellow text-yellow-on',
+  red: 'bg-red text-red-on',
 }
 
 export function Badge({ className, variant = 'default', ...props }: BadgeProps) {

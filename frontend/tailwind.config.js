@@ -69,30 +69,37 @@ export default {
         lime: {
           DEFAULT: "rgb(var(--lime) / <alpha-value>)",
           container: "rgb(var(--lime-container) / <alpha-value>)",
+          on: "rgb(var(--on-lime) / <alpha-value>)",
         },
         teal: {
           DEFAULT: "rgb(var(--teal) / <alpha-value>)",
           container: "rgb(var(--teal-container) / <alpha-value>)",
+          on: "rgb(var(--on-teal) / <alpha-value>)",
         },
         cyan: {
           DEFAULT: "rgb(var(--cyan) / <alpha-value>)",
           container: "rgb(var(--cyan-container) / <alpha-value>)",
+          on: "rgb(var(--on-cyan) / <alpha-value>)",
         },
         purple: {
           DEFAULT: "rgb(var(--purple) / <alpha-value>)",
           container: "rgb(var(--purple-container) / <alpha-value>)",
+          on: "rgb(var(--on-purple) / <alpha-value>)",
         },
         orange: {
           DEFAULT: "rgb(var(--orange) / <alpha-value>)",
           container: "rgb(var(--orange-container) / <alpha-value>)",
+          on: "rgb(var(--on-orange) / <alpha-value>)",
         },
         yellow: {
           DEFAULT: "rgb(var(--yellow) / <alpha-value>)",
           container: "rgb(var(--yellow-container) / <alpha-value>)",
+          on: "rgb(var(--on-yellow) / <alpha-value>)",
         },
         red: {
           DEFAULT: "rgb(var(--red) / <alpha-value>)",
           container: "rgb(var(--red-container) / <alpha-value>)",
+          on: "rgb(var(--on-red) / <alpha-value>)",
         },
 
         /* The five callout roles. */
