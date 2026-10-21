@@ -4,10 +4,11 @@
 
 ---
 
-## Current Phase: **All seven phases are complete** and integrated on `feat/phase5-integration`.
-Every feature in PLAN.md is now marked done; the last one was F5.7, the explanation text.
+## Current Phase: **Phase 8 — Product surface** is now open. Phases 0 to 7 are complete
+and integrated on `feat/phase5-integration`. Phase 8 rebuilds the user interface on
+one design system and turns the decision card into a spatial decision console.
 
-**Target:** Record what actually happened, compare it to predictions, measure accuracy and regret.
+**Target:** one design system, one decision console, and a test suite that proves both.
 
 ---
 
@@ -210,8 +211,33 @@ green on a laptop, and CI provides one.
 
 ---
 
+## Phase 8: Product surface
+
+| Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
+|---------|--------|-------|--------|---------|-----------|--------|-------|
+| F8.0 Design decision and dependency licences | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.0-design-decision-and-licences | 2026-10-21T00:00:00Z | — | — | ADR-006, Phase 8 in PLAN.md, CHANGELOG.md created |
+| F8.1 Design tokens, theme and self-hosted fonts | ⬜ Not started | — | feat/F8.1-design-tokens | — | — | — | MD3 token set, theme provider, @fontsource packages |
+| F8.2 The interface kit | ⬜ Not started | — | feat/F8.2-ui-kit | — | — | — | ~19 primitives replacing the hand-rolled variants |
+| F8.3 The application shell | ⬜ Not started | — | feat/F8.3-app-shell | — | — | — | Sidebar, glass header, command palette |
+| F8.4 The decision distribution endpoint | ⬜ Not started | — | feat/F8.4-decision-distribution | — | — | — | GET /decisions/{id}/distribution, replayed from the snapshot |
+| F8.5 The channel landscape and the decision card | ⬜ Not started | — | feat/F8.5-channel-landscape | — | — | — | 2D SVG ridgeline first, then the R3F scene, then the card |
+| F8.6 Intake, inspection and unit surfaces | ⬜ Not started | — | feat/F8.6-intake-and-units | — | — | — | Stepped forms, filter rail, real photos |
+| F8.7 Dashboard, health, analytics and backtest surfaces | ⬜ Not started | — | feat/F8.7-dash-and-analytics | — | — | — | Real Recharts charts, working quick actions |
+| F8.8 Motion, accessibility and the visual regression suite | ⬜ Not started | — | feat/F8.8-motion-and-a11y | — | — | — | Scroll fades, focus audit, Playwright screenshots |
+
+**Phase 8 Exit Criteria:** One design system, one decision console, and a test suite that proves both.
+
+**Notes for other agents:**
+- Phase 8 changes only the frontend, except F8.4, which adds one read-only backend endpoint. No decision logic, no schema change, no migration.
+- The 3D code is isolated under `frontend/src/three/` and is reached only through a dynamic `import()`. If the react-three-fiber upgrade to v9 and React 19 ever happens, that directory is the blast radius.
+- `three` is pinned below 0.186 on purpose: 0.186 removed the shadow map type that react-three-fiber v8 selects by default.
+- The existing `data-testid` contracts in the decision card tests are part of the interface. A redesign that renames one of them has to change the test in the same commit, on purpose, never silently.
+
+---
+
 ## In Progress
 
+- F8.0 Design decision and dependency licences — Agent: ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z — Started: 2026-10-21T00:00:00Z — Branch: feat/F8.0-design-decision-and-licences
 - Phase 4/6/7 consolidation — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Started: 2026-10-20T45:45:00Z — Branch: feat/phase5-integration
 
 ---
@@ -294,6 +320,7 @@ green on a laptop, and CI provides one.
 | ai-nemotron-ses_eaa6f421 | AI | F0.x, F2.1-F2.11, F3.2-F3.9 | 2026-10-20T12:00:00Z |
 | ai-longcat-ses_ea89089b | AI | F4.1, F5.1, F5.2, F5.3, F5.4 | 2026-10-20T22:30:00Z |
 | ai-minimax-m3.1-flash-ses_ea89089b | AI | F5.5, F5.6, Phase 5 integration | 2026-10-20T45:00:00Z |
+| ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | AI | F8.0-F8.8 (Phase 8, product surface) | 2026-10-21T00:00:00Z |
 
 ---
 
@@ -318,9 +345,10 @@ green on a laptop, and CI provides one.
 | ADR-003 | Market Intelligence Design | Accepted | 2026-10-20 |
 | ADR-004 | Offline inspection storage and the fake-indexeddb test shim | Accepted | 2026-10-20 |
 | ADR-005 | The feedback loop analytics | Accepted | 2026-10-20 |
+| ADR-006 | The design system and the spatial decision console | Accepted | 2026-10-21 |
 
 ---
 
-*Last updated: 2026-10-20*
-*Next review: Every phase is complete. Before the pilot, run the compose stack and walk
-the flow end to end.*
+*Last updated: 2026-10-21*
+*Next review: Phase 8 is open. F8.0 is in progress. The engine is not being changed by
+this phase, so the Phase 7 exit demo still stands.*

@@ -28,6 +28,7 @@ This plan splits SecondRoute into **8 phases** (0 to 7). Each phase is an indepe
 | 5 | Pilot readiness | 4 (3 optional) | Auth, tenancy, batch, offline, backtest, staging | Design partner pilot |
 | 6 | Learning loop | 5 | Shadow models, exploration, photo assist | Model improves from outcomes |
 | 7 | Ecosystem and expansion | 6 | Second category, fraud signals, partner APIs | Product line expansion |
+| 8 | Product surface | 2, 4 | One design system, one spatial decision console | A surface worth using |
 
 **Note on Phase 3:** it is optional for Phase 4 and Phase 5. Phase 5 can start with synthetic prices if the partner shares sold data directly, but Phase 3 is strongly recommended before any pilot that makes money claims.
 
@@ -418,6 +419,71 @@ This plan splits SecondRoute into **8 phases** (0 to 7). Each phase is an indepe
 
 ---
 
+## Phase 8: Product surface
+
+**Goal:** one design system and one decision surface, so the product reads as a single instrument rather than nine screens assembled one at a time.
+
+**Requires:** Phase 2 and Phase 4. Phases 5, 6 and 7 are unaffected.
+
+**Why this phase exists:** every phase before it was about the engine. The engine works, the data is real, and the surface that presents it does not. The operator's most important question — *how much do these channels overlap?* — is answered with a percentage. This phase makes the overlap visible, and makes every other surface consistent with it.
+
+### F8.0 Design decision and dependency licences
+- ADR-006 records the design language, the spatial decision console, and every new dependency with its licence.
+- PLAN.md Appendix A and D carry the new entries. `CHANGELOG.md` exists and follows Keep a Changelog.
+- **Accept:** ADR-006 is accepted; every new dependency has a licence recorded in the compliance log before it is installed.
+
+### F8.1 Design tokens, theme and self-hosted fonts
+- The pmndrs MD3 token set as CSS custom properties, in both light and dark, expressed as colour channels so opacity modifiers work.
+- The Tailwind scale carries the pmndrs radii, the brand accents, the callout roles, the elevation model and the single transition curve.
+- A theme provider with light, dark and system modes, persisted, applied before first paint so the page never flashes.
+- Inter and Inconsolata ship as packages. No font is fetched from a third party at runtime.
+- **Accept:** the application renders identically with and without the network; the theme survives a reload without a flash; no request leaves the origin for a font.
+
+### F8.2 The interface kit
+- One primitive per recurring idea: button, card, badge, callout, tabs, table, field, radio cards, checkbox group, meter, range bar, dialog, sheet, skeleton, tooltip, empty state, keyboard key, scroll fade, code block.
+- Every primitive carries the pmndrs treatment: the radius scale, the hairline ring, the 26px button, the 20px badge lozenge, the tinted callout.
+- **Accept:** the five hand-rolled alert banners in the current application are replaced by one callout with five tones; no page carries a bespoke banner.
+
+### F8.3 The application shell
+- A 288px sidebar that collapses to a 48px rail, with the active item as a lime half-pill hugging the content edge.
+- A sticky glass header with a search trigger, a keyboard hint and the theme toggle.
+- A command palette that navigates, runs a decision and toggles the theme from the keyboard.
+- The offline queue state is visible in the shell, not only on the inspection form.
+- **Accept:** every destination is reachable by mouse and by keyboard; the shell is usable at 360px wide.
+
+### F8.4 The decision distribution endpoint
+- `GET /api/v1/decisions/{id}/distribution` replays the stored decision from its input snapshot and returns the binned density of the engine's own Monte Carlo draws, per channel, on a shared axis.
+- The response carries the input snapshot hash.
+- **Accept:** the same decision always returns the same histogram; the histogram is derived from the samples and not from a fitted curve.
+
+### F8.5 The channel landscape and the decision card
+- The landscape is built first as a two-dimensional SVG ridgeline: accessible, printable, and testable without a GPU.
+- A react-three-fiber scene is layered on top of the same data behind a lazy boundary, with a WebGL support probe and a fallback to the two-dimensional view.
+- The decision card is rebuilt around the landscape: the recommendation, the confidence, the net range, the alternatives, the reasons, the flip conditions, the action steps and the provenance.
+- **Accept:** the three-dimensional view never renders a blank rectangle; with WebGL disabled the operator sees the same data; the existing decision card tests still pass.
+
+### F8.6 Intake, inspection and unit surfaces
+- The intake and inspection forms become stepped forms with the counter-based step markers, radio cards and a sticky action bar.
+- The unit list gains a filter rail and a table with the scroll-driven edge fade.
+- The unit detail becomes tabbed, and the photographs render.
+- **Accept:** a tester logs a full return with three photographs in under three minutes; an inspection completed offline still syncs.
+
+### F8.7 Dashboard, health, analytics and backtest surfaces
+- The dashboard shows the north star, the live system state and working quick actions.
+- The analytics page uses real charts. The synthetic and the real data stay in separate panels.
+- The backtest page shows the interval band and the look-ahead verdict as a callout.
+- **Accept:** every chart renders with the fixtures; a synthetic-only dataset shows the synthetic badge.
+
+### F8.8 Motion, accessibility and the visual regression suite
+- Scroll-driven edge fades on the wide surfaces, shimmer on the loading states, and `prefers-reduced-motion` respected throughout.
+- A focus-trap audit, a keyboard pass, and a text alternative for every canvas.
+- A Playwright visual regression suite over the critical routes in both themes.
+- **Accept:** the whole application is navigable by keyboard alone; the reduced-motion preference disables the non-essential motion.
+
+**Phase 8 exit:** the application has one design system, one decision console, and a test suite that proves both.
+
+---
+
 ## Appendix A: Technology stack
 
 | Layer | Choice | License |
@@ -436,6 +502,8 @@ This plan splits SecondRoute into **8 phases** (0 to 7). Each phase is an indepe
 | Computer vision | OpenCV, Tesseract or PaddleOCR | Apache-2.0 |
 | Explanation LLM runtime | Ollama | MIT |
 | Frontend | React 18, Vite, TypeScript, Tailwind, shadcn/ui, TanStack Query, Recharts | MIT |
+| Design system | pmndrs MD3 tokens (lime seed), Tailwind, self-hosted Inter and Inconsolata | MIT, SIL OFL 1.1 |
+| 3D decision console | three, @react-three/fiber v8, @react-three/drei v9, @react-three/postprocessing | MIT (postprocessing: Zlib) |
 | Offline storage | IndexedDB (browser), `idb` library | MIT |
 | Auth | Keycloak | Apache-2.0 |
 | Reverse proxy, TLS | Caddy | Apache-2.0 |
@@ -445,6 +513,7 @@ This plan splits SecondRoute into **8 phases** (0 to 7). Each phase is an indepe
 | Logs | Loki | AGPL-3.0 |
 | Tracing | OpenTelemetry | Apache-2.0 |
 | Tests | pytest, hypothesis, schemathesis, Vitest, Playwright | MIT, Apache-2.0 |
+| 3D test renderer | @react-three/test-renderer v8 | MIT |
 | Lint, types | ruff, mypy, eslint | MIT |
 | CI | GitHub Actions | Service terms |
 | Secrets in repo (if needed) | SOPS | MPL-2.0 |
@@ -567,6 +636,9 @@ secondroute/
 | 6 | Exploration harms a customer's returns | Caps, exclusions, propensity logging, conservative default |
 | 6 | Copyleft or restricted model license | License gate before any model is loaded |
 | 7 | Scope creep into marketplace | "Never build" list stays in the plan and in ADRs |
+| 8 | A 3D view that shows a plausible but wrong shape | The landscape is drawn from the engine's own Monte Carlo samples; the endpoint that feeds it is tested for determinism |
+| 8 | A canvas that silently renders nothing | A WebGL support probe and a two-dimensional fallback; a blank region is a build failure |
+| 8 | A design system that drifts | The primitives own the tokens; a page that hard-codes a colour or a radius is a review failure |
 
 ---
 
