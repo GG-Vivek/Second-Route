@@ -20,6 +20,7 @@
 #                   secondroute.
 #   APP_PORT        The port the API listens on. Default: 8000.
 #   WEB_PORT        The port the frontend listens on. Default: 5173.
+#   SHOP_PORT       The port the shop window listens on. Default: 5174.
 #   SKIP_SETUP      Set to 1 to skip the database preparation.
 
 set -euo pipefail
@@ -27,6 +28,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="${REPO_ROOT}/backend"
 FRONTEND_DIR="${REPO_ROOT}/frontend"
+SHOP_DIR="${REPO_ROOT}/frontend-public"
 
 : "${PGHOST:=127.0.0.1}"
 : "${PGPORT:=5432}"
@@ -35,9 +37,11 @@ FRONTEND_DIR="${REPO_ROOT}/frontend"
 : "${POSTGRES_PASSWORD:=secondroute}"
 : "${APP_PORT:=8000}"
 : "${WEB_PORT:=5173}"
+: "${SHOP_PORT:=5174}"
 
 API_URL="http://127.0.0.1:${APP_PORT}"
 WEB_URL="http://localhost:${WEB_PORT}"
+SHOP_URL="http://localhost:${SHOP_PORT}"
 
 BOLD=$'\033[1m'
 DIM=$'\033[2m'
@@ -71,7 +75,8 @@ info "PostgreSQL is up on ${PGHOST}:${PGPORT}"
 step "Installing the dependencies"
 (cd "$BACKEND_DIR" && uv sync --all-extras >/dev/null) || fail "the backend dependencies could not be installed."
 [ -d "${FRONTEND_DIR}/node_modules" ] || (cd "$FRONTEND_DIR" && npm install >/dev/null) || fail "the frontend dependencies could not be installed."
-info "the backend and the frontend are ready"
+[ -d "${SHOP_DIR}/node_modules" ] || (cd "$SHOP_DIR" && npm install >/dev/null) || fail "the shop window's dependencies could not be installed."
+info "the backend, the frontend and the shop window are ready"
 
 # ---------------------------------------------------------------------
 # The database
@@ -125,6 +130,10 @@ if [ ! -f "${FRONTEND_DIR}/.env" ]; then
     cp "${FRONTEND_DIR}/.env.example" "${FRONTEND_DIR}/.env"
     info "wrote frontend/.env"
 fi
+if [ ! -f "${SHOP_DIR}/.env" ]; then
+    cp "${SHOP_DIR}/.env.example" "${SHOP_DIR}/.env"
+    info "wrote frontend-public/.env"
+fi
 
 # The servers are started with the address this run is using, whatever
 # the files say. An environment variable takes priority over the file, so
@@ -138,8 +147,15 @@ info "the API will use ${PGDATABASE} on ${PGHOST}:${PGPORT}"
 # ---------------------------------------------------------------------
 step "Seeding"
 (cd "$BACKEND_DIR" && uv run python scripts/load_skus.py 2>/dev/null | tail -1) || fail "the catalogue could not be loaded."
-(cd "$BACKEND_DIR" && uv run python scripts/seed_dev_org.py 2>/dev/null | grep "org id" ) \
-    || fail "the development organisation could not be created."
+ORG_ID="$(cd "$BACKEND_DIR" && uv run python scripts/seed_dev_org.py 2>/dev/null | awk '/org id/{print $3}')"
+[ -n "$ORG_ID" ] || fail "the development organisation could not be created."
+info "the organisation is $ORG_ID"
+
+# The shop window shows one organisation's stock, and the organisation is
+# named by the deployment rather than by the caller. The backend is told
+# which one, and the window is told where to ask.
+export PUBLIC_ORG_ID="$ORG_ID"
+export VITE_ORG_ID="$ORG_ID"
 
 # ---------------------------------------------------------------------
 # The servers
@@ -148,11 +164,13 @@ step "Starting the API and the frontend"
 
 API_LOG="$(mktemp -t secondroute-api-XXXXXX.log)"
 WEB_LOG="$(mktemp -t secondroute-web-XXXXXX.log)"
+SHOP_LOG="$(mktemp -t secondroute-shop-XXXXXX.log)"
 
 cleanup() {
     trap - INT TERM EXIT
     [ -n "${API_PID:-}" ] && kill "$API_PID" 2>/dev/null || true
     [ -n "${WEB_PID:-}" ] && kill "$WEB_PID" 2>/dev/null || true
+    [ -n "${SHOP_PID:-}" ] && kill "$SHOP_PID" 2>/dev/null || true
     wait 2>/dev/null || true
 }
 trap cleanup INT TERM EXIT
@@ -162,6 +180,9 @@ API_PID=$!
 
 (cd "$FRONTEND_DIR" && npm run dev -- --port "$WEB_PORT" >"$WEB_LOG" 2>&1) &
 WEB_PID=$!
+
+(cd "$SHOP_DIR" && npm run dev -- --port "$SHOP_PORT" >"$SHOP_LOG" 2>&1) &
+SHOP_PID=$!
 
 wait_for() {
     local url="$1" name="$2" log="$3"
@@ -178,16 +199,16 @@ wait_for() {
 
 wait_for "${API_URL}/health" "the API" "$API_LOG" || exit 1
 wait_for "$WEB_URL" "the frontend" "$WEB_LOG" || exit 1
-
-ORG_ID="$(cd "$BACKEND_DIR" && uv run python scripts/seed_dev_org.py 2>/dev/null | awk '/org id/{print $3}')"
+wait_for "$SHOP_URL" "the shop window" "$SHOP_LOG" || exit 1
 
 printf '\n%s%s is running%s\n' "$GREEN" "SecondRoute" "$RESET"
 printf '    the application   %s\n' "$WEB_URL"
+printf '    the shop window   %s\n' "$SHOP_URL"
 printf '    the API           %s/api/v1\n' "$API_URL"
 printf '    the health check  %s/health\n' "$API_URL"
 printf '    the organisation  %s\n' "${ORG_ID:-unknown}"
 printf '\n    Every request has to name the organisation:\n'
 printf '        curl -H "X-Org-Id: %s" %s/api/v1/units\n' "${ORG_ID:-<the id>}" "$API_URL"
-printf '\n    %sCtrl-C stops both.%s\n\n' "$DIM" "$RESET"
+printf '\n    %sCtrl-C stops all three.%s\n\n' "$DIM" "$RESET"
 
 wait

@@ -96,6 +96,15 @@ be secured, measured and scaled apart: the console behind a sign-in on one
 host, the window on another. The staging stack builds them into two volumes
 and Caddy serves them from two hosts.
 
+**The shared source is resolved from the application, not from its directory.**
+A file outside the application's root resolves its imports by walking up from
+where it sits, which on a developer's machine finds the console's
+`node_modules` and in a container finds nothing at all. The window therefore
+deduplicates the packages the shared code imports — React above all — so that
+they are resolved from the window's own root and there is exactly one copy of
+React in the bundle. Two copies of React means two copies of the theme
+context, and a theme that does not apply.
+
 **The public endpoint is a contract.** Anything that is added to a listing is
 added to what the public can read. The tests in `tests/phase10/` assert the
 absence of the business's fields, so a field that leaks is a failing test

@@ -54,6 +54,10 @@ from secondroute.pricing.sources import (  # noqa: E402
 )
 from device_photos import ANGLES, body_colour_for, make_device_photo  # noqa: E402
 
+#: The order the photographs are offered in. The open screen is
+#: the first: it is the picture that says what the device is.
+PHOTO_ORDER = ("screen", "keyboard", "lid", "label")
+
 logger = get_logger(__name__)
 
 #: The organisation the demonstration data belongs to.
@@ -409,7 +413,11 @@ async def seed(
                     inspection_id=inspection.id,
                     storage_path=stored.storage_path,
                     exif_stripped=str(stored.exif_stripped).lower(),
-                    created_at=inspection.created_at + timedelta(minutes=rng.randint(1, 90)),
+                    # The order is fixed, so that the photograph on the
+                    # card is the one of the open screen rather than
+                    # whichever angle was taken first.
+                    created_at=inspection.created_at
+                    + timedelta(minutes=PHOTO_ORDER.index(angle) + 1),
                     # The photograph of the label carries the serial
                     # number, and the serial is not on the shop window.
                     published=angle != "label",

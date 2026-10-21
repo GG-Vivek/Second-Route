@@ -28,6 +28,19 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     resolve: {
+      // The design system is outside this application's root, so the
+      // packages it imports have to be resolved from here rather than
+      // from the directory the file happens to be in. Without this the
+      // container build has no ``frontend/node_modules`` to find them
+      // in, and a developer's machine has two copies of React.
+      dedupe: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'clsx',
+        'tailwind-merge',
+        'lucide-react',
+      ],
       alias: [
         // The design system.
         { find: /^@design-system\/(.*)$/, replacement: `${shared}/$1` },
