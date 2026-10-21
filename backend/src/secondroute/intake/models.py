@@ -97,14 +97,25 @@ class Unit(Base):
     )
 
     # Relationships
-    sku = relationship("SKU", backref="units")
+    #
+    # These are loaded with the unit rather than on demand. A lazy
+    # relationship in an asynchronous session raises when it is touched
+    # outside a greenlet, which turns into a five hundred in the middle of
+    # a request, and a unit without its model is not much use anyway.
+    sku = relationship("SKU", backref="units", lazy="selectin")
     inspections = relationship(
         "Inspection",
         back_populates="unit",
         cascade="all, delete-orphan",
         order_by="Inspection.created_at",
+        lazy="selectin",
     )
-    photos = relationship("Photo", back_populates="unit", cascade="all, delete-orphan")
+    photos = relationship(
+        "Photo",
+        back_populates="unit",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
 
     __table_args__ = (
         Index("ix_units_org_status", "org_id", "status"),
