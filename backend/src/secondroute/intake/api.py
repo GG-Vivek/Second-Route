@@ -113,7 +113,7 @@ async def list_units(
     Returns:
         List of units
     """
-    query = select(Unit).order_by(Unit.received_at.desc())
+    query = select(Unit).options(selectinload(Unit.sku)).order_by(Unit.received_at.desc())
 
     if status_filter:
         query = query.where(Unit.status == status_filter)
@@ -151,6 +151,7 @@ async def get_unit(unit_id: UUID, session: AsyncSession = Depends(get_session)) 
         .options(
             selectinload(Unit.inspections).selectinload(Inspection.photos),
             selectinload(Unit.photos),
+            selectinload(Unit.sku),
         )
         .where(Unit.id == unit_id)
     )

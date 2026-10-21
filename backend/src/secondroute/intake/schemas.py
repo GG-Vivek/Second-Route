@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from secondroute.identity.schemas import SKURead
 from secondroute.intake.models import ReturnReasonCode, OrderChannel, UnitStatus
 
 
@@ -33,6 +34,13 @@ class UnitRead(UnitBase):
     org_id: Optional[UUID] = None
     received_at: datetime
     status: UnitStatus
+    sku: Optional[SKURead] = Field(
+        default=None,
+        description=(
+            "The model the unit is. It is loaded with the unit, because a "
+            "unit without its model is not something anybody can act on."
+        ),
+    )
 
     model_config = ConfigDict(from_attributes=True)
 

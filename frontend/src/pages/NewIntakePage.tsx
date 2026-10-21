@@ -1,7 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, AlertCircle, Search, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, Search } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import {
+  Button,
+  Callout,
+  Field,
+  RadioCards,
+  StickyActions,
+  Step,
+  Steps,
+  inputClass,
+} from '@/components/ui'
 import {
   listSKUs,
   lookupSKUBySerial,
@@ -20,103 +30,98 @@ interface SKUOption {
   sku: SKU
 }
 
+/**
+ * The return intake.
+ *
+ * A return comes in through a door and has to be written down before
+ * anything can happen to it, so the form is three steps and the first
+ * one is the slowest: reading the serial and finding the model.
+ */
 export function NewIntakePage() {
   const navigate = useNavigate()
 
-  // Form state
   const [serial, setSerial] = useState('')
   const [selectedSKU, setSelectedSKU] = useState<SKUOption | null>(null)
   const [returnReason, setReturnReason] = useState<ReturnReasonCode>('buyer_remorse')
   const [orderChannel, setOrderChannel] = useState<OrderChannel>('online')
   const [notes, setNotes] = useState('')
 
-  // SKU search state
-  const [skuSearch, setSkuSearch] = useState('')
-  const [filteredSKUs, setFilteredSKUs] = useState<SKUOption[]>([])
+  const [skus, setSkus] = useState<SKUOption[]>([])
+  const [skuQuery, setSkuQuery] = useState('')
   const [showSKUDropdown, setShowSKUDropdown] = useState(false)
 
-  // Serial lookup state
   const [serialLookupLoading, setSerialLookupLoading] = useState(false)
   const [serialLookupError, setSerialLookupError] = useState<string | null>(null)
 
-  // Submit state
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [submitSuccess, setSubmitSuccess] = useState(false)
 
-  // Load all SKUs for dropdown
+  // The catalogue, for the manual choice.
   useEffect(() => {
     async function loadSKUs() {
       try {
-        const skus = await listSKUs({ limit: 100 })
-        setFilteredSKUs(
-          skus.map((sku) => ({
+        const loaded = await listSKUs({ limit: 100 })
+        setSkus(
+          loaded.map((sku) => ({
             value: sku.id,
             label: `${sku.family} ${sku.model_name} (${sku.year}) - ${sku.storage_gb}/${sku.ram_gb} ${sku.color}`,
             sku,
           }))
         )
-      } catch (err) {
-        console.error('Failed to load SKUs:', err)
+      } catch {
+        // The catalogue is a convenience. The serial lookup is the real
+        // path, and the operator can still choose by hand.
       }
     }
-    loadSKUs()
+    void loadSKUs()
   }, [])
 
-  // Filter SKUs based on search
-  useEffect(() => {
-    if (skuSearch) {
-      const filtered = filteredSKUs.filter(
-        (option) =>
-          option.label.toLowerCase().includes(skuSearch.toLowerCase()) ||
-          option.sku.family.toLowerCase().includes(skuSearch.toLowerCase()) ||
-          option.sku.model_name.toLowerCase().includes(skuSearch.toLowerCase())
-      )
-      setFilteredSKUs(filtered)
+  const filteredSKUs = skus.filter((option) => {
+    if (!skuQuery) return true
+    const needle = skuQuery.toLowerCase()
+    return (
+      option.label.toLowerCase().includes(needle) ||
+      option.sku.family.toLowerCase().includes(needle) ||
+      option.sku.model_name.toLowerCase().includes(needle)
+    )
+  })
+
+  const handleSerialChange = useCallback(async (value: string) => {
+    setSerial(value)
+    setSerialLookupError(null)
+
+    if (value.length < 3) {
+      setSelectedSKU(null)
+      return
     }
-  }, [skuSearch, filteredSKUs])
 
-  // Handle serial lookup
-  const handleSerialChange = useCallback(
-    async (value: string) => {
-      setSerial(value)
-      setSerialLookupError(null)
-
-      if (value.length >= 3) {
-        setSerialLookupLoading(true)
-        try {
-          const result = await lookupSKUBySerial(value)
-          setSelectedSKU({
-            value: result.sku.id,
-            label: `${result.sku.family} ${result.sku.model_name} (${result.sku.year}) - ${result.sku.storage_gb}/${result.sku.ram_gb} ${result.sku.color}`,
-            sku: result.sku,
-          })
-          setSerialLookupError(null)
-        } catch (err: unknown) {
-          const error = err as { response?: { status: number; data?: { detail?: string } } }
-          if (error.response?.status === 404) {
-            setSerialLookupError('No matching SKU found. Please select manually.')
-            setSelectedSKU(null)
-          } else {
-            setSerialLookupError('Failed to lookup serial')
-          }
-        } finally {
-          setSerialLookupLoading(false)
-        }
-      } else if (value.length === 0) {
+    setSerialLookupLoading(true)
+    try {
+      const result = await lookupSKUBySerial(value)
+      setSelectedSKU({
+        value: result.sku.id,
+        label: `${result.sku.family} ${result.sku.model_name} (${result.sku.year}) - ${result.sku.storage_gb}/${result.sku.ram_gb} ${result.sku.color}`,
+        sku: result.sku,
+      })
+    } catch (error: unknown) {
+      const apiError = error as { response?: { status: number } }
+      if (apiError.response?.status === 404) {
+        setSerialLookupError('No matching model was found for that serial. Choose one by hand.')
         setSelectedSKU(null)
+      } else {
+        setSerialLookupError('The serial could not be looked up.')
       }
-    },
-    []
-  )
+    } finally {
+      setSerialLookupLoading(false)
+    }
+  }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault()
     setSubmitError(null)
-    setSubmitSuccess(false)
 
     if (!selectedSKU) {
-      setSubmitError('Please select a SKU (or enter a serial number to auto-lookup)')
+      setSubmitError('Choose a model before logging the return.')
       return
     }
 
@@ -128,247 +133,221 @@ export function NewIntakePage() {
         return_reason_code: returnReason,
         order_channel: orderChannel,
       }
-
       const unit = await createUnit(unitData)
-      setSubmitSuccess(true)
-      // Redirect to unit detail after brief success message
-      setTimeout(() => {
-        navigate(`/units/${unit.id}`)
-      }, 1500)
-    } catch (err: unknown) {
-      const error = err as { response?: { status: number; data?: { detail?: string } } }
-      if (error.response?.status === 422) {
-        setSubmitError('Invalid data. Please check your inputs.')
-      } else if (error.response?.status === 404) {
-        setSubmitError('SKU not found. Please select a valid SKU.')
+      navigate(`/units/${unit.id}`)
+    } catch (error: unknown) {
+      const apiError = error as { response?: { status: number } }
+      if (apiError.response?.status === 422) {
+        setSubmitError('The details were not accepted. Check them and try again.')
+      } else if (apiError.response?.status === 404) {
+        setSubmitError('That model is no longer in the catalogue.')
       } else {
-        setSubmitError('Failed to create unit. Please try again.')
+        setSubmitError('The return could not be logged. Try again.')
       }
     } finally {
       setSubmitting(false)
     }
   }
 
-  const handleBack = () => navigate(-1)
-
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={handleBack} className="p-2 rounded-lg hover:bg-accent transition-colors">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
+    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-8">
+      <div className="flex items-start gap-4">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate(-1)}
+          aria-label="Go back"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+        </Button>
         <div>
-          <h1 className="text-2xl font-bold">New Return Intake</h1>
-          <p className="text-muted-foreground">Log a returned unit for processing</p>
+          <h1 className="text-3xl font-bold tracking-tight">Log a return</h1>
+          <p className="mt-1 text-muted-foreground">
+            One return in, one disposition instruction out. Three things to record.
+          </p>
         </div>
       </div>
 
-      {submitSuccess && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 flex items-center gap-3 text-green-800">
-          <CheckCircle className="h-5 w-5 flex-shrink-0" />
-          <span>Unit created successfully! Redirecting...</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Serial Number & SKU Lookup */}
-        <div className="rounded-lg border bg-card p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold">1. Identify Unit</h2>
-
-          {/* Serial Number */}
-          <div>
-            <label htmlFor="serial" className="block text-sm font-medium mb-1">
-              Serial Number <span className="text-muted-foreground">(optional)</span>
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                id="serial"
-                type="text"
-                value={serial}
-                onChange={(e) => handleSerialChange(e.target.value)}
-                placeholder="Enter serial number to auto-lookup SKU..."
-                className={cn(
-                  'w-full pl-10 pr-4 py-2 border rounded-lg bg-background',
-                  'focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
-                  'disabled:cursor-not-allowed disabled:opacity-50'
-                )}
-                disabled={serialLookupLoading || submitting}
-              />
-              {serialLookupLoading && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
-              )}
-            </div>
-            {serialLookupError && (
-              <p className="mt-1 text-sm text-yellow-600 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {serialLookupError}
-              </p>
-            )}
-          </div>
-
-          {/* SKU Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              SKU <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={selectedSKU ? selectedSKU.label : ''}
-                onClick={() => setShowSKUDropdown(true)}
-                onFocus={() => setShowSKUDropdown(true)}
-                readOnly
-                placeholder={selectedSKU ? '' : 'Select SKU...'}
-                className={cn(
-                  'w-full pl-4 pr-10 py-2 border rounded-lg bg-background',
-                  'focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent'
-                )}
-              />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              {showSKUDropdown && (
-                <div className="absolute z-50 w-full mt-1 border rounded-lg bg-background shadow-lg max-h-60 overflow-auto">
-                  {filteredSKUs.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => {
-                        setSelectedSKU(option)
-                        setShowSKUDropdown(false)
-                        setSkuSearch(option.label)
-                      }}
-                      className="w-full px-4 py-2 text-left hover:bg-accent first:rounded-t-lg last:rounded-b-lg"
-                    >
-                      <p className="font-medium">{option.sku.family} {option.sku.model_name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {option.sku.year} • {option.sku.storage_gb}/{option.sku.ram_gb} • {option.sku.color} • {option.sku.region}
-                      </p>
-                    </button>
-                  ))}
-                  {filteredSKUs.length === 0 && (
-                    <div className="px-4 py-2 text-sm text-muted-foreground">No matching SKUs found</div>
+      <Steps>
+        <Step
+          number={1}
+          title="Identify the unit"
+          description="Read the serial off the device. The model is looked up from it."
+        >
+          <div className="space-y-4">
+            <Field
+              label="Serial number"
+              hint="Optional, but it saves looking the model up by hand."
+            >
+              {({ id, describedBy }) => (
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id={id}
+                    aria-describedby={describedBy}
+                    type="text"
+                    value={serial}
+                    onChange={(event) => void handleSerialChange(event.target.value)}
+                    placeholder="C02XXXXXXXXX"
+                    className={cn(inputClass, 'pl-9 pr-9')}
+                    disabled={serialLookupLoading || submitting}
+                  />
+                  {serialLookupLoading && (
+                    <Loader2
+                      className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground"
+                      aria-hidden="true"
+                    />
                   )}
                 </div>
               )}
-            </div>
-            {!selectedSKU && (
-              <p className="mt-1 text-sm text-red-600">Please select a SKU</p>
+            </Field>
+
+            {serialLookupError && (
+              <Callout tone="warning">{serialLookupError}</Callout>
+            )}
+
+            <Field
+              label="Model"
+              required
+              error={
+                !selectedSKU && serialLookupError
+                  ? undefined
+                  : undefined
+              }
+            >
+              {({ id }) => (
+                <div className="relative">
+                  <input
+                    id={id}
+                    type="text"
+                    value={selectedSKU ? selectedSKU.label : ''}
+                    onFocus={() => setShowSKUDropdown(true)}
+                    onChange={(event) => {
+                      setSkuQuery(event.target.value)
+                      setShowSKUDropdown(true)
+                    }}
+                    readOnly={selectedSKU !== null}
+                    placeholder="Choose the model"
+                    className={inputClass}
+                    aria-autocomplete="list"
+                    aria-expanded={showSKUDropdown}
+                    role="combobox"
+                  />
+                  {showSKUDropdown && (
+                    <div className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-2xl border bg-popover p-1 shadow-lg">
+                      {filteredSKUs.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => {
+                            setSelectedSKU(option)
+                            setSkuQuery(option.label)
+                            setShowSKUDropdown(false)
+                          }}
+                          className="w-full rounded-xl px-3 py-2 text-left transition-colors hover:bg-accent"
+                        >
+                          <span className="block text-sm font-medium">
+                            {option.sku.family} {option.sku.model_name}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            {option.sku.year} &middot; {option.sku.storage_gb}/{
+                              option.sku.ram_gb
+                            } &middot; {option.sku.color} &middot; {option.sku.region}
+                          </span>
+                        </button>
+                      ))}
+                      {filteredSKUs.length === 0 && (
+                        <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                          Nothing in the catalogue matches that.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Field>
+
+            {selectedSKU && (
+              <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Check className="size-4 text-lime" aria-hidden="true" />
+                {selectedSKU.sku.family} {selectedSKU.sku.model_name} ({selectedSKU.sku.year})
+              </p>
             )}
           </div>
+        </Step>
 
-          {/* Hidden search input for SKU filtering */}
-          <input
-            type="hidden"
-            value={skuSearch}
-            onChange={(e) => setSkuSearch(e.target.value)}
+        <Step
+          number={2}
+          title="Why it came back"
+          description="The reason decides which channels are even worth considering."
+        >
+          <RadioCards
+            name="returnReason"
+            label="Why the unit came back"
+            value={returnReason}
+            onChange={setReturnReason}
+            options={RETURN_REASON_CODES.map((reason) => ({
+              value: reason.value,
+              label: reason.label,
+            }))}
           />
-        </div>
+        </Step>
 
-        {/* Return Reason */}
-        <div className="rounded-lg border bg-card p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold">2. Return Reason</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {RETURN_REASON_CODES.map((reason) => (
-              <label
-                key={reason.value}
-                className={cn(
-                  'flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors',
-                  returnReason === reason.value
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'hover:border-accent hover:bg-accent/50'
-                )}
-              >
-                <input
-                  type="radio"
-                  name="returnReason"
-                  value={reason.value}
-                  checked={returnReason === reason.value}
-                  onChange={() => setReturnReason(reason.value)}
-                  className="sr-only"
+        <Step
+          number={3}
+          title="Where it was bought"
+          description="The channel the return came in through."
+        >
+          <div className="space-y-4">
+            <RadioCards
+              name="orderChannel"
+              label="Where the unit was bought"
+              value={orderChannel}
+              onChange={setOrderChannel}
+              options={ORDER_CHANNELS.map((channel) => ({
+                value: channel.value,
+                label: channel.label,
+              }))}
+            />
+
+            <Field label="Notes" hint="Anything the next person should know.">
+              {({ id, describedBy }) => (
+                <textarea
+                  id={id}
+                  aria-describedby={describedBy}
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Any additional notes about this return..."
+                  rows={3}
+                  className={cn(inputClass, 'resize-y')}
                 />
-                <span className="font-medium">{reason.label}</span>
-              </label>
-            ))}
+              )}
+            </Field>
           </div>
-        </div>
+        </Step>
+      </Steps>
 
-        {/* Order Channel */}
-        <div className="rounded-lg border bg-card p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold">3. Order Channel</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {ORDER_CHANNELS.map((channel) => (
-              <label
-                key={channel.value}
-                className={cn(
-                  'flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors',
-                  orderChannel === channel.value
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'hover:border-accent hover:bg-accent/50'
-                )}
-              >
-                <input
-                  type="radio"
-                  name="orderChannel"
-                  value={channel.value}
-                  checked={orderChannel === channel.value}
-                  onChange={() => setOrderChannel(channel.value)}
-                  className="sr-only"
-                />
-                <span className="font-medium">{channel.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+      {submitError && <Callout tone="caution">{submitError}</Callout>}
 
-        {/* Notes */}
-        <div className="rounded-lg border bg-card p-6 shadow-sm space-y-4">
-          <h2 className="text-lg font-semibold">4. Notes (Optional)</h2>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Any additional notes about this return..."
-            rows={3}
-            className="w-full px-4 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
-          />
-        </div>
-
-        {/* Submit */}
-        <div className="flex items-center gap-4 pt-4 border-t">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="px-4 py-2 border rounded-lg hover:bg-accent transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting || !selectedSKU}
-            className={cn(
-              'ml-auto px-6 py-2 rounded-lg font-medium transition-colors',
-              'bg-primary text-primary-foreground hover:bg-primary/90',
-              'disabled:opacity-50 disabled:cursor-not-allowed'
-            )}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              'Create Unit'
-            )}
-          </button>
-        </div>
-
-        {submitError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{submitError}</span>
-          </div>
-        )}
-      </form>
-    </div>
+      <StickyActions>
+        <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={submitting || !selectedSKU} className="ml-auto">
+          {submitting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              Logging...
+            </>
+          ) : (
+            'Log the return'
+          )}
+        </Button>
+      </StickyActions>
+    </form>
   )
 }

@@ -6,11 +6,13 @@ Main FastAPI application with all routes, middleware, and lifecycle events.
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import ProgrammingError
 
 from secondroute.core.config import settings
@@ -69,6 +71,29 @@ app = FastAPI(
     openapi_url="/openapi.json" if settings.DEBUG else None,
     lifespan=lifespan,
 )
+
+
+def _mount_uploads(application: FastAPI) -> None:
+    """Serve the photographs.
+
+    A photo record carries the path the photograph is at, and nothing
+    else ever served it, so a unit could list its photographs and never
+    show one. The upload directory is served as it is.
+
+    A machine that cannot create the directory is not a machine that can
+    take photographs, so the application carries on without the mount and
+    says so.
+    """
+    try:
+        upload_dir = Path(settings.UPLOAD_DIR)
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        application.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
+        logger.info("uploads_mounted", path=str(upload_dir))
+    except OSError as exc:
+        logger.warning("uploads_not_mounted", path=settings.UPLOAD_DIR, error=str(exc))
+
+
+_mount_uploads(app)
 
 # CORS middleware
 app.add_middleware(

@@ -1,4 +1,5 @@
-import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import { forwardRef, type AnchorHTMLAttributes, type ButtonHTMLAttributes } from 'react'
+import { Link } from 'react-router-dom'
 import { cn } from '@/utils/cn'
 
 export type ButtonVariant =
@@ -67,3 +68,41 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   )
 )
 Button.displayName = 'Button'
+
+export interface ButtonLinkProps extends ButtonProps {
+  /** Where the link goes. */
+  href: string
+}
+
+/**
+ * The button, as a link.
+ *
+ * A button that navigates is still a link for a browser that does not
+ * run the script, and for a reader who opens it in a new tab.
+ */
+export function ButtonLink({
+  href,
+  className,
+  variant = 'default',
+  size = 'default',
+  ...props
+}: ButtonLinkProps) {
+  return (
+    <Link
+      to={href}
+      className={cn(
+        'group/button inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap',
+        'rounded-4xl border border-transparent bg-clip-padding text-sm font-medium',
+        'outline-none transition-all',
+        'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30',
+        'active:translate-y-px',
+        'aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20',
+        '[&_svg]:size-4',
+        VARIANTS[variant],
+        SIZES[size],
+        className
+      )}
+      {...(props as AnchorHTMLAttributes<HTMLAnchorElement>)}
+    />
+  )
+}

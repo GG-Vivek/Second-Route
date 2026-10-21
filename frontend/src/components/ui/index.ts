@@ -7,7 +7,14 @@
  */
 
 export { Badge, type BadgeProps, type BadgeVariant } from './badge'
-export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './button'
+export {
+  Button,
+  ButtonLink,
+  type ButtonLinkProps,
+  type ButtonProps,
+  type ButtonSize,
+  type ButtonVariant,
+} from './button'
 export { Callout, type CalloutProps, type CalloutTone } from './callout'
 export {
   Card,
@@ -45,6 +52,14 @@ export {
 } from './radio-cards'
 export { RangeBar, type RangeBarProps } from './range-bar'
 export { Sheet, type SheetProps } from './sheet'
+export {
+  Step,
+  Steps,
+  StickyActions,
+  type StepProps,
+  type StepsProps,
+  type StickyActionsProps,
+} from './steps'
 export {
   Table,
   TableBody,

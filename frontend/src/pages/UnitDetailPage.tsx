@@ -1,9 +1,55 @@
-import React, { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle, FileText, Camera, ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import {
+  ArrowLeft,
+  Camera,
+  ClipboardCheck,
+  Loader2,
+  Play,
+  ShieldCheck,
+  ShieldAlert,
+} from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/utils/cn'
-import { getUnit, updateUnitStatus, type UnitDetail, type UnitStatus, type Photo, UNIT_STATUSES, gradeColor, lockColor } from '@/api/intake'
+import {
+  Badge,
+  Button,
+  ButtonLink,
+  Callout,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui'
+import {
+  getUnit,
+  type UnitDetail,
+  type UnitStatus,
+  type Photo,
+  UNIT_STATUSES,
+  gradeColor,
+  lockColor,
+} from '@/api/intake'
+import { listUnitDecisions } from '@/api/decision'
+
+const STATUS_TONE: Record<
+  UnitStatus,
+  'default' | 'secondary' | 'outline' | 'lime' | 'teal' | 'purple' | 'orange'
+> = {
+  received: 'secondary',
+  inspected: 'orange',
+  decided: 'purple',
+  dispatched: 'teal',
+  sold: 'lime',
+  recycled: 'outline',
+  donated: 'default',
+}
 
 export function UnitDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -12,8 +58,6 @@ export function UnitDetailPage() {
   const [unit, setUnit] = useState<UnitDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [updatingStatus, setUpdatingStatus] = useState(false)
-  const [expandedInspection, setExpandedInspection] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchUnit() {
@@ -23,336 +67,329 @@ export function UnitDetailPage() {
         const data = await getUnit(id)
         setUnit(data)
         setError(null)
-      } catch (err: unknown) {
-        const error = err as { response?: { status: number } }
-        if (error.response?.status === 404) {
-          setError('Unit not found')
-        } else {
-          setError('Failed to load unit details')
-        }
+      } catch (fetchError: unknown) {
+        const apiError = fetchError as { response?: { status: number } }
+        setError(
+          apiError.response?.status === 404
+            ? 'That unit does not exist.'
+            : 'The unit could not be loaded.'
+        )
       } finally {
         setLoading(false)
       }
     }
-    fetchUnit()
+    void fetchUnit()
   }, [id])
 
-  const handleStatusChange = async (newStatus: UnitStatus) => {
-    if (!id) return
-    setUpdatingStatus(true)
-    try {
-      const updated = await updateUnitStatus(id, { status: newStatus })
-      setUnit((prev) => (prev ? { ...prev, status: updated.status } : null))
-    } catch (err) {
-      console.error('Failed to update status:', err)
-      alert('Failed to update status')
-    } finally {
-      setUpdatingStatus(false)
-    }
-  }
-
-  const handleBack = () => navigate(-1)
-
-  const statusColor = (status: UnitStatus) => {
-    switch (status) {
-      case 'received':
-        return 'bg-blue-100 text-blue-800'
-      case 'inspected':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'decided':
-        return 'bg-purple-100 text-purple-800'
-      case 'dispatched':
-        return 'bg-indigo-100 text-indigo-800'
-      case 'sold':
-        return 'bg-green-100 text-green-800'
-      case 'recycled':
-        return 'bg-gray-100 text-gray-800'
-      case 'donated':
-        return 'bg-teal-100 text-teal-800'
-      default:
-        return 'bg-muted text-muted-foreground'
-    }
-  }
+  const decisionsQuery = useQuery({
+    queryKey: ['unit-decisions', id],
+    queryFn: () => listUnitDecisions(id ?? ''),
+    enabled: Boolean(id),
+  })
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 text-primary animate-spin" />
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden="true" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-12">
-        <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Error</h2>
-        <p className="text-muted-foreground mb-6">{error}</p>
-        <button onClick={handleBack} className="px-4 py-2 border rounded-lg hover:bg-accent transition-colors">
-          Go Back
-        </button>
+      <div className="mx-auto max-w-2xl py-12">
+        <Callout tone="caution" title="The unit could not be opened">
+          <p>{error}</p>
+        </Callout>
+        <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+          Go back
+        </Button>
       </div>
     )
   }
 
   if (!unit) return null
 
+  const inspections = [...unit.inspections].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <button onClick={handleBack} className="p-2 rounded-lg hover:bg-accent transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
+    <div className="space-y-6">
+      {/* The header. */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+          </Button>
           <div>
-            <h1 className="text-2xl font-bold">Unit {unit.id.slice(0, 8)}...</h1>
-            <p className="text-muted-foreground">
-              {unit.sku ? `${unit.sku.family} ${unit.sku.model_name} (${unit.sku.year})` : 'Unknown SKU'}
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-3xl font-bold tracking-tight">
+                {unit.sku ? `${unit.sku.family} ${unit.sku.model_name}` : 'Unknown model'}
+              </h1>
+              <Badge variant={STATUS_TONE[unit.status] ?? 'secondary'}>
+                {UNIT_STATUSES.find((entry) => entry.value === unit.status)?.label ?? unit.status}
+              </Badge>
+            </div>
+            <p className="mt-1 font-mono text-sm text-muted-foreground">
+              {unit.serial ?? unit.id}
+              {unit.sku ? ` - ${unit.sku.year}, ${unit.sku.storage_gb}GB` : ''}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={unit.status}
-            onChange={(e) => handleStatusChange(e.target.value as UnitStatus)}
-            disabled={updatingStatus}
-            className={cn(
-              'px-3 py-1.5 rounded-lg text-sm font-medium border',
-              statusColor(unit.status)
-            )}
-          >
-            {UNIT_STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-          <Link
-            to={`/units/${unit.id}/inspection/new`}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Add Inspection
-          </Link>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <ButtonLink href={`/units/${unit.id}/inspection/new`} variant="outline">
+            <ClipboardCheck className="size-4" aria-hidden="true" />
+            Inspect
+          </ButtonLink>
+          <ButtonLink href={`/units/${unit.id}/decision`}>
+            <Play className="size-4" aria-hidden="true" />
+            Decide
+          </ButtonLink>
         </div>
       </div>
 
-      {/* Unit Info Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <InfoCard title="Serial Number" value={unit.serial ?? '—'} icon={<Eye className="h-5 w-5" />} />
-        <InfoCard title="Return Reason" value={unit.return_reason_code.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())} icon={<AlertCircle className="h-5 w-5" />} />
-        <InfoCard title="Order Channel" value={unit.order_channel} icon={<CheckCircle className="h-5 w-5" />} />
-        <InfoCard title="Received" value={format(new Date(unit.received_at), 'PPp')} icon={<FileText className="h-5 w-5" />} />
+      {/* The facts. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Fact label="Return reason" value={unit.return_reason_code.replace(/_/g, ' ')} />
+        <Fact label="Order channel" value={unit.order_channel} />
+        <Fact label="Received" value={format(new Date(unit.received_at), 'PPp')} />
+        <Fact
+          label="Model source"
+          value={unit.sku ? unit.sku.source : 'Unknown'}
+          hint={unit.sku ? `as of ${unit.sku.as_of}` : undefined}
+        />
       </div>
 
-      {/* SKU Details */}
-      {unit.sku && (
-        <div className="rounded-lg border bg-card p-6 shadow-sm">
-          <h2 className="text-lg font-semibold mb-4">SKU Details</h2>
-          <div className="grid gap-3 md:grid-cols-3">
-            <DetailRow label="Family" value={unit.sku.family} />
-            <DetailRow label="Model" value={unit.sku.model_name} />
-            <DetailRow label="Year" value={unit.sku.year} />
-            <DetailRow label="Storage" value={unit.sku.storage_gb} />
-            <DetailRow label="RAM" value={unit.sku.ram_gb} />
-            <DetailRow label="Color" value={unit.sku.color} />
-            <DetailRow label="Region" value={unit.sku.region} />
-            <DetailRow label="Source" value={unit.sku.source} />
-            <DetailRow label="As Of" value={unit.sku.as_of} />
-          </div>
-        </div>
-      )}
+      {/* The tabs. */}
+      <Tabs defaultValue="inspection">
+        <TabsList>
+          <TabsTrigger value="inspection">Inspection</TabsTrigger>
+          <TabsTrigger value="photos">Photos ({unit.photos.length})</TabsTrigger>
+          <TabsTrigger value="decisions">
+            Decisions ({decisionsQuery.data?.total ?? 0})
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Inspections */}
-      <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-        <div className="p-6 border-b flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Inspections ({unit.inspections.length})</h2>
-          <Link
-            to={`/units/${unit.id}/inspection/new`}
-            className="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Add Inspection
-          </Link>
-        </div>
-
-        {unit.inspections.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">No inspections yet</p>
-            <p className="text-sm">Add the first inspection to begin grading this unit</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {unit.inspections
-              .slice()
-              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-              .map((inspection) => (
-                <InspectionCard
-                  key={inspection.id}
-                  inspection={inspection}
-                  expanded={expandedInspection === inspection.id}
-                  onToggle={() => setExpandedInspection(expandedInspection === inspection.id ? null : inspection.id)}
-                />
-              ))}
-          </div>
-        )}
-      </div>
-
-      {/* Photos */}
-      <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-        <div className="p-6 border-b">
-          <h2 className="text-lg font-semibold">Photos ({unit.photos.length})</h2>
-        </div>
-
-        {unit.photos.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground">
-            <Camera className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">No photos uploaded</p>
-          </div>
-        ) : (
-          <div className="p-6">
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {unit.photos.map((photo: Photo) => (
-                <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden border bg-muted">
-                  <div className="w-full h-full flex items-center justify-center bg-muted">
-                    <Camera className="h-12 w-12 text-muted-foreground/50" />
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 text-white text-xs">
-                    {format(new Date(photo.created_at), 'PPp')}
-                  </div>
-                  <div className="absolute top-1 right-1 flex gap-1">
-                    <span className={cn('px-1.5 py-0.5 rounded text-xs', photo.exif_stripped ? 'bg-green-600' : 'bg-yellow-600')}>
-                      {photo.exif_stripped ? 'EXIF Stripped' : 'EXIF Present'}
+        <TabsContent value="inspection">
+          {inspections.length === 0 ? (
+            <EmptyState
+              icon={<ClipboardCheck className="size-6" />}
+              title="No inspection yet"
+              description="Inspect the unit so that the engine has something to work from."
+              action={
+                <ButtonLink href={`/units/${unit.id}/inspection/new`}>
+                  Start the inspection
+                </ButtonLink>
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {inspections.map((inspection) => (
+                <Card key={inspection.id}>
+                  <CardHeader className="flex-row items-center justify-between gap-3">
+                    <CardTitle>Inspection</CardTitle>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {format(new Date(inspection.created_at), 'PPp')}
                     </span>
-                  </div>
-                </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Badge className={cn(gradeColor(inspection.cosmetic_grade))}>
+                        Grade {inspection.cosmetic_grade}
+                      </Badge>
+                      <Badge className={cn(lockColor(inspection.activation_lock))}>
+                        {inspection.activation_lock === 'none'
+                          ? 'No lock'
+                          : inspection.activation_lock === 'present'
+                            ? 'Locked'
+                            : 'Unknown'}
+                      </Badge>
+                      <Badge variant="secondary">
+                        {inspection.battery_health_pct}% battery
+                      </Badge>
+                      {inspection.battery_cycles && (
+                        <Badge variant="secondary">
+                          {inspection.battery_cycles} cycles
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FactList
+                        title="Functional tests"
+                        entries={Object.entries(inspection.functional_tests_json)}
+                      />
+                      <FactList
+                        title="Accessories"
+                        entries={Object.entries(inspection.accessories_json)}
+                      />
+                    </div>
+
+                    {inspection.notes && (
+                      <p className="whitespace-pre-wrap rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
+                        {inspection.notes}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
               ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function InfoCard({ title, value, icon }: { title: string; value: string; icon: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border bg-card p-4 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">{icon}</div>
-        <div>
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="font-medium text-sm truncate max-w-xs">{value}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="space-y-1">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-medium text-sm">{value}</p>
-    </div>
-  )
-}
-
-function InspectionCard({
-  inspection,
-  expanded,
-  onToggle,
-}: {
-  inspection: UnitDetail['inspections'][0]
-  expanded: boolean
-  onToggle: () => void
-}) {
-  return (
-    <div className="p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4 flex-1">
-          <button onClick={onToggle} className="p-1 rounded hover:bg-accent transition-colors" aria-expanded={expanded}>
-            {expanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-          </button>
-          <div>
-            <p className="font-medium">Inspection {inspection.id.slice(0, 8)}...</p>
-            <p className="text-sm text-muted-foreground">
-              {format(new Date(inspection.created_at), 'PPp')}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={cn('px-2 py-1 rounded text-xs font-medium', gradeColor(inspection.cosmetic_grade))}>
-            Grade {inspection.cosmetic_grade}
-          </span>
-          <span className={cn('px-2 py-1 rounded text-xs font-medium', lockColor(inspection.activation_lock))}>
-            {inspection.activation_lock === 'none' ? 'No Lock' : inspection.activation_lock === 'present' ? 'Locked' : 'Unknown'}
-          </span>
-          <span className="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
-            {inspection.battery_health_pct}% Battery
-          </span>
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="mt-4 pt-4 border-t space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <DetailRow label="Battery Health" value={`${inspection.battery_health_pct}%`} />
-            <DetailRow label="Battery Cycles" value={inspection.battery_cycles ?? '—'} />
-            <DetailRow label="Cosmetic Grade" value={inspection.cosmetic_grade} />
-            <DetailRow label="Activation Lock" value={inspection.activation_lock} />
-          </div>
-
-          <div>
-            <h4 className="font-medium mb-2">Functional Tests</h4>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(inspection.functional_tests_json).map(([key, value]: [string, boolean]) => (
-                <span
-                  key={key}
-                  className={cn(
-                    'px-2 py-1 rounded text-xs font-medium',
-                    value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  )}
-                >
-                  {key.replace(/_/g, ' ').replace(/\b\w/g, (letter: string) => letter.toUpperCase())}: {value ? 'Pass' : 'Fail'}
-                </span>
-              ))}
-              {Object.keys(inspection.functional_tests_json).length === 0 && (
-                <span className="text-sm text-muted-foreground">No functional tests recorded</span>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <h4 className="font-medium mb-2">Accessories</h4>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(inspection.accessories_json).map(([key, value]: [string, boolean]) => (
-                <span
-                  key={key}
-                  className={cn(
-                    'px-2 py-1 rounded text-xs font-medium',
-                    value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  )}
-                >
-                  {key.replace(/_/g, ' ').replace(/\b\w/g, (letter: string) => letter.toUpperCase())}: {value ? 'Yes' : 'No'}
-                </span>
-              ))}
-              {Object.keys(inspection.accessories_json).length === 0 && (
-                <span className="text-sm text-muted-foreground">No accessories recorded</span>
-              )}
-            </div>
-          </div>
-
-          {inspection.notes && (
-            <div className="rounded-lg bg-muted p-4">
-              <h4 className="font-medium mb-1">Notes</h4>
-              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{inspection.notes}</p>
             </div>
           )}
-        </div>
-      )}
+        </TabsContent>
+
+        <TabsContent value="photos">
+          {unit.photos.length === 0 ? (
+            <EmptyState
+              icon={<Camera className="size-6" />}
+              title="No photographs"
+              description="Photographs are taken against the inspection and stored with it."
+            />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {unit.photos.map((photo) => (
+                <PhotoTile key={photo.id} photo={photo} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="decisions">
+          {decisionsQuery.isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden="true" />
+            </div>
+          ) : (decisionsQuery.data?.items.length ?? 0) === 0 ? (
+            <EmptyState
+              icon={<Play className="size-6" />}
+              title="No decision yet"
+              description="Run the engine to get a disposition recommendation for this unit."
+              action={<ButtonLink href={`/units/${unit.id}/decision`}>Run the decision</ButtonLink>}
+            />
+          ) : (
+            <ul className="space-y-2">
+              {decisionsQuery.data?.items.map((summary) => (
+                <li key={summary.id}>
+                  <Link
+                    to={`/units/${unit.id}/decision`}
+                    className="flex items-center justify-between gap-4 rounded-2xl border bg-card p-4 transition-colors hover:bg-accent/40"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="font-medium">{summary.recommended_channel}</span>
+                      {summary.fallback_used && (
+                        <Badge variant="yellow">
+                          <ShieldAlert className="size-3" aria-hidden="true" />
+                          Safe default
+                        </Badge>
+                      )}
+                    </span>
+                    <span className="flex items-center gap-4 font-mono text-xs text-muted-foreground">
+                      {(summary.confidence * 100).toFixed(1)}% - {summary.risk_profile}
+                      <ShieldCheck className="size-3.5" aria-hidden="true" />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
+  )
+}
+
+function Fact({
+  label,
+  value,
+  hint,
+}: {
+  label: string
+  value: string
+  hint?: string
+}) {
+  return (
+    <div className="rounded-4xl border bg-card p-4 shadow-md ring-1 ring-foreground/5 dark:ring-foreground/10">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-medium capitalize">{value}</p>
+      {hint && <p className="mt-0.5 font-mono text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  )
+}
+
+function FactList({
+  title,
+  entries,
+}: {
+  title: string
+  entries: [string, boolean][]
+}) {
+  if (entries.length === 0) {
+    return (
+      <div>
+        <p className="mb-2 text-xs font-medium text-muted-foreground">{title}</p>
+        <p className="text-sm text-muted-foreground">Nothing recorded.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <p className="mb-2 text-xs font-medium text-muted-foreground">{title}</p>
+      <ul className="flex flex-wrap gap-2">
+        {entries.map(([name, passed]) => (
+          <li key={name}>
+            <Badge variant={passed ? 'lime' : 'destructive'}>
+              {name.replace(/_/g, ' ')}
+              <span className="opacity-70">{passed ? 'pass' : 'fail'}</span>
+            </Badge>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/**
+ * One photograph.
+ *
+ * The photograph is served from the upload directory. When it is not
+ * there, the tile says so rather than showing a broken image.
+ */
+function PhotoTile({ photo }: { photo: Photo }) {
+  const [failed, setFailed] = useState(false)
+
+  return (
+    <figure className="overflow-hidden rounded-2xl border bg-card">
+      <div className="relative aspect-square bg-muted">
+        {!failed ? (
+          <img
+            src={photo.storage_path}
+            alt={`Photograph taken ${format(new Date(photo.created_at), 'PPp')}`}
+            className="size-full object-cover"
+            onError={() => setFailed(true)}
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+            <Camera className="size-6" aria-hidden="true" />
+            <span className="text-xs">The file is not there</span>
+          </div>
+        )}
+        <span className="absolute right-2 top-2">
+          <Badge variant={photo.exif_stripped ? 'lime' : 'yellow'}>
+            {photo.exif_stripped ? 'EXIF stripped' : 'EXIF present'}
+          </Badge>
+        </span>
+      </div>
+      <figcaption className="px-3 py-2 font-mono text-xs text-muted-foreground">
+        {format(new Date(photo.created_at), 'PPp')}
+      </figcaption>
+    </figure>
   )
 }
