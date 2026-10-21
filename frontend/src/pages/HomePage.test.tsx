@@ -130,8 +130,8 @@ describe('HomePage', () => {
     render(<HomePage />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      // The API is degraded and the queue is down, so two are down.
-      expect(screen.getAllByLabelText('Down').length).toBe(2)
+      // The queue is down. The API answered, so it is up.
+      expect(screen.getAllByLabelText('Down').length).toBe(1)
     })
   })
 

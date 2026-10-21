@@ -174,8 +174,13 @@ export function HomePage() {
 
         {/* The state of the system. */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
             <CardTitle>The system</CardTitle>
+            {healthQuery.data && (
+              <Badge variant={healthQuery.data.status === 'healthy' ? 'lime' : 'yellow'}>
+                {healthQuery.data.status}
+              </Badge>
+            )}
           </CardHeader>
           <CardContent>
             {healthQuery.isLoading ? (
@@ -193,7 +198,9 @@ export function HomePage() {
                 <ServiceRow
                   icon={<Server className="size-4" />}
                   name="The API"
-                  ok={healthQuery.data?.status === 'healthy'}
+                  // The API answered, so it is up. The overall status is
+                  // about the whole system, which is a different thing.
+                  ok
                   detail={`${healthQuery.data?.environment ?? 'unknown'}, version ${healthQuery.data?.version ?? '—'}`}
                 />
                 <ServiceRow
