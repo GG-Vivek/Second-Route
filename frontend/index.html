@@ -5,10 +5,33 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="SecondRoute - Decision engine for returned electronics" />
+    <meta name="theme-color" content="#141311" />
     <title>SecondRoute</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!--
+      The theme is applied before the first paint.
+
+      The application ships dark. This script reads the stored preference and
+      puts the class on the document element before anything is drawn, so the
+      page never flashes the wrong theme. It is deliberately inline and
+      deliberately has no dependencies: it has to run before the bundle does.
+    -->
+    <script>
+      ;(function () {
+        try {
+          var stored = window.localStorage.getItem('secondroute-theme')
+          var preference =
+            stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'dark'
+          var dark =
+            preference === 'dark' ||
+            (preference === 'system' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+          document.documentElement.classList.toggle('dark', dark)
+        } catch (error) {
+          // A browser that refuses to read storage still gets the default.
+          document.documentElement.classList.add('dark')
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

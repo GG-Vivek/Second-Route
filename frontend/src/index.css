@@ -2,69 +2,333 @@
 @tailwind components;
 @tailwind utilities;
 
+/**
+ * The design tokens (F8.1).
+ *
+ * The palette is the pmndrs Material Design 3 output for a lime seed
+ * (#CAF543) on a warm neutral seed (#C1B793). Warm off-whites and warm
+ * near-blacks, never pure white or pure black.
+ *
+ * Every colour is stored as its red, green and blue channels rather than as
+ * a hex value, so that Tailwind's opacity modifiers work: `ring-foreground/10`
+ * and `bg-primary/5` need to be able to apply an alpha to the token.
+ *
+ * The light theme is the default in CSS. The application ships dark, and the
+ * inline script in `index.html` puts the `dark` class on the document before
+ * the first paint so the page never flashes.
+ */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    color-scheme: light;
+
+    /* Surfaces, from the page up. */
+    --background: 254 248 244; /* #fef8f4 */
+    --foreground: 29 27 25; /* #1d1b19 */
+    --card: 248 243 238; /* #f8f3ee */
+    --card-foreground: 29 27 25; /* #1d1b19 */
+    --popover: 242 237 232; /* #f2ede8 */
+    --popover-foreground: 29 27 25; /* #1d1b19 */
+    --muted: 236 231 227; /* #ece7e3 */
+    --muted-foreground: 70 72 60; /* #46483c */
+    --accent: 230 226 221; /* #e6e2dd */
+    --accent-foreground: 29 27 25; /* #1d1b19 */
+    --surface-2: 242 237 232; /* #f2ede8 */
+    --surface-3: 236 231 227; /* #ece7e3 */
+    --surface-4: 230 226 221; /* #e6e2dd */
+
+    /* The brand. Lime, at the tone a light surface can carry. */
+    --primary: 80 102 0; /* #506600 */
+    --primary-foreground: 255 255 255; /* #ffffff */
+    --primary-container: 202 245 67; /* #caf543 */
+    --on-primary-container: 87 110 0; /* #576e00 */
+    --secondary: 211 233 144; /* #d3e990 */
+    --secondary-foreground: 87 105 32; /* #576920 */
+
+    --destructive: 183 0 78; /* #b7004e */
+    --destructive-foreground: 255 255 255; /* #ffffff */
+
+    /* Hairlines. The rings do the edge work, not the shadows. */
+    --border: 198 200 184; /* #c6c8b8 */
+    --input: 198 200 184; /* #c6c8b8 */
+    --ring: 80 102 0; /* #506600 */
+    --outline: 118 120 107; /* #76786b */
+
+    /* The seven brand accents. */
+    --lime: 80 102 0; /* #506600 */
+    --lime-container: 202 245 67; /* #caf543 */
+    --teal: 0 108 69; /* #006c45 */
+    --teal-container: 0 247 163; /* #00f7a3 */
+    --cyan: 0 104 118; /* #006876 */
+    --cyan-container: 43 220 246; /* #2bdcf6 */
+    --purple: 155 0 190; /* #9b00be */
+    --purple-container: 184 51 218; /* #b833da */
+    --orange: 124 88 0; /* #7c5800 */
+    --orange-container: 255 192 67; /* #ffc043 */
+    --yellow: 91 100 0; /* #5b6400 */
+    --yellow-container: 235 255 15; /* #ebff0f */
+    --red: 183 0 78; /* #b7004e */
+    --red-container: 218 43 102; /* #da2b66 */
+
+    /* The five callout roles. The containers read the same in both themes. */
+    --note: 0 96 159; /* #00609f */
+    --note-container: 0 121 199; /* #0079c7 */
+    --on-note-container: 255 253 255; /* #fffdff */
+    --tip: 50 105 0; /* #326900 */
+    --tip-container: 73 131 29; /* #49831d */
+    --on-tip-container: 251 255 240; /* #fbfff0 */
+    --important: 79 69 214; /* #4f45d6 */
+    --important-container: 104 97 240; /* #6861f0 */
+    --on-important-container: 255 253 255; /* #fffdff */
+    --warning: 112 93 0; /* #705d00 */
+    --warning-container: 191 161 35; /* #bfa123 */
+    --on-warning-container: 69 56 0; /* #453800 */
+    --caution: 165 56 0; /* #a53800 */
+    --caution-container: 206 72 0; /* #ce4800 */
+    --on-caution-container: 255 253 255; /* #fffdff */
+
+    /* The code island. Always dark, in both themes. */
+    --code-background: 25 27 22; /* #191b16 */
+    --code-foreground: 251 252 246; /* #fbfcf6 */
+
+    /* The radius scale. Every radius is a multiple of the base. */
+    --radius: 0.625rem;
+    --radius-xs: 2px;
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+
+    /* One transition curve, one duration. */
+    --transition-duration: 150ms;
+    --transition-timing: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* The hairline the header and the sidebar sit on. */
+    --hairline: 198 200 184;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-  }
-}
+    color-scheme: dark;
 
-@layer base {
+    --background: 20 19 17; /* #141311 */
+    --foreground: 230 226 221; /* #e6e2dd */
+    --card: 29 27 25; /* #1d1b19 */
+    --card-foreground: 230 226 221; /* #e6e2dd */
+    --popover: 33 31 29; /* #211f1d */
+    --popover-foreground: 230 226 221; /* #e6e2dd */
+    --muted: 43 42 39; /* #2b2a27 */
+    --muted-foreground: 198 200 184; /* #c6c8b8 */
+    --accent: 54 53 50; /* #363532 */
+    --accent-foreground: 230 226 221; /* #e6e2dd */
+    --surface-2: 33 31 29; /* #211f1d */
+    --surface-3: 43 42 39; /* #2b2a27 */
+    --surface-4: 54 53 50; /* #363532 */
+
+    --primary: 200 242 64; /* #c8f240 */
+    --primary-foreground: 40 53 0; /* #283500 */
+    --primary-container: 200 242 64; /* #c8f240 */
+    --on-primary-container: 85 109 0; /* #556d00 */
+    --secondary: 60 77 3; /* #3c4d03 */
+    --secondary-foreground: 211 233 144; /* #d3e990 */
+
+    --destructive: 255 77 130; /* #ff4d82 */
+    --destructive-foreground: 87 0 33; /* #570021 */
+
+    --border: 70 72 60; /* #46483c */
+    --input: 70 72 60; /* #46483c */
+    --ring: 200 242 64; /* #c8f240 */
+    --outline: 144 146 132; /* #909284 */
+
+    --lime: 200 242 64; /* #c8f240 */
+    --lime-container: 200 242 64; /* #c8f240 */
+    --teal: 214 255 228; /* #d6ffe4 */
+    --teal-container: 0 247 163; /* #00f7a3 */
+    --cyan: 170 240 255; /* #aaf0ff */
+    --cyan-container: 43 220 246; /* #2bdcf6 */
+    --purple: 244 174 255; /* #f4aeff */
+    --purple-container: 217 86 249; /* #d956f9 */
+    --orange: 255 227 183; /* #ffe3b7 */
+    --orange-container: 255 192 67; /* #ffc043 */
+    --yellow: 255 255 255; /* #ffffff */
+    --yellow-container: 219 238 0; /* #dbee00 */
+    --red: 255 177 192; /* #ffb1c0 */
+    --red-container: 255 77 130; /* #ff4d82 */
+
+    --note: 157 202 255; /* #9dcaff */
+    --tip: 151 216 104; /* #97d868 */
+    --important: 195 192 255; /* #c3c0ff */
+    --warning: 229 196 70; /* #e5c446 */
+    --caution: 255 181 154; /* #ffb59a */
+
+    --hairline: 70 72 60; /* #46483c */
+  }
+
   * {
     @apply border-border;
   }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: theme('fontFamily.sans');
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* The focus ring is exactly three pixels, everywhere. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Numerals line up in a column. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /**
+   * The code island. Always dark, in both themes, because the point of it is
+   * to read as a different kind of thing from the prose around it.
+   */
+  .code-island {
+    @apply rounded-2xl bg-code text-code-foreground;
   }
 }
 
 @layer utilities {
+  /**
+   * The scroll-driven edge fade.
+   *
+   * Content dissolves at the edges of a wide surface instead of being cut
+   * off. Where the browser supports scroll-driven animations the fade grows
+   * as the content scrolls away; where it does not, the fade is still there.
+   */
+  .scroll-fade-x {
+    --scroll-fade-start: 0px;
+    --scroll-fade-end: 0px;
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--scroll-fade-start),
+      #000 calc(100% - var(--scroll-fade-end)),
+      transparent 100%
+    );
+  }
+
+  .scroll-fade-y {
+    --scroll-fade-start: 0px;
+    --scroll-fade-end: 0px;
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--scroll-fade-start),
+      #000 calc(100% - var(--scroll-fade-end)),
+      transparent 100%
+    );
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/**
+ * The scroll-driven part of the edge fade.
+ *
+ * The custom properties are registered so that they can be animated. The
+ * animation is attached to the scroll container itself, so the fade grows
+ * as the content moves.
+ */
+@property --scroll-fade-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --scroll-fade-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes scroll-fade-inline {
+  from {
+    --scroll-fade-start: 0px;
+    --scroll-fade-end: 0px;
+  }
+  to {
+    --scroll-fade-start: 2.5rem;
+    --scroll-fade-end: 2.5rem;
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  .scroll-fade-x {
+    animation: scroll-fade-inline linear both;
+    animation-timeline: scroll(self inline);
+    animation-range: 0 2.5rem;
+  }
+}
+
+/**
+ * The shimmer, for the loading states.
+ *
+ * A single sweep of highlight at a low alpha. It is the only moving thing
+ * on the page, so it reads as "waiting" rather than as decoration.
+ */
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.tw-shimmer {
+  animation: shimmer var(--shimmer-duration, 2s) linear infinite;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0,
+    rgb(var(--foreground) / 0.06) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+}
+
+/**
+ * The motion.
+ *
+ * Everything that moves uses one duration and one curve, and everything
+ * that is not essential stops when the reader has asked for less motion.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .tw-shimmer {
+    animation: none;
   }
 }

@@ -215,8 +215,8 @@ green on a laptop, and CI provides one.
 
 | Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
 |---------|--------|-------|--------|---------|-----------|--------|-------|
-| F8.0 Design decision and dependency licences | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.0-design-decision-and-licences | 2026-10-21T00:00:00Z | — | — | ADR-006, Phase 8 in PLAN.md, CHANGELOG.md created |
-| F8.1 Design tokens, theme and self-hosted fonts | ⬜ Not started | — | feat/F8.1-design-tokens | — | — | — | MD3 token set, theme provider, @fontsource packages |
+| F8.0 Design decision and dependency licences | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.0-design-decision-and-licences | 2026-10-21T00:00:00Z | 2026-10-21T01:00:00Z | 26eafec | ADR-006, Phase 8 in PLAN.md, CHANGELOG.md created |
+| F8.1 Design tokens, theme and self-hosted fonts | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.1-design-tokens | 2026-10-21T01:00:00Z | — | — | MD3 token set, theme provider, @fontsource packages |
 | F8.2 The interface kit | ⬜ Not started | — | feat/F8.2-ui-kit | — | — | — | ~19 primitives replacing the hand-rolled variants |
 | F8.3 The application shell | ⬜ Not started | — | feat/F8.3-app-shell | — | — | — | Sidebar, glass header, command palette |
 | F8.4 The decision distribution endpoint | ⬜ Not started | — | feat/F8.4-decision-distribution | — | — | — | GET /decisions/{id}/distribution, replayed from the snapshot |
@@ -232,6 +232,8 @@ green on a laptop, and CI provides one.
 - The 3D code is isolated under `frontend/src/three/` and is reached only through a dynamic `import()`. If the react-three-fiber upgrade to v9 and React 19 ever happens, that directory is the blast radius.
 - `three` is pinned below 0.186 on purpose: 0.186 removed the shadow map type that react-three-fiber v8 selects by default.
 - The existing `data-testid` contracts in the decision card tests are part of the interface. A redesign that renames one of them has to change the test in the same commit, on purpose, never silently.
+- **Known defect, carried into Phase 8:** the dashboard calls `/api/v1/health`, but the backend serves `/health` at the root, so the landing page shows "Request failed with status code 404" on every load. This predates Phase 8 and is fixed in F8.7 when the dashboard is rebuilt. The health check never passed from the browser; the F0.4 acceptance criterion was met against the endpoint directly.
+- **Known debt, not in Phase 8:** `npm audit` reports 17 findings, all in the dev toolchain (vitest, vite, tailwindcss, react-router-dom). Every fix is a major version bump. None came from the Phase 8 dependencies. Migrating the toolchain is a separate piece of work and must not be bundled into a design change.
 
 ---
 
@@ -333,6 +335,8 @@ green on a laptop, and CI provides one.
 | 2026-10-20 | Added data source | Synthetic generator (in-house, `ml/synthetic`) | MIT (project license) | Approved - every row tagged `is_synthetic=true` |
 | 2026-10-20 | Added data source | Synthetic price source (in-house, log-normal) | MIT (project license) | Approved - `source=synthetic`, `is_synthetic=true` |
 | 2026-10-20 | Added dependency | fake-indexeddb (IndexedDB shim for the F5.5 offline store tests) | Apache-2.0 | Approved - dev-only, see ADR-004 |
+| 2026-10-21 | Added dependency | @fontsource-variable/inter (self-hosted Inter, replaces the Google Fonts CDN) | SIL OFL 1.1 | Approved - see ADR-006 |
+| 2026-10-21 | Added dependency | @fontsource-variable/inconsolata (self-hosted Inconsolata, replaces the Google Fonts CDN) | SIL OFL 1.1 | Approved - see ADR-006 |
 
 ---
 
