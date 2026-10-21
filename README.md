@@ -206,11 +206,32 @@ alembic history
 
 - **Backend**: FastAPI + SQLAlchemy 2.x + PostgreSQL 16
 - **Frontend**: React 18 + Vite + TypeScript + Tailwind + shadcn/ui
+- **Design system**: the pmndrs Material Design 3 tokens, lime on a warm neutral
+- **Decision console**: a flat ridgeline with a react-three-fiber landscape over it
 - **Decision engine**: NumPy Monte Carlo, seeded and reproducible
 - **ML**: scikit-learn, LightGBM, MLflow
 - **Auth**: Keycloak (OIDC)
 - **Observability**: Prometheus + Grafana + Loki + OpenTelemetry
 - **Infrastructure**: Docker Compose, Caddy for TLS
+
+### Running the tests
+
+```bash
+# The backend
+cd backend && .venv/bin/python -m pytest tests/ -q
+
+# The frontend
+cd frontend && npm run test:run
+
+# The visual regression suite. It needs no backend: every API call is
+# answered with a fixture, so a screenshot never depends on what happens
+# to be in the database.
+cd frontend && npx playwright install chromium && npm run test:e2e
+```
+
+The visual baselines are per platform. The ones for a platform that has never
+run the suite are written on the first run and committed from then on.
+
 
 ### Package layout
 

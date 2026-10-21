@@ -37,8 +37,9 @@ export default tseslint.config(
     },
   },
   {
-    // The build configuration runs in Node, not in the browser.
-    files: ['vite.config.ts', 'vitest.config.ts'],
+    // The build configuration and the end-to-end suite run in Node, not in
+    // the browser.
+    files: ['vite.config.ts', 'vitest.config.ts', 'playwright.config.ts', 'e2e/**/*.ts'],
     languageOptions: {
       globals: { ...globals.node },
     },

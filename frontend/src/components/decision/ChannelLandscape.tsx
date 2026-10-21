@@ -131,6 +131,16 @@ export function ChannelLandscape({
             className="mx-auto h-[32rem] w-full max-w-4xl overflow-hidden rounded-4xl border bg-card"
             data-testid="channel-landscape-3d"
           >
+            {/*
+              The text alternative for the canvas. A reader who cannot see
+              the picture is told what the picture shows and where the
+              numbers are.
+            */}
+            <p className="sr-only">
+              The net value distribution of the recommended channel and the channels that
+              overlap it, drawn in three dimensions. The same information is in the flat view
+              and the table of alternatives below.
+            </p>
             <Suspense
               fallback={
                 <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">

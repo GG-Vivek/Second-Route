@@ -220,10 +220,10 @@ green on a laptop, and CI provides one.
 | F8.2 The interface kit | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.2-ui-kit | 2026-10-21T02:10:00Z | 2026-10-21T03:10:00Z | 67e4a5a | 19 primitives, 31 tests |
 | F8.3 The application shell | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.3-app-shell | 2026-10-21T03:10:00Z | 2026-10-21T04:05:00Z | 853bd92 | Sidebar, glass header, command palette, 12 tests |
 | F8.4 The decision distribution endpoint | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.4-decision-distribution | 2026-10-21T04:05:00Z | 2026-10-21T05:20:00Z | bf84e83 | GET /decisions/{id}/distribution, 15 tests, fixed the replay defect |
-| F8.5 The channel landscape and the decision card | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.5-channel-landscape | 2026-10-21T05:20:00Z | — | — | 2D ridgeline, the R3F scene, the rebuilt card |
-| F8.6 Intake, inspection and unit surfaces | ⬜ Not started | — | feat/F8.6-intake-and-units | — | — | — | Stepped forms, filter rail, real photos |
-| F8.7 Dashboard, health, analytics and backtest surfaces | ⬜ Not started | — | feat/F8.7-dash-and-analytics | — | — | — | Real Recharts charts, working quick actions |
-| F8.8 Motion, accessibility and the visual regression suite | ⬜ Not started | — | feat/F8.8-motion-and-a11y | — | — | — | Scroll fades, focus audit, Playwright screenshots |
+| F8.5 The channel landscape and the decision card | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.5-channel-landscape | 2026-10-21T05:20:00Z | 2026-10-21T07:20:00Z | f81e93e | 2D ridgeline, the R3F scene, the rebuilt card, 167 tests |
+| F8.6 Intake, inspection and unit surfaces | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.6-intake-and-units | 2026-10-21T07:20:00Z | 2026-10-21T08:40:00Z | fef4f9c | Stepped forms, the unit tabs, the photographs, the SKU fix |
+| F8.7 Dashboard, health, analytics and backtest surfaces | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.7-dash-and-analytics | 2026-10-21T08:40:00Z | 2026-10-21T09:40:00Z | 2cfbf67 | The north star, the reliability curve, the data sources, the health fix |
+| F8.8 Motion, accessibility and the visual regression suite | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.8-motion-and-a11y | 2026-10-21T09:40:00Z | — | — | The Playwright suite, the keyboard pass, the CI job |
 
 **Phase 8 Exit Criteria:** One design system, one decision console, and a test suite that proves both.
 
@@ -237,6 +237,9 @@ green on a laptop, and CI provides one.
 - **Fixed in F8.4, and it was a real defect:** the `reproduce` endpoint replayed a decision without binding the price source to the SKU family, without valuing the parts, and without consulting the launch calendar. It looked like a faithful replay and was not one: it priced the unit as a different model. The confidence came back as 0.8159 where the stored decision said 0.8125. The live path and the replay path now both go through `build_price_context` in `decision/engine.py`, so they cannot drift apart again. The existing test only asserted that the recommended channel matched, which it did; the mismatch was in the numbers underneath.
 - **Fixed in F8.5, also a real defect:** `DecisionPage` fetched the decision with `activeDecisionId`, which is null until the operator clicks a row in the history. The card therefore never appeared on its own; the page showed the history and nothing else. The query now uses the decision that is being shown.
 - **Fixed in F8.5, a gap in Phase 5 rather than a bug:** the frontend never named a tenant. The backend accepts the organisation in the `X-Org-Id` header outside production, and the frontend never sent it, so every write from the browser was refused with `tenant_not_resolved` and every read came back empty. The client now sends the header, taken from `VITE_ORG_ID` or from local storage. The real login still has to set the tenant from the token; that is Phase 5 work and is not done.
+- **Fixed in F8.6, and it had always been broken:** the API never returned the model of a unit, so every list said "Unknown" and the unit detail had an empty section for it. The model is loaded with the unit now.
+- **Fixed in F8.6, and it had always been broken:** a photo record carries the path the photograph is at, and nothing ever served it. The upload directory is mounted and the photographs are shown.
+- **Fixed in F8.7, and it had always been broken:** the dashboard asked for `/api/v1/health`, but the health endpoint is at the root of the service. Every load of the dashboard showed an error.
 
 ---
 
@@ -345,6 +348,8 @@ green on a laptop, and CI provides one.
 | 2026-10-21 | Added dependency | @react-three/drei 9.122.0 (helpers for the 3D scene) | MIT | Approved - see ADR-006. Pinned to the version that pairs with fiber v8 |
 | 2026-10-21 | Added dependency | @react-three/postprocessing 2.19.1, postprocessing 6.39.5 | MIT, Zlib | Approved - see ADR-006. Reserved for the bloom in F8.8; not yet imported |
 | 2026-10-21 | Added dependency | @react-three/test-renderer 8.2.4 (scene-graph assertions) | MIT | Approved - dev-only, see ADR-006 |
+| 2026-10-21 | Added dependency | @playwright/test 1.64.1 (the visual regression suite) | Apache-2.0 | Approved - dev-only, already listed in PLAN.md Appendix A |
+| 2026-10-21 | Added dependency | @types/node 22.10.2 | MIT | Approved - dev-only, the types for the build and the end-to-end configuration |
 
 ---
 
