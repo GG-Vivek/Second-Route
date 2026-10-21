@@ -217,8 +217,8 @@ green on a laptop, and CI provides one.
 |---------|--------|-------|--------|---------|-----------|--------|-------|
 | F8.0 Design decision and dependency licences | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.0-design-decision-and-licences | 2026-10-21T00:00:00Z | 2026-10-21T01:00:00Z | 26eafec | ADR-006, Phase 8 in PLAN.md, CHANGELOG.md created |
 | F8.1 Design tokens, theme and self-hosted fonts | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.1-design-tokens | 2026-10-21T01:00:00Z | 2026-10-21T02:10:00Z | 6ae79a0 | MD3 token set, theme provider, @fontsource packages, 10 tests |
-| F8.2 The interface kit | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.2-ui-kit | 2026-10-21T02:10:00Z | — | — | 19 primitives, 31 tests |
-| F8.3 The application shell | ⬜ Not started | — | feat/F8.3-app-shell | — | — | — | Sidebar, glass header, command palette |
+| F8.2 The interface kit | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.2-ui-kit | 2026-10-21T02:10:00Z | 2026-10-21T03:10:00Z | 67e4a5a | 19 primitives, 31 tests |
+| F8.3 The application shell | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.3-app-shell | 2026-10-21T03:10:00Z | — | — | Sidebar, glass header, command palette, 12 tests |
 | F8.4 The decision distribution endpoint | ⬜ Not started | — | feat/F8.4-decision-distribution | — | — | — | GET /decisions/{id}/distribution, replayed from the snapshot |
 | F8.5 The channel landscape and the decision card | ⬜ Not started | — | feat/F8.5-channel-landscape | — | — | — | 2D SVG ridgeline first, then the R3F scene, then the card |
 | F8.6 Intake, inspection and unit surfaces | ⬜ Not started | — | feat/F8.6-intake-and-units | — | — | — | Stepped forms, filter rail, real photos |
