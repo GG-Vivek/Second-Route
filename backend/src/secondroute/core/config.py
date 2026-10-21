@@ -45,9 +45,13 @@ class Settings(BaseSettings):
     DATABASE_POOL_TIMEOUT: int = 30
 
     # Redis
+    #
+    # The cache is optional. It holds the session store and the background
+    # jobs, and a deployment that runs neither of them should not have to
+    # run a cache to be healthy. An empty value means it is not in use.
     REDIS_URL: str = Field(
-        default="redis://localhost:6379/0",
-        description="Redis connection URL",
+        default="",
+        description="Redis connection URL. Empty means the cache is not in use.",
     )
     REDIS_MAX_CONNECTIONS: int = 50
 

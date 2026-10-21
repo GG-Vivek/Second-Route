@@ -15,7 +15,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
-import { getHealth } from '@/api/health'
+import { getHealth, type DependencyState } from '@/api/health'
 import { getNorthStar } from '@/api/decision'
 import { formatMoney } from '@/types/decision'
 import {
@@ -206,14 +206,14 @@ export function HomePage() {
                 <ServiceRow
                   icon={<Database className="size-4" />}
                   name="The database"
-                  ok={healthQuery.data?.checks.database === 'ok'}
-                  detail={healthQuery.data?.checks.database === 'ok' ? 'Connected' : 'Not reachable'}
+                  state={healthQuery.data?.checks.database}
+                  detail={describe(healthQuery.data?.checks.database, 'Not reachable')}
                 />
                 <ServiceRow
                   icon={<CircleDashed className="size-4" />}
-                  name="The queue"
-                  ok={healthQuery.data?.checks.redis === 'ok'}
-                  detail={healthQuery.data?.checks.redis === 'ok' ? 'Connected' : 'Not reachable'}
+                  name="The cache"
+                  state={healthQuery.data?.checks.redis}
+                  detail={describe(healthQuery.data?.checks.redis, 'Not reachable')}
                 />
               </ul>
             )}
@@ -261,13 +261,18 @@ function ServiceRow({
   icon,
   name,
   ok,
+  state,
   detail,
 }: {
   icon: ReactNode
   name: string
-  ok: boolean
+  ok?: boolean
+  state?: DependencyState
   detail: string
 }) {
+  const up = state ? state === 'ok' : Boolean(ok)
+  const unused = state === 'not_configured'
+
   return (
     <li className="flex items-center gap-3">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
@@ -277,11 +282,23 @@ function ServiceRow({
         <span className="block text-sm font-medium">{name}</span>
         <span className="block truncate text-xs text-muted-foreground">{detail}</span>
       </span>
-      {ok ? (
+      {unused ? (
+        <span
+          className="size-4 shrink-0 rounded-full border border-dashed border-outline"
+          aria-label="Not in use"
+        />
+      ) : up ? (
         <CheckCircle2 className="size-4 shrink-0 text-lime" aria-label="Up" />
       ) : (
         <AlertCircle className="size-4 shrink-0 text-destructive" aria-label="Down" />
       )}
     </li>
   )
+}
+
+/** The sentence that says what the state of a dependency is. */
+function describe(state: DependencyState | undefined, down: string): string {
+  if (state === 'ok') return 'Connected'
+  if (state === 'not_configured') return 'Not in use'
+  return down
 }

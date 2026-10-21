@@ -1,8 +1,16 @@
 import { api, rootApi } from '@/api/client'
 
+/**
+ * The state of one dependency.
+ *
+ * `not_configured` means the deployment does not use it. It is not the
+ * same as `failed`, and the application is not degraded by it.
+ */
+export type DependencyState = 'ok' | 'failed' | 'not_configured'
+
 export interface HealthChecks {
-  database: 'ok' | 'failed'
-  redis: 'ok' | 'failed'
+  database: DependencyState
+  redis: DependencyState
 }
 
 export interface HealthResponse {

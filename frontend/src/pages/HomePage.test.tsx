@@ -117,7 +117,7 @@ describe('HomePage', () => {
       expect(screen.getByText('The API')).toBeInTheDocument()
     })
     expect(screen.getByText('The database')).toBeInTheDocument()
-    expect(screen.getByText('The queue')).toBeInTheDocument()
+    expect(screen.getByText('The cache')).toBeInTheDocument()
   })
 
   it('says when a service is down', async () => {
@@ -130,7 +130,7 @@ describe('HomePage', () => {
     render(<HomePage />, { wrapper: createWrapper() })
 
     await waitFor(() => {
-      // The queue is down. The API answered, so it is up.
+      // The cache is down. The API and the database answered, so they are up.
       expect(screen.getAllByLabelText('Down').length).toBe(1)
     })
   })

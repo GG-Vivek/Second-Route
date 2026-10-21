@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { AlertCircle, CheckCircle2, Clock, Database, FlaskConical, Server, TriangleAlert } from 'lucide-react'
-import { getHealth, getSourceHealth } from '@/api/health'
+import { getHealth, getSourceHealth, type DependencyState } from '@/api/health'
 import {
   Badge,
   Card,
@@ -83,14 +83,14 @@ export function HealthPage() {
                 <Service
                   icon={<Database className="size-4" />}
                   name="The database"
-                  ok={health?.checks.database === 'ok'}
-                  detail={health?.checks.database === 'ok' ? 'Connected' : 'Not reachable'}
+                  state={health?.checks.database}
+                  detail={describe(health?.checks.database, 'Not reachable')}
                 />
                 <Service
                   icon={<Clock className="size-4" />}
-                  name="The queue"
-                  ok={health?.checks.redis === 'ok'}
-                  detail={health?.checks.redis === 'ok' ? 'Connected' : 'Not reachable'}
+                  name="The cache"
+                  state={health?.checks.redis}
+                  detail={describe(health?.checks.redis, 'Not reachable')}
                 />
               </ul>
             </>
@@ -150,13 +150,18 @@ function Service({
   icon,
   name,
   ok,
+  state,
   detail,
 }: {
   icon: ReactNode
   name: string
-  ok: boolean
+  ok?: boolean
+  state?: DependencyState
   detail: string
 }) {
+  const up = state ? state === 'ok' : Boolean(ok)
+  const unused = state === 'not_configured'
+
   return (
     <li className="flex items-start gap-3">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
@@ -166,13 +171,25 @@ function Service({
         <span className="block text-sm font-medium">{name}</span>
         <span className="block truncate text-xs text-muted-foreground">{detail}</span>
       </span>
-      {ok ? (
+      {unused ? (
+        <span
+          className="size-4 shrink-0 rounded-full border border-dashed border-outline"
+          aria-label="Not in use"
+        />
+      ) : up ? (
         <CheckCircle2 className="size-4 shrink-0 text-lime" aria-label="Up" />
       ) : (
         <AlertCircle className="size-4 shrink-0 text-destructive" aria-label="Down" />
       )}
     </li>
   )
+}
+
+/** The sentence that says what the state of a dependency is. */
+function describe(state: DependencyState | undefined, down: string): string {
+  if (state === 'ok') return 'Connected'
+  if (state === 'not_configured') return 'Not in use'
+  return down
 }
 
 function SourceBadge({ status }: { status: 'fresh' | 'stale' | 'missing' }) {
