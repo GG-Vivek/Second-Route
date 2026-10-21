@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from secondroute.core.config import settings
 from secondroute.core.db import get_session
+from secondroute.decision.distribution import DEFAULT_BIN_COUNT, build_distribution
 from secondroute.decision.engine import (
     DECISION_MODEL_VERSION,
     decide_unit,
@@ -29,11 +30,15 @@ from secondroute.decision.engine import (
     run_decision,
 )
 from secondroute.decision.models import Decision, hash_snapshot
+from secondroute.decision.replay import SnapshotReplayError, replay_from_snapshot
 from secondroute.decision.schemas import (
+    ChannelDistributionRead,
     DecisionCreate,
     DecisionListRead,
     DecisionRead,
     DecisionSummaryRead,
+    DistributionAxisRead,
+    DistributionRead,
     ExplanationRead,
     ReproducibilityRead,
 )
@@ -335,48 +340,14 @@ async def reproduce_decision(decision_id: UUID, session: SessionDep) -> Reproduc
     confidence = decision.confidence
 
     try:
-        signals_payload = snapshot["signals"]
-        signals = InspectionSignals(
-            battery_health_pct=float(signals_payload["battery_health_pct"]),
-            battery_cycles=signals_payload.get("battery_cycles"),
-            cosmetic_grade=str(signals_payload["cosmetic_grade"]),
-            functional_tests=signals_payload.get("functional_tests") or {},
-            accessories=signals_payload.get("accessories") or {},
-            activation_lock=str(signals_payload.get("activation_lock", "unknown")),
-        )
-
-        entries: dict[tuple[str, str], CostBookEntry] = {}
-        for raw_key, value in snapshot["cost_book"].items():
-            kind, _, key = raw_key.partition(":")
-            entries[(kind, key)] = CostBookEntry(
-                kind=kind,
-                key=key,
-                value=float(value),
-                source="snapshot",
-                as_of=datetime.utcnow().date(),
-            )
-        book = CostBook(entries=entries)
-
-        outcome = await run_decision(
-            unit_id=UUID(str(snapshot["unit_id"])),
-            sku_id=UUID(str(snapshot["sku_id"])),
-            signals=signals,
-            cost_book=book,
-            price_source=_price_source(session),
-            risk_profile=str(snapshot["risk_profile"]),
-            samples=int(snapshot["samples"]),
-            seed=int(snapshot["seed"]),
-            threshold=float(snapshot["threshold"]),
-            as_of=datetime.fromisoformat(snapshot["as_of"]),
-            include_flip_conditions=False,
-        )
+        outcome = await replay_from_snapshot(session, decision, _price_source(session))
         recommended = outcome.recommended_channel
         confidence = outcome.confidence
         details = {
             "replayed_reasons": [reason.as_dict() for reason in outcome.reasons],
             "replayed_candidates": outcome.candidates,
         }
-    except (KeyError, ValueError, TypeError) as exc:
+    except (SnapshotReplayError, KeyError, ValueError, TypeError) as exc:
         details = {"error": f"Replay failed: {exc}"}
 
     return ReproducibilityRead(
@@ -387,6 +358,94 @@ async def reproduce_decision(decision_id: UUID, session: SessionDep) -> Reproduc
         recommended_channel=recommended,
         confidence=confidence,
         details=details,
+    )
+
+
+@router.get(
+    "/decisions/{decision_id}/distribution",
+    response_model=DistributionRead,
+    summary="The distribution of the net value, per channel",
+)
+async def decision_distribution(
+    decision_id: UUID,
+    session: SessionDep,
+    bins: int = Query(DEFAULT_BIN_COUNT, ge=8, le=512),
+) -> DistributionRead:
+    """Return the density of the net value for every channel.
+
+    The engine draws ten thousand samples per channel. This endpoint
+    replays the decision from its stored snapshot and bins those samples
+    into a density histogram on a shared axis, so that the overlap
+    between two channels can be seen rather than asserted.
+
+    The histogram is the engine's own output. It is never fitted from a
+    mean and a standard deviation, because the engine samples from
+    log-normal price and cost factors and a normal approximation would be
+    a number with no source.
+
+    Args:
+        decision_id: The decision to describe.
+        session: Database session.
+        bins: How many bars each channel has.
+
+    Returns:
+        The distribution of every channel, on one shared axis.
+
+    Raises:
+        HTTPException: 404 when the decision does not exist, 422 when the
+            snapshot cannot be replayed.
+    """
+    decision = await session.get(Decision, decision_id)
+    if decision is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Decision not found",
+        )
+
+    try:
+        outcome = await replay_from_snapshot(session, decision, _price_source(session))
+    except SnapshotReplayError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    evaluation = outcome.evaluation
+    if evaluation is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="The decision could not be evaluated.",
+        )
+
+    draws_by_channel = {
+        name: evaluation.joint_draws[row] for name, row in evaluation.joint_index_by_channel.items()
+    }
+
+    distribution = build_distribution(
+        draws_by_channel=draws_by_channel,
+        channels=outcome.candidates,
+        probability_best=outcome.probability_best,
+        bin_count=bins,
+    )
+
+    matches = (
+        outcome.recommended_channel == decision.recommended_channel
+        and abs(outcome.confidence - decision.confidence) < 1e-9
+    )
+
+    return DistributionRead(
+        decision_id=decision.id,
+        input_snapshot_hash=decision.input_snapshot_hash,
+        model_version=decision.model_version,
+        risk_profile=decision.risk_profile,
+        recommended_channel=outcome.recommended_channel,
+        confidence=outcome.confidence,
+        matches_stored_decision=matches,
+        bin_count=distribution.bin_count,
+        axis=DistributionAxisRead(min=distribution.axis_min, max=distribution.axis_max),
+        channels=[
+            ChannelDistributionRead(**channel.to_dict()) for channel in distribution.channels
+        ],
     )
 
 

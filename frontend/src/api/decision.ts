@@ -1,4 +1,5 @@
 import { api } from '@/api/client'
+import type { DecisionDistribution } from '@/types/distribution'
 import type {
   CreateDecisionRequest,
   CreateOutcomeRequest,
@@ -236,4 +237,22 @@ export function exportUrl(entity: 'decisions' | 'overrides' | 'outcomes'): strin
 /** Ask for an explanation of a decision, in words. */
 export async function explainDecision(decisionId: string): Promise<Explanation> {
   return api.post<Explanation>(`/decisions/${decisionId}/explanation`)
+}
+
+/**
+ * Fetch the distribution of the net value across every channel.
+ *
+ * This is the engine's own Monte Carlo output, replayed from the stored
+ * snapshot. It is not a fitted curve.
+ */
+export async function getDecisionDistribution(
+  decisionId: string,
+  params?: { bins?: number }
+): Promise<DecisionDistribution> {
+  const search = new URLSearchParams()
+  if (params?.bins) search.set('bins', String(params.bins))
+  const query = search.toString()
+  return api.get<DecisionDistribution>(
+    `/decisions/${decisionId}/distribution${query ? `?${query}` : ''}`
+  )
 }

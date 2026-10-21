@@ -397,6 +397,90 @@ async def run_decision(
     )
 
 
+class SignalInspection:
+    """The inspection fields the parts valuation reads, taken from signals.
+
+    A replay has the signals but not the inspection record, and the parts
+    valuation reads exactly two fields from it.
+    """
+
+    def __init__(self, signals: InspectionSignals) -> None:
+        self.functional_tests_json = dict(signals.functional_tests)
+        self.battery_health_pct = signals.battery_health_pct
+
+
+async def build_price_context(
+    session: AsyncSession,
+    *,
+    unit_id: UUID,
+    sku_id: UUID,
+    signals: InspectionSignals,
+    inspection_like: Any,
+    price_source: PriceSource,
+    as_of: datetime,
+) -> tuple[PriceSource, dict[str, tuple[bool, str | None]]]:
+    """Build the price source and the channel eligibility a decision needs.
+
+    The live decision and the replay both go through here, so that a
+    replay cannot drift from the decision it is replaying.
+
+    This matters more than it looks. The live path binds the price source
+    to the SKU family, values the parts from the component prices, and
+    offers HOLD according to the launch calendar. A replay that skipped
+    any of those would look like a faithful repetition and would not be
+    one: it would price the unit as a different model.
+
+    Args:
+        session: Database session.
+        unit_id: The unit being decided.
+        sku_id: The SKU of the unit.
+        signals: The inspection signals.
+        inspection_like: The inspection, or anything with the same
+            ``functional_tests_json`` and ``battery_health_pct`` fields.
+        price_source: Where sale prices come from.
+        as_of: The timestamp the decision is made as of.
+
+    Returns:
+        The effective price source and the channel eligibility the launch
+        calendar decided on.
+    """
+    from secondroute.identity.models import SKU
+
+    sku = await session.get(SKU, sku_id)
+    family = sku.family if sku is not None else "MacBook Pro"
+
+    effective_price_source = price_source
+    if hasattr(price_source, "with_family"):
+        effective_price_source = price_source.with_family(family)  # type: ignore[attr-defined]
+
+    # The parts channel has its own price source: the value of what is inside
+    # the unit, not the value of the unit. Everything else keeps the source
+    # the caller passed in.
+    parts_source = await build_parts_source(session, unit_id, inspection_like)
+
+    # HOLD is only on the table when the launch calendar says it is safe.
+    launches = await list_launch_events(session, sku_family=family)
+    decay = await get_decay_param(session, sku_family=family, grade=_dominant_grade(signals))
+    hold = hold_decision(
+        rate_per_day=decay.rate_per_day if decay else 0.0,
+        launches=launches,
+        today=as_of.date(),
+    )
+
+    channel_sources: dict[str, Any] = {"PARTS_HARVEST": parts_source}
+    if hold.offered:
+        channel_sources["HOLD"] = HoldPriceSource(
+            effective_price_source, hold.expected_change_p50, window_days=hold.window_days
+        )
+
+    effective_price_source = CompositePriceSource(channel_sources, effective_price_source)
+
+    # The launch calendar decides whether HOLD is on the table.
+    hold_eligibility: dict[str, tuple[bool, str | None]] = {"HOLD": (hold.offered, hold.reason)}
+
+    return effective_price_source, hold_eligibility
+
+
 async def decide_unit(
     session: AsyncSession,
     unit_id: UUID,
@@ -445,40 +529,18 @@ async def decide_unit(
     if inspection is None:
         raise ValueError(f"Unit {unit_id} has no inspection record")
 
-    sku = await session.get(SKU, unit.sku_id)
-    family = sku.family if sku is not None else "MacBook Pro"
-
     signals = InspectionSignals.from_inspection(inspection)
     cost_book = await load_cost_book(session, unit.org_id)
 
-    effective_price_source = price_source
-    if hasattr(price_source, "with_family"):
-        effective_price_source = price_source.with_family(family)  # type: ignore[attr-defined]
-
-    # The parts channel has its own price source: the value of what is inside
-    # the unit, not the value of the unit. Everything else keeps the source
-    # the caller passed in.
-    parts_source = await build_parts_source(session, unit.id, inspection)
-
-    # HOLD is only on the table when the launch calendar says it is safe.
-    launches = await list_launch_events(session, sku_family=family)
-    decay = await get_decay_param(session, sku_family=family, grade=_dominant_grade(signals))
-    hold = hold_decision(
-        rate_per_day=decay.rate_per_day if decay else 0.0,
-        launches=launches,
-        today=(as_of or datetime.utcnow()).date(),
+    effective_price_source, hold_eligibility = await build_price_context(
+        session,
+        unit_id=unit.id,
+        sku_id=unit.sku_id,
+        signals=signals,
+        inspection_like=inspection,
+        price_source=price_source,
+        as_of=as_of or datetime.utcnow(),
     )
-
-    channel_sources: dict[str, Any] = {"PARTS_HARVEST": parts_source}
-    if hold.offered:
-        channel_sources["HOLD"] = HoldPriceSource(
-            effective_price_source, hold.expected_change_p50, window_days=hold.window_days
-        )
-
-    effective_price_source = CompositePriceSource(channel_sources, effective_price_source)
-
-    # The launch calendar decides whether HOLD is on the table.
-    hold_eligibility: dict[str, tuple[bool, str | None]] = {"HOLD": (hold.offered, hold.reason)}
 
     outcome = await run_decision(
         unit_id=unit.id,

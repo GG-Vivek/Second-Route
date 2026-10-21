@@ -186,4 +186,60 @@ class ReproducibilityRead(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict)
 
 
+class DensityBinRead(BaseModel):
+    """One bar of the density histogram."""
+
+    x: float = Field(description="Middle of the bar, in the units of the net value.")
+    density: float = Field(ge=0.0, description="Probability density at that point.")
+
+
+class ChannelDistributionRead(BaseModel):
+    """The distribution of the net value for one channel."""
+
+    channel: str
+    eligible: bool
+    exclusion_reason: Optional[str] = None
+    mean: float
+    stddev: float
+    p10: float
+    p50: float
+    p90: float
+    probability_best: float
+    bins: list[DensityBinRead] = Field(default_factory=list)
+
+
+class DistributionAxisRead(BaseModel):
+    """The shared axis every channel is drawn against."""
+
+    min: float
+    max: float
+
+
+class DistributionRead(BaseModel):
+    """The distribution of the net value across every channel.
+
+    This is the engine's own Monte Carlo output, replayed from the stored
+    snapshot. It is a replay and not a copy: if the price data has moved
+    since the decision was made, the replay reflects that, which is why
+    the response carries the snapshot hash and whether the replay still
+    agrees with the stored decision.
+    """
+
+    decision_id: UUID
+    input_snapshot_hash: str
+    model_version: str
+    risk_profile: str
+    recommended_channel: str
+    confidence: float
+    matches_stored_decision: bool = Field(
+        description=(
+            "Whether the replay still recommends the same channel with the "
+            "same confidence as the stored decision."
+        )
+    )
+    bin_count: int
+    axis: DistributionAxisRead
+    channels: list[ChannelDistributionRead] = Field(default_factory=list)
+
+
 SAFE_DEFAULT_CHANNEL = SAFE_DEFAULT
