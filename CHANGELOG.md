@@ -12,11 +12,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   records the decision, the pmndrs token set, the react-three-fiber dependency
   versions and their licences, and the rule that the 3D view is an enhancement over an
   accessible two-dimensional one rather than a replacement for it.
+- The pmndrs Material Design 3 token set, in light and dark, with a theme that is
+  remembered and a page that never flashes the wrong one.
+- An interface kit of nineteen primitives, and an application shell with a sidebar, a
+  glass header and a command palette that puts every destination one keystroke away.
+- A decision distribution endpoint that returns the engine's own Monte Carlo draws as
+  a density histogram, replayed from the stored snapshot.
+- The channel landscape: a flat ridgeline that is always available, and a
+  react-three-fiber scene over the top of it for the browsers that can draw it.
+- The photographs are served and shown. The model of a unit is returned with the unit.
+- A visual regression suite over the critical routes in both themes, run against the
+  built application with the API answered from fixtures, so it needs no backend.
 
 ### Changed
-- The build plan now carries Phase 8 and the risks that come with it: a view that
-  shows a plausible but wrong shape, a canvas that silently renders nothing, and a
-  design system that drifts.
+- The build plan now carries Phase 8 and the risks it comes with: a view that shows a
+  plausible but wrong shape, a canvas that silently renders nothing, and a design
+  system that drifts.
+- Every surface uses the new design system: the dashboard, the unit list, the unit
+  detail, the two forms, the decision card, the analytics and the backtest.
+- The fonts ship with the application. The Google Fonts link is gone, because a
+  third-party runtime request is not something a pilot can depend on.
+- The decision card shows how much the channels overlap, which is what the confidence
+  is made of and what used to be a single percentage.
+
+### Fixed
+- The replay of a decision did not bind the price source to the model of the unit, did
+  not value the parts and did not consult the launch calendar. It looked like a
+  faithful replay and was not one.
+- The decision page never showed the decision card, because it fetched the decision
+  with an identifier that was null until the operator clicked a row in the history.
+- The frontend never named a tenant, so every write was refused and every read came
+  back empty.
+- The dashboard asked for the health check under the versioned API prefix, where it
+  does not live, so it showed an error on every load.
 
 ## [0.1.0] - 2026-10-20
 

@@ -18,7 +18,7 @@ import {
 } from '@/api/decision'
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ui'
 
-export function AnalyticsPage() {
+export default function AnalyticsPage() {
   const [kind, setKind] = useState<DataKind>('synthetic')
 
   const northStarQuery = useQuery({

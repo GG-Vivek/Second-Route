@@ -4,9 +4,9 @@
 
 ---
 
-## Current Phase: **Phase 8 — Product surface** is now open. Phases 0 to 7 are complete
-and integrated on `feat/phase5-integration`. Phase 8 rebuilds the user interface on
-one design system and turns the decision card into a spatial decision console.
+## Current Phase: **Phase 8 — Product surface** is complete.
+Phases 0 to 7 were complete before it. Phase 8 rebuilt the whole user interface on
+one design system and turned the decision card into a spatial decision console.
 
 **Target:** one design system, one decision console, and a test suite that proves both.
 
@@ -223,7 +223,9 @@ green on a laptop, and CI provides one.
 | F8.5 The channel landscape and the decision card | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.5-channel-landscape | 2026-10-21T05:20:00Z | 2026-10-21T07:20:00Z | f81e93e | 2D ridgeline, the R3F scene, the rebuilt card, 167 tests |
 | F8.6 Intake, inspection and unit surfaces | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.6-intake-and-units | 2026-10-21T07:20:00Z | 2026-10-21T08:40:00Z | fef4f9c | Stepped forms, the unit tabs, the photographs, the SKU fix |
 | F8.7 Dashboard, health, analytics and backtest surfaces | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.7-dash-and-analytics | 2026-10-21T08:40:00Z | 2026-10-21T09:40:00Z | 2cfbf67 | The north star, the reliability curve, the data sources, the health fix |
-| F8.8 Motion, accessibility and the visual regression suite | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.8-motion-and-a11y | 2026-10-21T09:40:00Z | — | — | The Playwright suite, the keyboard pass, the CI job |
+| F8.8 Motion, accessibility and the visual regression suite | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.8-motion-and-a11y | 2026-10-21T09:40:00Z | 2026-10-21T10:40:00Z | 192461e | The Playwright suite, the keyboard pass, the CI job, 24 end-to-end tests |
+
+**Phase 8 Exit Criteria:** ✅ One design system, one decision console, and a test suite that proves both. 169 frontend unit tests, 24 end-to-end tests, 896 backend tests.
 
 **Phase 8 Exit Criteria:** One design system, one decision console, and a test suite that proves both.
 
