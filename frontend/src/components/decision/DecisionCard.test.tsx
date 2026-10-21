@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DecisionCard } from '@/components/decision/DecisionCard'
 import type { Decision } from '@/types/decision'
+import type { DecisionDistribution } from '@/types/distribution'
 
 function makeCandidate(overrides: Partial<Decision['candidates'][number]> = {}) {
   return {
@@ -219,5 +220,45 @@ describe('DecisionCard', () => {
     const decision = makeDecision({ flip_conditions: [] })
     render(<DecisionCard decision={decision} />)
     expect(screen.queryByTestId('flip-conditions-list')).not.toBeInTheDocument()
+  })
+
+  it('draws the landscape when the distribution has been fetched', () => {
+    const distribution: DecisionDistribution = {
+      decision_id: 'decision-1',
+      input_snapshot_hash: 'abc123',
+      model_version: 'decision-v1',
+      risk_profile: 'balanced',
+      recommended_channel: 'RESELL_OPEN_BOX',
+      confidence: 0.86,
+      matches_stored_decision: true,
+      bin_count: 3,
+      axis: { min: 0, max: 200 },
+      channels: [
+        {
+          channel: 'RESELL_OPEN_BOX',
+          eligible: true,
+          exclusion_reason: null,
+          mean: 1200,
+          stddev: 90,
+          p10: 1000,
+          p50: 1200,
+          p90: 1400,
+          probability_best: 0.82,
+          bins: [
+            { x: 0, density: 0 },
+            { x: 100, density: 0.5 },
+            { x: 200, density: 0 },
+          ],
+        },
+      ],
+    }
+
+    render(<DecisionCard decision={makeDecision()} distribution={distribution} />)
+    expect(screen.getByTestId('channel-landscape-2d')).toBeInTheDocument()
+  })
+
+  it('has no landscape until the distribution has been fetched', () => {
+    render(<DecisionCard decision={makeDecision()} />)
+    expect(screen.queryByTestId('channel-landscape-2d')).not.toBeInTheDocument()
   })
 })

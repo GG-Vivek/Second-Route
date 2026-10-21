@@ -19,6 +19,8 @@ export interface CalloutProps {
   /** Overrides the icon that goes with the tone. */
   icon?: ReactNode
   children?: ReactNode
+  /** The test id. Defaults to the tone. */
+  testId?: string
   className?: string
 }
 
@@ -49,6 +51,7 @@ export function Callout({
   title,
   icon,
   children,
+  testId,
   className,
 }: CalloutProps) {
   const Icon = TONES[tone].icon
@@ -61,7 +64,7 @@ export function Callout({
         className
       )}
       role="note"
-      data-testid={`callout-${tone}`}
+      data-testid={testId ?? `callout-${tone}`}
       data-tone={tone}
     >
       <span className="mt-0.5 shrink-0" aria-hidden="true">

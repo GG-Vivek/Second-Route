@@ -219,8 +219,8 @@ green on a laptop, and CI provides one.
 | F8.1 Design tokens, theme and self-hosted fonts | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.1-design-tokens | 2026-10-21T01:00:00Z | 2026-10-21T02:10:00Z | 6ae79a0 | MD3 token set, theme provider, @fontsource packages, 10 tests |
 | F8.2 The interface kit | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.2-ui-kit | 2026-10-21T02:10:00Z | 2026-10-21T03:10:00Z | 67e4a5a | 19 primitives, 31 tests |
 | F8.3 The application shell | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.3-app-shell | 2026-10-21T03:10:00Z | 2026-10-21T04:05:00Z | 853bd92 | Sidebar, glass header, command palette, 12 tests |
-| F8.4 The decision distribution endpoint | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.4-decision-distribution | 2026-10-21T04:05:00Z | — | — | GET /decisions/{id}/distribution, 15 tests |
-| F8.5 The channel landscape and the decision card | ⬜ Not started | — | feat/F8.5-channel-landscape | — | — | — | 2D SVG ridgeline first, then the R3F scene, then the card |
+| F8.4 The decision distribution endpoint | ✅ Done | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.4-decision-distribution | 2026-10-21T04:05:00Z | 2026-10-21T05:20:00Z | bf84e83 | GET /decisions/{id}/distribution, 15 tests, fixed the replay defect |
+| F8.5 The channel landscape and the decision card | 🔄 In progress | ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z | feat/F8.5-channel-landscape | 2026-10-21T05:20:00Z | — | — | 2D ridgeline, the R3F scene, the rebuilt card |
 | F8.6 Intake, inspection and unit surfaces | ⬜ Not started | — | feat/F8.6-intake-and-units | — | — | — | Stepped forms, filter rail, real photos |
 | F8.7 Dashboard, health, analytics and backtest surfaces | ⬜ Not started | — | feat/F8.7-dash-and-analytics | — | — | — | Real Recharts charts, working quick actions |
 | F8.8 Motion, accessibility and the visual regression suite | ⬜ Not started | — | feat/F8.8-motion-and-a11y | — | — | — | Scroll fades, focus audit, Playwright screenshots |
@@ -235,6 +235,8 @@ green on a laptop, and CI provides one.
 - **Known defect, carried into Phase 8:** the dashboard calls `/api/v1/health`, but the backend serves `/health` at the root, so the landing page shows "Request failed with status code 404" on every load. This predates Phase 8 and is fixed in F8.7 when the dashboard is rebuilt. The health check never passed from the browser; the F0.4 acceptance criterion was met against the endpoint directly.
 - **Known debt, not in Phase 8:** `npm audit` reports 17 findings, all in the dev toolchain (vitest, vite, tailwindcss, react-router-dom). Every fix is a major version bump. None came from the Phase 8 dependencies. Migrating the toolchain is a separate piece of work and must not be bundled into a design change.
 - **Fixed in F8.4, and it was a real defect:** the `reproduce` endpoint replayed a decision without binding the price source to the SKU family, without valuing the parts, and without consulting the launch calendar. It looked like a faithful replay and was not one: it priced the unit as a different model. The confidence came back as 0.8159 where the stored decision said 0.8125. The live path and the replay path now both go through `build_price_context` in `decision/engine.py`, so they cannot drift apart again. The existing test only asserted that the recommended channel matched, which it did; the mismatch was in the numbers underneath.
+- **Fixed in F8.5, also a real defect:** `DecisionPage` fetched the decision with `activeDecisionId`, which is null until the operator clicks a row in the history. The card therefore never appeared on its own; the page showed the history and nothing else. The query now uses the decision that is being shown.
+- **Fixed in F8.5, a gap in Phase 5 rather than a bug:** the frontend never named a tenant. The backend accepts the organisation in the `X-Org-Id` header outside production, and the frontend never sent it, so every write from the browser was refused with `tenant_not_resolved` and every read came back empty. The client now sends the header, taken from `VITE_ORG_ID` or from local storage. The real login still has to set the tenant from the token; that is Phase 5 work and is not done.
 
 ---
 
@@ -338,6 +340,11 @@ green on a laptop, and CI provides one.
 | 2026-10-20 | Added dependency | fake-indexeddb (IndexedDB shim for the F5.5 offline store tests) | Apache-2.0 | Approved - dev-only, see ADR-004 |
 | 2026-10-21 | Added dependency | @fontsource-variable/inter (self-hosted Inter, replaces the Google Fonts CDN) | SIL OFL 1.1 | Approved - see ADR-006 |
 | 2026-10-21 | Added dependency | @fontsource-variable/inconsolata (self-hosted Inconsolata, replaces the Google Fonts CDN) | SIL OFL 1.1 | Approved - see ADR-006 |
+| 2026-10-21 | Added dependency | three 0.185.1 (the 3D renderer) | MIT | Approved - see ADR-006. Pinned below 0.186 on purpose: 0.186 removed the shadow map type that react-three-fiber v8 selects by default |
+| 2026-10-21 | Added dependency | @react-three/fiber 8.18.0 (the React renderer for three.js) | MIT | Approved - see ADR-006. The React 18 line; v9 needs React 19 |
+| 2026-10-21 | Added dependency | @react-three/drei 9.122.0 (helpers for the 3D scene) | MIT | Approved - see ADR-006. Pinned to the version that pairs with fiber v8 |
+| 2026-10-21 | Added dependency | @react-three/postprocessing 2.19.1, postprocessing 6.39.5 | MIT, Zlib | Approved - see ADR-006. Reserved for the bloom in F8.8; not yet imported |
+| 2026-10-21 | Added dependency | @react-three/test-renderer 8.2.4 (scene-graph assertions) | MIT | Approved - dev-only, see ADR-006 |
 
 ---
 

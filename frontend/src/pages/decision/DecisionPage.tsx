@@ -8,6 +8,7 @@ import { PredictedVsRealizedPanel } from '@/components/decision/PredictedVsReali
 import {
   createDecision,
   getDecision,
+  getDecisionDistribution,
   listUnitDecisions,
   getUnitPredictedVsRealized,
 } from '@/api/decision'
@@ -29,10 +30,13 @@ export function DecisionPage() {
     enabled: Boolean(unitId),
   })
 
+  const latestId = decisionsQuery.data?.items?.[0]?.id ?? null
+  const shownId = activeDecisionId ?? latestId
+
   const decisionQuery = useQuery({
-    queryKey: ['decision', activeDecisionId],
-    queryFn: () => getDecision(activeDecisionId as string),
-    enabled: Boolean(activeDecisionId),
+    queryKey: ['decision', shownId],
+    queryFn: () => getDecision(shownId as string),
+    enabled: Boolean(shownId),
   })
 
   const predictedVsRealizedQuery = useQuery({
@@ -41,8 +45,14 @@ export function DecisionPage() {
     enabled: Boolean(unitId),
   })
 
-  const latestId = decisionsQuery.data?.items?.[0]?.id ?? null
-  const shownId = activeDecisionId ?? latestId
+  // The distribution of the net value, which the landscape is drawn from.
+  // It is fetched separately because it is a replay of the engine rather
+  // than part of the decision itself.
+  const distributionQuery = useQuery({
+    queryKey: ['decision-distribution', shownId],
+    queryFn: () => getDecisionDistribution(shownId as string),
+    enabled: Boolean(shownId),
+  })
 
   const showSpinner = decisionsQuery.isLoading || (shownId && decisionQuery.isLoading)
 
@@ -126,7 +136,10 @@ export function DecisionPage() {
 
       {!showSpinner && decisionQuery.data && (
         <>
-          <DecisionCard decision={decisionQuery.data} />
+          <DecisionCard
+            decision={decisionQuery.data}
+            distribution={distributionQuery.data ?? null}
+          />
           <div className="flex flex-wrap items-center gap-3">
             <Button
               type="button"

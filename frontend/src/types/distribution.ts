@@ -78,3 +78,62 @@ export function peakDensity(channels: ChannelDistribution[]): number {
   }
   return peak
 }
+
+/**
+ * The channels the decision is actually made between.
+ *
+ * The engine evaluates every channel, including the ones that recover
+ * almost nothing. The confidence depends on the channels whose net values
+ * could have been chosen instead, which are the ones whose range overlaps
+ * the recommendation's range. The rest are not part of the decision.
+ */
+export function decisionChannels(
+  distribution: DecisionDistribution,
+  rivals = 2,
+): ChannelDistribution[] {
+  const eligible = distribution.channels.filter(
+    (channel) => channel.eligible && channel.bins.length > 0
+  )
+  const recommended = eligible.find(
+    (channel) => channel.channel === distribution.recommended_channel
+  )
+  if (!recommended) return eligible
+
+  const overlapping = eligible
+    .filter(
+      (channel) =>
+        channel.channel !== recommended.channel &&
+        channel.p90 >= recommended.p10 &&
+        channel.p10 <= recommended.p90
+    )
+    .sort((a, b) => Math.abs(a.mean - recommended.mean) - Math.abs(b.mean - recommended.mean))
+    .slice(0, rivals)
+
+  return [recommended, ...overlapping]
+}
+
+/**
+ * The range of the axis that the decision is made in.
+ *
+ * Drawn on one axis, the channels that recover nothing squeeze the
+ * channels that matter into a corner of the picture. The landscape is
+ * drawn over the range that the decision is made in instead, and the
+ * table of alternatives carries the numbers for every channel.
+ */
+export function focusAxis(
+  distribution: DecisionDistribution,
+  rivals = 2,
+): { min: number; max: number } {
+  const focus = decisionChannels(distribution, rivals)
+  if (focus.length === 0) return distribution.axis
+
+  let min = Infinity
+  let max = -Infinity
+  for (const channel of focus) {
+    min = Math.min(min, channel.p10)
+    max = Math.max(max, channel.p90)
+  }
+
+  const padding = Math.max((max - min) * 0.1, 10)
+  return { min: min - padding, max: max + padding }
+}
