@@ -222,9 +222,11 @@ export function UnitDetailPage() {
                             ? 'Locked'
                             : 'Unknown'}
                       </Badge>
-                      <Badge variant="secondary">
-                        {inspection.battery_health_pct}% battery
-                      </Badge>
+                      {inspection.battery_health_pct && (
+                        <Badge variant="secondary">
+                          {inspection.battery_health_pct}% battery
+                        </Badge>
+                      )}
                       {inspection.battery_cycles && (
                         <Badge variant="secondary">
                           {inspection.battery_cycles} cycles

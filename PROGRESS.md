@@ -4,16 +4,18 @@
 
 ---
 
-## Current Phase: **Phase 10 — The shop window** is complete.
+## Current Phase: **Phase 11 — Accounts, categories and the glass surfaces** is complete.
 Phase 8 rebuilt the whole user interface on one design system and turned the
 decision card into a spatial decision console. Phase 9 measured the colours
 rather than eyeballing them, put the cache up, gave the application something
 to look at, and closed the defects that came out of it. Phase 10 built the
 other half of the product: a shop window, on its own port, that a buyer can
-look at without ever seeing the business.
+look at without ever seeing the business. Phase 11 gave the application a door
+to walk through and a catalogue that is no longer laptops alone.
 
-**Target:** a buyer can look at the stock, and nothing of the business's is in
-what they can read.
+**Target:** a retailer can sign up, the window shows the kinds of device a
+shop shows, and a device with no battery is not graded as one with a dead
+battery.
 
 ---
 
@@ -286,6 +288,27 @@ green on a laptop, and CI provides one.
 - **A photograph says whether it may be published.** One of the four angles the inspection form takes is a photograph of the label on the bottom of the device, and the label carries the serial number. The serial was not in the response, but it was in the picture.
 - **Fixed in F10.1, and it had always been broken:** the seed marked every unit sold as soon as the first one was sold, because it read the running total of the outcomes rather than the outcome of the unit. Nothing was ever left on the shelf.
 - **Fixed in F10.1, a trap worth knowing about:** a generator dependency that sits underneath another dependency is torn down as soon as the outer one returns, and the session dependency clears the organisation when it is torn down. The storefront therefore had a session with no organisation on it, and every row was refused.
+
+---
+
+## Phase 11: Accounts, categories and the glass surfaces
+
+| Feature | Status | Owner | Branch | Started | Completed | Commit | Notes |
+|---|---|---|---|---|---|---|---|
+| F11.1 Accounts | Done | human-ui-ux-designer | (reference build `hackyard_Build_2026_v2`) | 2026-10-24T00:00:00Z | 2026-10-25T00:00:00Z | (this commit) | `POST /auth/signup/retailer`, `/auth/signup/user`, `/auth/signin`; migration `0017_accounts`; console sign-up and sign-in pages |
+| F11.2 The mixed catalogue | Done | human-ui-ux-designer + ai-mimo-ses_e90b81ea6ffe | (reference build) | 2026-10-24T00:00:00Z | 2026-10-25T00:00:00Z | (this commit) | `identity/categories.py`, 37 seed rows; mixer grinders, air conditioners, air purifiers and hair dryers added on top of the reference build |
+| F11.3 The window shows the kinds | Done | human-ui-ux-designer | (reference build) | 2026-10-24T00:00:00Z | 2026-10-25T00:00:00Z | (this commit) | Category filter with counts, per-category icons, debounced search |
+| F11.4 Devices without a battery | Done | human-ui-ux-designer | (reference build) | 2026-10-24T00:00:00Z | 2026-10-25T00:00:00Z | (this commit) | Nullable battery reading, `NO_BATTERY_SCORE` at the middle of the scale |
+| F11.5 The backdrop | Done | human-ui-ux-designer | (reference build) | 2026-10-24T00:00:00Z | 2026-10-25T00:00:00Z | (this commit) | `components/visual/ShaderBackdrop.tsx` |
+| F11.6 The glass surfaces | Done | human-ui-ux-designer | (reference build) | 2026-10-24T00:00:00Z | 2026-10-25T00:00:00Z | (this commit) | `components/visual/LiquidGlass.tsx` and the `glass-panel` / `glass-card` layers |
+
+**Notes on Phase 11**
+
+- **The work arrived as a reference build.** A UI/UX designer worked in `hackyard_Build_2026_v2`, a second clone of this repository, and left it uncommitted. It was merged into the main tree file by file (tracked changes by patch, new files copied), so the designer's history and this repository's are one.
+- **Four categories were added after the merge** — mixer grinders, air conditioners, air purifiers and hair dryers — because the reference build did not have them. Each needed a category record, seed rows, a silhouette and two drawings, and an icon.
+- **Two tests were rewritten, not weakened.** `test_from_inspection_handles_missing_values` and `test_from_inspection_handles_bad_battery` asserted that a missing battery reading reads as `0.0`. The reading is now absent rather than zero, so they assert that, and that an unreadable reading is treated exactly as an absent one.
+- **Fixed with the merge:** six type errors the new code introduced (the mypy run went from 16 errors to none), one lint error from a 23-branch drawing function (split into a dispatch table), and two sign-in tests that looked up a required field by its bare label while the shared `Field` appends ` (required)` to it.
+- **CI on main was already red before this phase:** mypy failed on 16 errors that had accumulated, and both visual suites failed because only macOS baselines are committed. Both are fixed — mypy is clean, and a first Linux run now writes its baselines and hands them over as an artifact to commit instead of failing.
 
 ---
 

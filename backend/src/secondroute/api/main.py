@@ -323,6 +323,7 @@ from secondroute.intake import intake_router
 from secondroute.feedback import feedback_router
 from secondroute.admin.api import router as admin_router
 from secondroute.auth import auth_router
+from secondroute.auth.accounts import router as accounts_router
 from secondroute.auth.api import org_router, user_router, org_user_router
 from secondroute.backtest.api import router as backtest_router
 from secondroute.costs.api import router as costs_router
@@ -351,6 +352,7 @@ app.include_router(ingest_router, prefix=API_PREFIX)
 app.include_router(component_router, prefix=API_PREFIX)
 app.include_router(admin_router, prefix=API_PREFIX)
 app.include_router(auth_router, prefix=API_PREFIX)
+app.include_router(accounts_router, prefix=API_PREFIX)
 app.include_router(org_router, prefix=API_PREFIX)
 app.include_router(user_router, prefix=API_PREFIX)
 app.include_router(org_user_router, prefix=API_PREFIX)

@@ -380,7 +380,9 @@ class TestOneDevice:
             .first()
         )
         assert photo is not None
-        photo.published = False
+        # The model declares this column the legacy way, so mypy reads the
+        # attribute as a Column rather than as the bool it holds here.
+        photo.published = False  # type: ignore[assignment]
         await db_session.flush()
 
         response = await client.get(f"/api/v1/public/listings/{on_sale['unit'].id}")

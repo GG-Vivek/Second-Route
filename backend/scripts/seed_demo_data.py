@@ -21,6 +21,7 @@ import asyncio
 import random
 import sys
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -37,6 +38,7 @@ from secondroute.core.logging import get_logger  # noqa: E402
 from secondroute.decision.engine import decide_unit  # noqa: E402
 from secondroute.feedback.models import Outcome, Override  # noqa: E402
 from secondroute.identity.organizations import Organization  # noqa: E402
+from secondroute.identity.categories import category_of  # noqa: E402
 from secondroute.identity.models import SKU  # noqa: E402
 from secondroute.intake.images import store_photo  # noqa: E402
 from secondroute.intake.models import (  # noqa: E402
@@ -83,7 +85,8 @@ CHANNELS = [
     (OrderChannel.B2B, 5),
 ]
 
-#: The tests an inspector runs.
+#: The tests an inspector runs on a laptop. Every other kind of device has its
+#: own list, in ``secondroute.identity.categories``.
 TESTS = [
     "display",
     "keyboard",
@@ -110,14 +113,15 @@ OVERRIDE_REASONS = [
 
 #: What the notes say.
 NOTES = [
-    "Screen is clean, no scratches.",
-    "Two scuffs on the lid, one on the corner.",
-    "Small dent on the back, near the hinge.",
+    "Front is clean, no scratches.",
+    "Two scuffs on the back, one on the corner.",
+    "Small dent on the side, near the top.",
     "Charger missing. Everything else is in the box.",
     "The battery was below eighty percent on arrival.",
-    "Keyboard is fine, the trackpad is not.",
+    "Everything tests fine, one button is stiff.",
     "A sticker was left on the underside.",
     "The box has been opened and resealed.",
+    "Light scuff on the corner, otherwise clean.",
     "",
     "",
 ]
@@ -139,7 +143,7 @@ STATUS_BY_CHANNEL = {
 }
 
 
-def _weighted(rng: random.Random, options: list[tuple[object, int]]) -> object:
+def _weighted(rng: random.Random, options: Sequence[tuple[object, int]]) -> object:
     """Choose one of the options, in proportion to its weight."""
     total = sum(weight for _, weight in options)
     pick = rng.uniform(0, total)
@@ -158,8 +162,14 @@ def _serial(rng: random.Random, index: int) -> str:
     return f"C02{body}{index:03d}"
 
 
-def _battery(rng: random.Random, grade: str) -> tuple[str, str]:
-    """Return the battery health and the cycle count for a grade."""
+def _battery(rng: random.Random, grade: str, has_battery: bool) -> tuple[str | None, str | None]:
+    """Return the battery health and the cycle count for a grade.
+
+    A device with no battery has no reading at all. The engine is told so,
+    and does not read the absence as a flat battery.
+    """
+    if not has_battery:
+        return None, None
     centres = {"A": (95, 60), "B": (88, 210), "C": (78, 420), "D": (66, 610)}
     health, cycles = centres[grade]
     return str(max(40, min(100, int(rng.gauss(health, 6))))), str(
@@ -167,19 +177,19 @@ def _battery(rng: random.Random, grade: str) -> tuple[str, str]:
     )
 
 
-def _functional_tests(rng: random.Random, grade: str) -> dict[str, bool]:
+def _functional_tests(rng: random.Random, grade: str, tests: tuple[str, ...]) -> dict[str, bool]:
     """Return the functional tests, with the failures a grade implies."""
     failure_chance = {"A": 0.02, "B": 0.10, "C": 0.26, "D": 0.45}[grade]
     results: dict[str, bool] = {}
-    for test in TESTS:
+    for test in tests:
         results[test] = rng.random() > failure_chance
     return results
 
 
-def _accessories(rng: random.Random, grade: str) -> dict[str, bool]:
+def _accessories(rng: random.Random, grade: str, names: tuple[str, ...]) -> dict[str, bool]:
     """Return the accessories that came back."""
     missing_chance = {"A": 0.12, "B": 0.24, "C": 0.42, "D": 0.6}[grade]
-    return {name: rng.random() > missing_chance for name in ACCESSORIES}
+    return {name: rng.random() > missing_chance for name in names}
 
 
 async def _reset(session: AsyncSession, org_id: uuid.UUID) -> None:
@@ -236,7 +246,7 @@ async def _reset(session: AsyncSession, org_id: uuid.UUID) -> None:
 
 async def _seed_the_sources(
     session: AsyncSession,
-    skus: list[SKU],
+    skus: Sequence[SKU],
     org_id: uuid.UUID,
     *,
     seed_value: int,
@@ -381,15 +391,16 @@ async def seed(
         await session.flush()
         made["units"] += 1
 
-        battery_health, battery_cycles = _battery(rng, grade)
+        category = category_of(sku.specs_json)
+        battery_health, battery_cycles = _battery(rng, grade, category.has_battery)
         inspection = Inspection(
             unit_id=unit.id,
             battery_health_pct=battery_health,
             battery_cycles=battery_cycles,
             cosmetic_grade=grade,
-            functional_tests_json=_functional_tests(rng, grade),
+            functional_tests_json=_functional_tests(rng, grade, category.tests),
             activation_lock="none" if rng.random() > 0.06 else "present",
-            accessories_json=_accessories(rng, grade),
+            accessories_json=_accessories(rng, grade, category.accessories),
             notes=rng.choice(NOTES),
             created_at=received + timedelta(hours=rng.randint(1, 20)),
         )
@@ -405,6 +416,7 @@ async def seed(
                 body_colour=body,
                 angle=angle,
                 seed=seed_value + index,
+                category=category.key,
             )
             stored = store_photo(content, content_type="image/jpeg")
             session.add(

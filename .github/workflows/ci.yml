@@ -207,12 +207,37 @@ jobs:
       - name: Install the browser
         run: npx playwright install --with-deps chromium
 
-      # The baselines are per platform. The Linux ones are written the
-      # first time the suite runs here and committed from then on; until
-      # they exist there is nothing to compare against, so the run is
-      # allowed to write them.
+      # The baselines are per platform. The macOS ones were committed by
+      # whoever ran the suite on a Mac; the Linux ones have to be written
+      # here first. Until they exist there is nothing to compare against,
+      # so this run writes them and hands them over to be committed. Once
+      # they are in the repository the suite runs the ordinary strict way
+      # and a real difference fails.
+      - name: Look for the Linux baselines
+        id: baselines
+        run: |
+          if compgen -G "e2e/visual.spec.ts-snapshots/*-linux.png" > /dev/null; then
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run the visual suite
-        run: npx playwright test
+        run: |
+          if [ "${{ steps.baselines.outputs.missing }}" = "true" ]; then
+            npx playwright test --update-snapshots=missing
+            echo "::notice title=Visual baselines written::No Linux baselines are committed yet, so this run wrote them. Download the visual-baselines-linux artifact and commit it."
+          else
+            npx playwright test
+          fi
+
+      - name: Hand over the baselines this run wrote
+        if: steps.baselines.outputs.missing == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines-linux
+          path: ./frontend/e2e/visual.spec.ts-snapshots/*-linux.png
+          retention-days: 7
 
       - name: Keep the screenshots when they differ
         if: failure()
@@ -300,8 +325,33 @@ jobs:
       - name: Install the browser
         run: npx playwright install --with-deps chromium
 
+      # The same as the operator's suite: the Linux baselines are written
+      # here first, and committed from the artifact this run uploads.
+      - name: Look for the Linux baselines
+        id: baselines
+        run: |
+          if compgen -G "e2e/visual.spec.ts-snapshots/*-linux.png" > /dev/null; then
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run the visual suite
-        run: npx playwright test
+        run: |
+          if [ "${{ steps.baselines.outputs.missing }}" = "true" ]; then
+            npx playwright test --update-snapshots=missing
+            echo "::notice title=Visual baselines written::No Linux baselines are committed yet, so this run wrote them. Download the storefront-visual-baselines-linux artifact and commit it."
+          else
+            npx playwright test
+          fi
+
+      - name: Hand over the baselines this run wrote
+        if: steps.baselines.outputs.missing == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: storefront-visual-baselines-linux
+          path: ./frontend-public/e2e/visual.spec.ts-snapshots/*-linux.png
+          retention-days: 7
 
       - name: Keep the screenshots when they differ
         if: failure()

@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional, List
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class OrganizationBase(BaseModel):
@@ -206,3 +206,92 @@ def role_level(role: str) -> int:
 def can_access(role: str, required_role: str) -> bool:
     """Check if a role can access a resource requiring a minimum role."""
     return role_level(role) >= role_level(required_role)
+
+
+# ========================================================================
+# Sign-up and sign-in (accounts the application keeps itself)
+# ========================================================================
+
+#: The shortest password an account may have.
+PASSWORD_MIN_LENGTH = 10
+#: The longest, which keeps a hashing request from being a denial of service.
+PASSWORD_MAX_LENGTH = 128
+
+
+def _check_password_strength(value: str) -> str:
+    """A password needs a letter and a digit, and to be long enough.
+
+    Raises:
+        ValueError: When the password is not strong enough. The message is
+            the one the person sees, so it says what to change.
+    """
+    if not any(ch.isalpha() for ch in value) or not any(ch.isdigit() for ch in value):
+        raise ValueError("The password needs at least one letter and one number.")
+    return value
+
+
+class RetailerSignUp(BaseModel):
+    """A retailer creates its organisation, with an administrator account."""
+
+    organisation_name: str = Field(
+        ..., min_length=2, max_length=200, description="The name of the retailer."
+    )
+    display_name: str = Field(
+        ..., min_length=1, max_length=120, description="The administrator's name."
+    )
+    email: EmailStr = Field(..., description="The administrator's email address.")
+    password: str = Field(
+        ...,
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+        description="The password. At least ten characters, with a letter and a number.",
+    )
+    risk_profile: str = Field(
+        default="balanced",
+        pattern="^(conservative|balanced|aggressive)$",
+        description="How much risk the decision engine takes on the retailer's behalf.",
+    )
+
+    @field_validator("password")
+    @classmethod
+    def _password_is_strong(cls, value: str) -> str:
+        return _check_password_strength(value)
+
+
+class UserSignUp(BaseModel):
+    """A person joins an existing retailer as an inspector."""
+
+    invite_code: UUID = Field(
+        ..., description="The retailer's code, which the retailer gives its staff."
+    )
+    display_name: str = Field(..., min_length=1, max_length=120, description="The person's name.")
+    email: EmailStr = Field(..., description="The person's email address.")
+    password: str = Field(
+        ...,
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+        description="The password. At least ten characters, with a letter and a number.",
+    )
+
+    @field_validator("password")
+    @classmethod
+    def _password_is_strong(cls, value: str) -> str:
+        return _check_password_strength(value)
+
+
+class SignIn(BaseModel):
+    """An email address and the password for it."""
+
+    email: EmailStr = Field(..., description="The email address the account was made with.")
+    password: str = Field(..., min_length=1, max_length=PASSWORD_MAX_LENGTH)
+
+
+class AccountRead(BaseModel):
+    """The account a person has just made, or has signed in to."""
+
+    id: UUID
+    email: str
+    display_name: str
+    role: str
+    org_id: UUID | None = None
+    organisation_name: str | None = None

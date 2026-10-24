@@ -122,9 +122,9 @@ export function ListingPage() {
               {listing.in_stock && <Badge variant="teal">In stock</Badge>}
             </div>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight">{listing.title}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {listing.color} · {listing.year} · {listing.ram_gb} GB memory ·{' '}
-              {listing.storage_gb}
+            <p className="mt-1 text-sm text-muted-foreground">{listing.summary}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {listing.category_label} · {listing.color} · {listing.year}
             </p>
           </div>
 

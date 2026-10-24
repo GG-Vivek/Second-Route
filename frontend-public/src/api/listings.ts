@@ -1,5 +1,5 @@
 /**
- * The listings the storefront reads (Phase 10).
+ * The listings the storefront reads (Phase 10, extended in F11.2).
  */
 
 import { api } from '@/api/client'
@@ -26,6 +26,12 @@ export interface ListingPhoto {
 export interface Listing {
   id: string
   title: string
+  /** The kind of device: laptop, phone, tv, refrigerator and so on. */
+  category: string
+  /** The kind of device, in words a buyer uses. */
+  category_label: string
+  /** One line about the device, written for the card. */
+  summary: string
   family: string
   model_name: string
   year: string
@@ -36,6 +42,7 @@ export interface Listing {
   grade: string
   /** The grade in words a buyer understands. */
   condition: string
+  /** Null for a device that has no battery, such as a refrigerator. */
   battery_health_pct: string | null
   price: ListingPrice
   photo: ListingPhoto | null
@@ -58,14 +65,23 @@ export interface ListingDetail extends Listing {
   highlights: string[]
 }
 
+/** One kind of device on sale, with how many there are. */
+export interface ListingCategory {
+  key: string
+  label: string
+  count: number
+}
+
 /** A page of devices. */
 export interface ListingPage {
   items: Listing[]
   total: number
   limit: number
   offset: number
-  /** The families on sale, for the filter. */
+  /** The families on sale. */
   families: string[]
+  /** The kinds of device on sale, for the filter. */
+  categories: ListingCategory[]
   /** True when the prices on the page are modelled rather than observed. */
   synthetic: boolean
 }
@@ -73,6 +89,7 @@ export interface ListingPage {
 /** What to ask for. */
 export interface ListingQuery {
   family?: string
+  category?: string
   search?: string
   limit?: number
   offset?: number

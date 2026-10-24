@@ -60,7 +60,8 @@ export interface Inspection {
   unit_id: string
   inspector_id: string | null
   created_at: string
-  battery_health_pct: string
+  /** Null for a device that has no battery: a television, a refrigerator. */
+  battery_health_pct: string | null
   battery_cycles: string | null
   cosmetic_grade: string
   functional_tests_json: Record<string, boolean>
@@ -94,7 +95,8 @@ export interface CreateUnitRequest {
 }
 
 export interface CreateInspectionRequest {
-  battery_health_pct: string
+  /** Omitted for a device that has no battery; the server treats it as absent. */
+  battery_health_pct?: string
   battery_cycles?: string
   cosmetic_grade: string
   functional_tests_json: Record<string, boolean>

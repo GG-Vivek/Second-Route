@@ -186,11 +186,9 @@ export function NewInspectionPage() {
 
     if (!unitId) return
 
-    if (!batteryHealth) {
-      setSubmitError('The battery health is required.')
-      return
-    }
-    if (!validateBatteryHealth(batteryHealth)) {
+    // A device with no battery has no reading to give: the form accepts an
+    // empty one, and the server treats it as absent rather than as zero.
+    if (batteryHealth && !validateBatteryHealth(batteryHealth)) {
       setSubmitError('The battery health has to be between 0 and 100.')
       return
     }
@@ -202,7 +200,7 @@ export function NewInspectionPage() {
     setSubmitting(true)
     try {
       const inspectionData: CreateInspectionRequest = {
-        battery_health_pct: batteryHealth,
+        battery_health_pct: batteryHealth || undefined,
         battery_cycles: batteryCycles || undefined,
         cosmetic_grade: cosmeticGrade,
         functional_tests_json: functionalTests,
@@ -298,10 +296,14 @@ export function NewInspectionPage() {
         <Step
           number={1}
           title="Battery"
-          description="The battery health is what decides the grade more than anything else."
+          description="The battery health is what decides the grade more than anything else. Leave it empty for a device that has no battery."
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Battery Health %" required error={batteryHealthError}>
+            <Field
+              label="Battery Health %"
+              hint="Empty for a device with no battery, such as a television."
+              error={batteryHealthError}
+            >
               {({ id, describedBy }) => (
                 <input
                   id={id}

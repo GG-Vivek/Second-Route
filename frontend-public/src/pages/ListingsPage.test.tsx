@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider } from '@design-system/theme'
 
 import { ListingCard } from '@/components/ListingCard'
 import { ListingsPage } from '@/pages/ListingsPage'
@@ -19,7 +20,10 @@ const { getListings } = await import('@/api/listings')
 function aListing(overrides: Partial<Listing> = {}): Listing {
   return {
     id: 'device-1',
-    title: 'M3 Pro 2023 512',
+    title: 'MacBook Pro M3 Pro',
+    category: 'laptop',
+    category_label: 'Laptops',
+    summary: '14.2-inch display · M3 Pro · 70 Wh battery',
     family: 'MacBook Pro',
     model_name: 'M3 Pro',
     year: '2023',
@@ -52,6 +56,10 @@ function aPage(items: Listing[]): ListingPageData {
     limit: 24,
     offset: 0,
     families: ['MacBook Pro'],
+    categories: [
+      { key: 'laptop', label: 'Laptops', count: 1 },
+      { key: 'phone', label: 'Phones', count: 2 },
+    ],
     synthetic: true,
   }
 }
@@ -62,15 +70,41 @@ function renderPage() {
     defaultOptions: { queries: { retry: false } },
   })
   return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <ListingsPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <ThemeProvider>
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <ListingsPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
   )
 }
 
 describe('a card on the window', () => {
+  it('describes a television by its size, not by a memory figure', () => {
+    render(
+      <MemoryRouter>
+        <ListingCard
+          listing={aListing({
+            id: 'tv-1',
+            title: 'QLED TV QN90C 65-inch',
+            category: 'tv',
+            category_label: 'TVs',
+            summary: '65-inch Neo QLED 4K · 120 Hz',
+            ram_gb: '',
+            storage_gb: '',
+            battery_health_pct: null,
+          })}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('65-inch Neo QLED 4K · 120 Hz')).toBeInTheDocument()
+    expect(screen.getByText('TVs')).toBeInTheDocument()
+    expect(screen.queryByText(/GB memory/)).not.toBeInTheDocument()
+  })
+
+
   it('shows the device, its condition and its price', () => {
     render(
       <MemoryRouter>
@@ -78,7 +112,7 @@ describe('a card on the window', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('M3 Pro 2023 512')).toBeInTheDocument()
+    expect(screen.getByText('MacBook Pro M3 Pro')).toBeInTheDocument()
     expect(screen.getByText('Like new')).toBeInTheDocument()
     expect(screen.getByText('$1,499.50')).toBeInTheDocument()
     expect(screen.getByText('estimated resale price')).toBeInTheDocument()
@@ -114,7 +148,7 @@ describe('the window', () => {
     vi.mocked(getListings).mockResolvedValue(aPage([aListing()]))
     renderPage()
 
-    await waitFor(() => expect(screen.getByText('M3 Pro 2023 512')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('MacBook Pro M3 Pro')).toBeInTheDocument())
     expect(screen.getByText('1 device')).toBeInTheDocument()
   })
 
@@ -131,7 +165,7 @@ describe('the window', () => {
     vi.mocked(getListings).mockResolvedValue({ ...aPage([aListing()]), synthetic: false })
     renderPage()
 
-    await waitFor(() => expect(screen.getByText('M3 Pro 2023 512')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('MacBook Pro M3 Pro')).toBeInTheDocument())
     expect(screen.queryByText('These prices are modelled')).not.toBeInTheDocument()
   })
 
@@ -153,19 +187,35 @@ describe('the window', () => {
     )
   })
 
-  it('filters by family', async () => {
+  it('filters by kind of device', async () => {
     const user = userEvent.setup()
     vi.mocked(getListings).mockResolvedValue(aPage([aListing()]))
     renderPage()
 
-    await waitFor(() => expect(screen.getByText('M3 Pro 2023 512')).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'MacBook Pro' }))
+    await waitFor(() => expect(screen.getByText('MacBook Pro M3 Pro')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /Phones/ }))
 
     await waitFor(() =>
-      expect(vi.mocked(getListings).mock.calls.some((call) => call[0]?.family === 'MacBook Pro')).toBe(
+      expect(vi.mocked(getListings).mock.calls.some((call) => call[0]?.category === 'phone')).toBe(
         true,
       ),
     )
+  })
+
+  it('waits for the reader to stop typing before it searches', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getListings).mockResolvedValue(aPage([aListing()]))
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText('MacBook Pro M3 Pro')).toBeInTheDocument())
+    vi.mocked(getListings).mockClear()
+    await user.type(screen.getByLabelText('Search for a model'), 'M3')
+
+    // Two keystrokes inside the delay make at most one search for the final word.
+    await waitFor(() =>
+      expect(vi.mocked(getListings).mock.calls.some((call) => call[0]?.search === 'M3')).toBe(true),
+    )
+    expect(vi.mocked(getListings).mock.calls.some((call) => call[0]?.search === 'M')).toBe(false)
   })
 
   it('searches for a model', async () => {
@@ -173,7 +223,7 @@ describe('the window', () => {
     vi.mocked(getListings).mockResolvedValue(aPage([aListing()]))
     renderPage()
 
-    await waitFor(() => expect(screen.getByText('M3 Pro 2023 512')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('MacBook Pro M3 Pro')).toBeInTheDocument())
     await user.type(screen.getByLabelText('Search for a model'), 'M3')
 
     await waitFor(() =>

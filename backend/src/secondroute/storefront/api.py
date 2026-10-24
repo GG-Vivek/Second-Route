@@ -90,7 +90,7 @@ async def act_as(session: AsyncSession, org_id: uuid.UUID) -> AsyncSession:
     Returns:
         The session, set to the organisation.
     """
-    await set_session_org_id(session, org_id)
+    await set_session_org_id(session, str(org_id))
     return session
 
 
@@ -104,6 +104,10 @@ async def public_listings(  # noqa: PLR0913, PLR0917
     org_id: PublicOrgDep,
     family: Annotated[str | None, Query(description="Restrict to one family")] = None,
     search: Annotated[str | None, Query(description="Restrict to matching models")] = None,
+    category: Annotated[
+        str | None,
+        Query(description="Restrict to one kind of device, such as phone or tv"),
+    ] = None,
     limit: Annotated[int, Query(ge=1, le=100, description="How many to return")] = 24,
     offset: Annotated[int, Query(ge=0, description="How many to skip")] = 0,
 ) -> ListingListRead:
@@ -114,6 +118,7 @@ async def public_listings(  # noqa: PLR0913, PLR0917
         org_id: The organisation the storefront shows.
         family: Restrict to one family.
         search: Restrict to the models that match.
+        category: Restrict to one kind of device.
         limit: How many to return.
         offset: How many to skip.
 
@@ -126,6 +131,7 @@ async def public_listings(  # noqa: PLR0913, PLR0917
         org_id,
         family=family,
         search=search,
+        category=category,
         limit=limit,
         offset=offset,
     )

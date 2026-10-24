@@ -145,16 +145,22 @@ class TestSignals:
         assert signals.accessories == {"charger": False}
 
     def test_from_inspection_handles_missing_values(self) -> None:
-        """Missing values fall back to safe defaults."""
+        """Missing values fall back to safe defaults.
+
+        A missing battery reading is not a battery at zero per cent: it is no
+        reading at all, which is what a device without a battery produces.
+        """
         signals = InspectionSignals.from_inspection({})
-        assert signals.battery_health_pct == 0.0
+        assert signals.battery_health_pct is None
         assert signals.battery_cycles is None
         assert signals.activation_lock == "unknown"
 
     def test_from_inspection_handles_bad_battery(self) -> None:
-        """A non-numeric battery reading becomes zero."""
+        """A non-numeric battery reading is not a battery reading either."""
         signals = InspectionSignals.from_inspection({"battery_health_pct": "not a number"})
-        assert signals.battery_health_pct == 0.0
+        assert signals.battery_health_pct is None
+        # An unreadable reading is treated exactly as an absent one.
+        assert condition_score(signals) == condition_score(InspectionSignals.from_inspection({}))
 
     def test_from_inspection_handles_json_string(self) -> None:
         """JSON strings are decoded."""

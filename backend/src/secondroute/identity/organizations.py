@@ -63,6 +63,10 @@ class User(Base):
         index=True,
     )
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # A scrypt hash, never the password. Null for an account made outside the
+    # application's own sign-up, which signs in through the identity provider.
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     role: Mapped[str] = mapped_column(String(30), nullable=False, default=ROLE_INSPECTOR)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 

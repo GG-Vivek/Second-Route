@@ -18,9 +18,11 @@ from sqlalchemy import Select, func, literal_column, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from secondroute.decision.models import Decision
+from secondroute.identity.categories import CATEGORIES, category_of, storage_label
 from secondroute.identity.models import SKU
 from secondroute.intake.models import Inspection, Photo, Unit, UnitStatus
 from secondroute.storefront.schemas import (
+    ListingCategoryRead,
     ListingCheckRead,
     ListingDetailRead,
     ListingListRead,
@@ -39,6 +41,10 @@ GONE_STATUSES: tuple[UnitStatus, ...] = (
     UnitStatus.RECYCLED,
     UnitStatus.DONATED,
 )
+
+#: The kinds of device that have a memory figure worth saying. A washing
+#: machine has no memory, and "0 GB memory" would be a lie about it.
+_MEMORY_CATEGORIES: frozenset[str] = frozenset({"laptop", "phone", "tablet", "console"})
 
 #: The grade in the words a buyer would use.
 CONDITION_LABELS: dict[str, str] = {
@@ -60,16 +66,40 @@ CONDITION_NOTES: dict[str, str] = {
 def _title(sku: SKU) -> str:
     """The name of a device, in the shop's words.
 
+    The family is put in front of the model unless the model already names
+    it: "iPhone" and "15 Pro" make "iPhone 15 Pro", and "Galaxy S" with
+    "Galaxy S24 Ultra" makes "Galaxy S24 Ultra" rather than repeating it.
+
     Args:
         sku: The catalogue model.
 
     Returns:
         The title of the listing.
     """
-    parts = [f"{sku.model_name} {sku.year}".strip()]
-    if sku.storage_gb:
-        parts.append(sku.storage_gb)
-    return " ".join(parts)
+    family = (sku.family or "").strip()
+    model = (sku.model_name or "").strip()
+    if not family or family.lower() in model.lower():
+        return model or family
+    return f"{family} {model}"
+
+
+def _summary(sku: SKU) -> str:
+    """One line about a device, for the card.
+
+    The catalogue writes the line for each device. A device that has none
+    falls back to its colour and its capacity, which is always true.
+
+    Args:
+        sku: The catalogue model.
+
+    Returns:
+        The line.
+    """
+    specs = sku.specs_json if isinstance(sku.specs_json, dict) else {}
+    written = specs.get("summary")
+    if isinstance(written, str) and written.strip():
+        return written.strip()
+    return " · ".join(part for part in (sku.color, storage_label(sku.storage_gb)) if part)
 
 
 def _photo_alt(sku: SKU, index: int) -> str:
@@ -199,7 +229,8 @@ def _latest_inspection(unit: Unit) -> Inspection | None:
     """
     if not unit.inspections:
         return None
-    return max(unit.inspections, key=lambda inspection: inspection.created_at)
+    inspected: list[Inspection] = unit.inspections
+    return max(inspected, key=lambda inspection: inspection.created_at)
 
 
 def _accessories(inspection: Inspection | None) -> list[str]:
@@ -259,14 +290,16 @@ def _highlights(
     Returns:
         The lines for the card.
     """
+    category = category_of(sku.specs_json)
     lines: list[str] = []
-    if sku.ram_gb:
+    if category.key in _MEMORY_CATEGORIES and sku.ram_gb:
         lines.append(f"{sku.ram_gb} GB memory")
-    if sku.storage_gb:
-        lines.append(f"{sku.storage_gb} storage")
+    capacity = storage_label(sku.storage_gb)
+    if capacity:
+        lines.append(f"{capacity} storage")
     if sku.year:
         lines.append(f"{sku.year} model")
-    if inspection is not None and inspection.battery_health_pct:
+    if category.has_battery and inspection is not None and inspection.battery_health_pct:
         lines.append(f"Battery at {inspection.battery_health_pct}% health")
     if grade in CONDITION_NOTES:
         lines.append(CONDITION_NOTES[grade])
@@ -292,9 +325,13 @@ def _listing(
     inspection = _latest_inspection(unit)
     grade = inspection.cosmetic_grade if inspection is not None else "C"
     photos = _published_photos(unit)
+    category = category_of(sku.specs_json)
     return ListingRead(
         id=unit.id,
         title=_title(sku),
+        category=category.key,
+        category_label=category.label,
+        summary=_summary(sku),
         family=sku.family,
         model_name=sku.model_name,
         year=sku.year,
@@ -306,7 +343,9 @@ def _listing(
         battery_health_pct=inspection.battery_health_pct if inspection is not None else None,
         price=price,
         photo=(
-            ListingPhotoRead(url=photos[0].storage_path, alt=_photo_alt(sku, 0)) if photos else None
+            ListingPhotoRead(url=str(photos[0].storage_path), alt=_photo_alt(sku, 0))
+            if photos
+            else None
         ),
         photo_count=len(photos),
         listed_at=decision.created_at,
@@ -418,6 +457,7 @@ async def list_listings(  # noqa: PLR0913
     *,
     family: str | None = None,
     search: str | None = None,
+    category: str | None = None,
     limit: int = 24,
     offset: int = 0,
 ) -> ListingListRead:
@@ -428,6 +468,7 @@ async def list_listings(  # noqa: PLR0913
         org_id: The organisation.
         family: Restrict to one family.
         search: Restrict to the models that match.
+        category: Restrict to one kind of device, such as ``phone``.
         limit: How many to return.
         offset: How many to skip.
 
@@ -438,6 +479,11 @@ async def list_listings(  # noqa: PLR0913
 
     if family:
         query = query.where(SKU.family == family)
+    if category:
+        # The category lives in the specifications. Filtering in the database
+        # keeps the count and the paging honest, which filtering the page in
+        # Python would not.
+        query = query.where(SKU.specs_json["category"].as_string() == category)
     if search:
         pattern = f"%{search}%"
         query = query.where(
@@ -478,6 +524,7 @@ async def list_listings(  # noqa: PLR0913
         items.append(_listing(unit, decision, price))
 
     families = await _families(session, org_id)
+    categories = await _categories(session, org_id)
 
     return ListingListRead(
         items=items,
@@ -485,8 +532,31 @@ async def list_listings(  # noqa: PLR0913
         limit=limit,
         offset=offset,
         families=families,
+        categories=categories,
         synthetic=synthetic,
     )
+
+
+async def _categories(session: AsyncSession, org_id: uuid.UUID) -> list[ListingCategoryRead]:
+    """The kinds of device that are on sale, with how many of each.
+
+    Args:
+        session: The database session.
+        org_id: The organisation.
+
+    Returns:
+        The categories, in the order the catalogue lists them.
+    """
+    query = _base_query(org_id).join(SKU, SKU.id == Unit.sku_id).with_only_columns(SKU.specs_json)
+    counts: dict[str, int] = {}
+    for specs in (await session.execute(query)).scalars().all():
+        key = category_of(specs).key
+        counts[key] = counts.get(key, 0) + 1
+    ordered = sorted(counts, key=lambda key: list(CATEGORIES).index(key))
+    return [
+        ListingCategoryRead(key=key, label=CATEGORIES[key].label, count=counts[key])
+        for key in ordered
+    ]
 
 
 async def _families(session: AsyncSession, org_id: uuid.UUID) -> list[str]:
@@ -545,7 +615,7 @@ async def get_listing(
     return ListingDetailRead(
         **listing.model_dump(),
         photos=[
-            ListingPhotoRead(url=photo.storage_path, alt=_photo_alt(sku, index))
+            ListingPhotoRead(url=str(photo.storage_path), alt=_photo_alt(sku, index))
             for index, photo in enumerate(photos)
         ],
         accessories=_accessories(inspection),

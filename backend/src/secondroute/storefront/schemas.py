@@ -61,6 +61,13 @@ class ListingRead(BaseModel):
 
     id: UUID = Field(..., description="The identifier of the listing.")
     title: str = Field(..., description="The name of the device, in the shop's words.")
+    category: str = Field(
+        default="laptop", description="The kind of device: phone, tv, refrigerator and so on."
+    )
+    category_label: str = Field(default="Laptops", description="The category, for a person.")
+    summary: str = Field(
+        default="", description="One line about the device, in the words a buyer uses."
+    )
     family: str = Field(..., description="The family the device belongs to.")
     model_name: str = Field(..., description="The model of the device.")
     year: str = Field(..., description="The year of the model.")
@@ -94,6 +101,14 @@ class ListingDetailRead(ListingRead):
     )
 
 
+class ListingCategoryRead(BaseModel):
+    """One kind of device on sale, for the category filter."""
+
+    key: str = Field(..., description="The category's identifier.")
+    label: str = Field(..., description="The category, in the shop's words.")
+    count: int = Field(default=0, description="How many devices of this kind are on sale.")
+
+
 class ListingListRead(BaseModel):
     """A page of devices."""
 
@@ -103,6 +118,9 @@ class ListingListRead(BaseModel):
     offset: int = Field(default=0, description="How many were skipped.")
     families: list[str] = Field(
         default_factory=list, description="The families on sale, for the filter."
+    )
+    categories: list[ListingCategoryRead] = Field(
+        default_factory=list, description="The kinds of device on sale, for the filter."
     )
     synthetic: bool = Field(
         default=False,

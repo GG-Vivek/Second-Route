@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- The catalogue is no longer laptops only. `data/seeds/skus.csv` keeps one
+  configuration of four laptops and adds phones, tablets, TVs, refrigerators,
+  washing machines, mixer grinders, air conditioners, air purifiers, hair dryers,
+  game consoles, headphones and cameras. Each device names its `category` and
+  carries a one-line `summary` in its specifications.
+- The shop window filters by category, shows a line that suits the device
+  (screen size for a TV, capacity for a refrigerator) instead of memory and
+  storage for everything, and searches after a pause in typing rather than on
+  every key press.
+- The inspection form no longer demands a battery reading. A television or a
+  refrigerator has none, and the reading is left empty rather than invented:
+  the request omits it, the API accepts it as absent, and the unit's page
+  shows a battery line only when there is one.
+- Demonstration photographs are drawn for each category, not as laptops only.
+
+### Added (accounts)
+- Sign-up for a retailer (`POST /api/v1/auth/signup/retailer`), which creates the
+  organisation and its administrator, and for a person (`POST /api/v1/auth/signup/user`),
+  who joins with the retailer's code as an inspector. Sign-in with an email and a
+  password is `POST /api/v1/auth/signin`. Passwords are stored as scrypt hashes.
+  Migration `0017_accounts` adds the columns, and makes the battery reading
+  optional for devices that have no battery.
+- Sign-up and sign-in pages in the operator console.
+
+### Fixed
+- Type checking is clean again. Sixteen errors had accumulated in the photo
+  scripts, the seed, the storefront service and two test files; the code added
+  for the accounts and the catalogue added six more. `uv run mypy .` now
+  reports none.
+- A drawing function that branched on the category and the angle twenty-three
+  times was split into two functions with a dispatch table for the appliances,
+  which is also how the next kind of appliance is added.
+- The visual suites no longer fail the first time they run on Linux, where no
+  baselines have ever been committed. Such a run writes the baselines and
+  uploads them as an artifact to commit; once they are committed the suite
+  compares strictly and a real difference fails.
+- The sign-in tests looked the email and password fields up by their bare
+  label, while a required field's label carries ` (required)` for screen
+  readers. They now match the way the rest of the suite looks fields up.
+
 ### Added
 - A shop window: a separate application in `frontend-public/`, served on port 5174,
   that shows the devices that are for sale with their photographs, their condition,

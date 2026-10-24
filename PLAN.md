@@ -30,6 +30,8 @@ This plan splits SecondRoute into **8 phases** (0 to 7). Each phase is an indepe
 | 7 | Ecosystem and expansion | 6 | Second category, fraud signals, partner APIs | Product line expansion |
 | 8 | Product surface | 2, 4 | One design system, one spatial decision console | A surface worth using |
 | 9 | Colours, cache and data | 8 | Measured contrast, real data, closed defects | An application worth using |
+| 10 | The shop window | 2, 8, 9 | A public storefront on its own port | A buyer can look at the stock |
+| 11 | Accounts, categories and the glass surfaces | 8, 10 | Sign-up and sign-in, a catalogue of many kinds of device, new surfaces | A retailer can become a customer |
 
 **Note on Phase 3:** it is optional for Phase 4 and Phase 5. Phase 5 can start with synthetic prices if the partner shares sold data directly, but Phase 3 is strongly recommended before any pilot that makes money claims.
 
@@ -560,6 +562,54 @@ The shop window is not the console with the serial number hidden. It is a differ
 **Accept:** `docker compose up` serves the window; the CI is green.
 
 **Phase 10 exit:** a buyer can look at the stock, and nothing of the business's is in what they can read.
+
+---
+
+## Phase 11: Accounts, categories and the glass surfaces
+
+**Goal:** a retailer can become a customer of the application, and the shop sells what a shop sells rather than one shape of laptop.
+
+**Requires:** Phases 8 and 10.
+
+**Why this phase exists:** every row in the catalogue was a laptop, so every filter, every photograph and every card assumed memory and storage were the things a buyer reads — "16 GB memory" under a television. And there was no door for a retailer to walk through: the identity provider was the only one, and a deployment with none had no sign-in at all.
+
+### F11.1 Accounts
+- A retailer signs up and gets an organisation and its administrator: `POST /api/v1/auth/signup/retailer`.
+- A person signs up with the retailer's code and joins it as an inspector: `POST /api/v1/auth/signup/user`.
+- Sign-in is `POST /api/v1/auth/signin`, by email address and password. Passwords are stored as scrypt hashes with their own salt; the stored hash records its own cost parameters, so the cost can be raised later without invalidating what is already there.
+- An unknown address and a wrong password are refused in the same words and take the same time, so the answer does not say which addresses have accounts.
+- Migration `0017_accounts` adds the columns. Accounts made before it have no hash and keep signing in through the identity provider.
+- The console has sign-up and sign-in pages of their own, standing outside the application shell.
+
+**Accept:** no password is stored in any form; a wrong email and a wrong password cannot be told apart from outside.
+
+### F11.2 The mixed catalogue
+- `identity/categories.py` names the kinds of device the shop sells, with the tests an inspector runs on each, what comes back in the box, and whether a battery reading means anything for it.
+- A category is data, not a migration: the key lives in the SKU's `specs_json`, and a category the code does not know reads as a laptop.
+- The catalogue carries phones, tablets, televisions, refrigerators, washing machines, mixer grinders, air conditioners, air purifiers, hair dryers, game consoles, headphones and cameras beside the laptops.
+- Every row names its category and carries a one-line summary in the words a buyer uses.
+
+**Accept:** every seeded device names a known category and has a summary; adding a kind is a data change and a drawing.
+
+### F11.3 The window shows the kinds
+- The window filters by kind with a count for each, and searches after a pause in typing rather than on every key press.
+- The card shows a line that suits the device — screen size for a television, capacity for a refrigerator, memory only for the kinds that have memory.
+- Each kind has an icon; a kind the window has not been given one still gets a sensible one.
+
+### F11.4 Devices without a battery
+- The battery reading is optional, in the model, the API and the form. A refrigerator has no battery, and a missing reading is not a battery at zero per cent.
+- The grade model scores an absent reading at the middle of the scale, so the grade rests on what the device does have rather than on a reading that does not exist.
+- The window shows a battery line only for the kinds that have a battery.
+
+**Accept:** inspecting a television requires no battery reading; a device with no battery is not graded as one with a dead battery.
+
+### F11.5 The backdrop
+- An animated mesh gradient, drawn with a fragment shader, behind the frame the account pages sit in.
+
+### F11.6 The glass surfaces
+- Frosted panels and cards: translucent and blurred, refracting through a shared SVG filter where a browser can apply one to a backdrop, and plain frosted glass where it cannot.
+
+**Phase 11 exit:** a retailer can sign up and a person can join it, the window shows the kinds of device a shop shows, and a device with no battery is not graded as one with a dead battery.
 
 ---
 

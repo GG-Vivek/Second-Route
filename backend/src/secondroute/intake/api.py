@@ -243,12 +243,13 @@ async def create_inspection(
         )
 
     # Validate battery health range (0-100)
-    battery_health = float(inspection_data.battery_health_pct)
-    if not 0 <= battery_health <= 100:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Battery health must be between 0 and 100",
-        )
+    if inspection_data.battery_health_pct is not None:
+        battery_health = float(inspection_data.battery_health_pct)
+        if not 0 <= battery_health <= 100:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Battery health must be between 0 and 100",
+            )
 
     import json
 

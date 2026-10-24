@@ -17,6 +17,7 @@ the drift cannot come back without somebody being told about it.
 
 from __future__ import annotations
 
+import enum
 import importlib.util
 import re
 from pathlib import Path
@@ -29,7 +30,7 @@ from secondroute.intake.models import OrderChannel, ReturnReasonCode, Unit, Unit
 VERSIONS = Path(__file__).parent.parent.parent / "alembic" / "versions"
 
 #: The enums the models declare, by the name the database knows them by.
-MODEL_ENUMS: dict[str, type] = {
+MODEL_ENUMS: dict[str, type[enum.Enum]] = {
     "unit_status_enum": UnitStatus,
     "return_reason_code_enum": ReturnReasonCode,
     "order_channel_enum": OrderChannel,

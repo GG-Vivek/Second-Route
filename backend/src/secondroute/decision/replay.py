@@ -43,7 +43,11 @@ def _signals_from(snapshot: dict[str, Any]) -> InspectionSignals:
 
     try:
         return InspectionSignals(
-            battery_health_pct=float(raw["battery_health_pct"]),
+            battery_health_pct=(
+                None
+                if raw.get("battery_health_pct") in (None, "")
+                else float(raw["battery_health_pct"])
+            ),
             battery_cycles=raw.get("battery_cycles"),
             cosmetic_grade=str(raw["cosmetic_grade"]),
             functional_tests=raw.get("functional_tests") or {},

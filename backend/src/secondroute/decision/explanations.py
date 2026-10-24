@@ -279,15 +279,6 @@ def _numeric_perturbations(
 
     perturbations: list[_NumericPerturbation] = [
         _NumericPerturbation(
-            name="battery_health_pct",
-            label="Battery health",
-            current=signals.battery_health_pct,
-            lower=50.0,
-            upper=100.0,
-            unit="%",
-            apply=lambda inp, value: inp.with_signals(battery_health_pct=value),
-        ),
-        _NumericPerturbation(
             name="channel_fee_pct",
             label="Platform fee",
             current=book.get("channel_fee_pct", recommended_channel),
@@ -321,6 +312,23 @@ def _numeric_perturbations(
             ),
         ),
     ]
+
+    # A device with no battery has no battery to perturb, so the slider is
+    # not offered. What it does have is perturbed like anything else.
+    battery = signals.battery_health_pct
+    if battery is not None:
+        perturbations.insert(
+            0,
+            _NumericPerturbation(
+                name="battery_health_pct",
+                label="Battery health",
+                current=battery,
+                lower=50.0,
+                upper=100.0,
+                unit="%",
+                apply=lambda inp, value: inp.with_signals(battery_health_pct=value),
+            ),
+        )
     return perturbations
 
 

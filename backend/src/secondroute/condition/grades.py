@@ -76,6 +76,9 @@ BATTERY_FLOOR_PCT: Final[float] = 50.0
 #: Battery health at or above this maps to a score of one.
 BATTERY_CEILING_PCT: Final[float] = 100.0
 
+#: The battery term for a device with no battery: the middle of the scale.
+NO_BATTERY_SCORE: Final[float] = 0.5
+
 #: Activation-lock states that block every resale channel.
 BLOCKING_ACTIVATION_LOCKS: Final[frozenset[str]] = frozenset({"present"})
 
@@ -111,7 +114,7 @@ class InspectionSignals:
         activation_lock: Activation-lock state (``none``/``present``/``unknown``).
     """
 
-    battery_health_pct: float
+    battery_health_pct: float | None
     cosmetic_grade: str
     functional_tests: Mapping[str, bool] = field(default_factory=dict)
     accessories: Mapping[str, bool] = field(default_factory=dict)
@@ -132,7 +135,7 @@ class InspectionSignals:
             data: Mapping[str, object] = inspection
         else:
             data = {
-                "battery_health_pct": getattr(inspection, "battery_health_pct", 0.0),
+                "battery_health_pct": getattr(inspection, "battery_health_pct", None),
                 "battery_cycles": getattr(inspection, "battery_cycles", None),
                 "cosmetic_grade": getattr(inspection, "cosmetic_grade", "C"),
                 "functional_tests": getattr(inspection, "functional_tests", {}) or {},
@@ -140,11 +143,15 @@ class InspectionSignals:
                 "activation_lock": getattr(inspection, "activation_lock", "unknown"),
             }
 
-        raw_battery = data.get("battery_health_pct", 0.0)
-        try:
-            battery = float(raw_battery)  # type: ignore[arg-type]
-        except (TypeError, ValueError):
-            battery = 0.0
+        raw_battery = data.get("battery_health_pct")
+        battery: float | None
+        if raw_battery in (None, ""):
+            battery = None
+        else:
+            try:
+                battery = float(raw_battery)  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                battery = None
 
         raw_cycles = data.get("battery_cycles")
         try:
@@ -233,8 +240,13 @@ def condition_score(signals: InspectionSignals) -> float:
     cosmetic = COSMETIC_SCORE.get(signals.cosmetic_grade, COSMETIC_SCORE["C"])
 
     span = BATTERY_CEILING_PCT - BATTERY_FLOOR_PCT
-    battery = (signals.battery_health_pct - BATTERY_FLOOR_PCT) / span
-    battery = min(max(battery, 0.0), 1.0)
+    if signals.battery_health_pct is None:
+        # A device with no battery is neither good nor bad on that account.
+        # It sits at the middle, so the grade is decided by what it does have.
+        battery = NO_BATTERY_SCORE
+    else:
+        battery = (signals.battery_health_pct - BATTERY_FLOOR_PCT) / span
+        battery = min(max(battery, 0.0), 1.0)
 
     tests = signals.functional_tests
     if tests:

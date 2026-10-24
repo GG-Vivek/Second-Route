@@ -59,10 +59,12 @@ class UnitStatusUpdate(BaseModel):
 class InspectionBase(BaseModel):
     """Base inspection fields."""
 
-    battery_health_pct: str = Field(
-        ..., pattern=r"^\d+(\.\d+)?$", description="Battery health percentage as string"
+    battery_health_pct: Optional[str] = Field(
+        default=None,
+        pattern=r"^\d+(\.\d+)?$",
+        description="Battery health percentage as string. Omitted for a device with no battery.",
     )
-    battery_cycles: Optional[str] = Field(None, description="Battery cycle count as string")
+    battery_cycles: Optional[str] = Field(default=None, description="Battery cycle count as string")
     cosmetic_grade: str = Field(
         ..., min_length=1, max_length=20, description="Cosmetic grade (A/B/C/D)"
     )
@@ -75,15 +77,17 @@ class InspectionBase(BaseModel):
     accessories_json: dict[str, Any] = Field(
         default_factory=dict, description="Accessories checklist"
     )
-    notes: Optional[str] = Field(None, description="Inspector notes")
+    notes: Optional[str] = Field(default=None, description="Inspector notes")
     offline_created: bool = Field(
         default=False, description="Whether inspection was created offline"
     )
 
     @field_validator("battery_health_pct")
     @classmethod
-    def validate_battery_health(cls, v: str) -> str:
-        """Validate battery health is between 0 and 100."""
+    def validate_battery_health(cls, v: Optional[str]) -> Optional[str]:
+        """Validate battery health is between 0 and 100, when there is one."""
+        if v is None:
+            return None
         try:
             value = float(v)
             if not 0 <= value <= 100:

@@ -147,8 +147,11 @@ class Inspection(Base):
         UUID(as_uuid=True), nullable=True
     )  # FK added in Phase 5
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    battery_health_pct: Mapped[str] = mapped_column(
-        String(10), nullable=False
+    # Null for a device that has no battery (a refrigerator, a TV). A missing
+    # battery is not a battery at zero per cent, and the engine must not read
+    # it as one.
+    battery_health_pct: Mapped[str | None] = mapped_column(
+        String(10), nullable=True
     )  # Stored as string to preserve precision
     battery_cycles: Mapped[str | None] = mapped_column(String(20), nullable=True)
     cosmetic_grade: Mapped[str] = mapped_column(String(20), nullable=False)

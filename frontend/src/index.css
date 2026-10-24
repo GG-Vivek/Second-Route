@@ -346,3 +346,43 @@
     animation: none;
   }
 }
+
+@layer components {
+  /**
+   * Frosted glass (F11.6). The surface is translucent and blurred, so the
+   * backdrop shows through softly without competing with the text on it.
+   */
+  .glass-panel {
+    background: rgb(var(--card) / 0.6);
+    border: 1px solid rgb(var(--foreground) / 0.08);
+    backdrop-filter: blur(18px) saturate(1.5);
+    -webkit-backdrop-filter: blur(18px) saturate(1.5);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.08),
+      0 24px 70px -36px rgb(0 0 0 / 0.55);
+  }
+
+  /**
+   * The refracting variant. The bend comes from the shared SVG filter. Where a
+   * browser cannot apply an SVG filter to a backdrop, this declaration is
+   * dropped and the frosted glass above stands on its own.
+   */
+  .glass-refract {
+    backdrop-filter: url(#sr-liquid-glass) blur(4px) saturate(1.6);
+    -webkit-backdrop-filter: url(#sr-liquid-glass) blur(4px) saturate(1.6);
+  }
+}
+
+@layer components {
+  /**
+   * A card on the window: the same frosted surface as the glass panel, a little
+   * lighter, for content that is read many times over (F11.6).
+   */
+  .glass-card {
+    background: rgb(var(--card) / 0.72);
+    border: 1px solid rgb(var(--foreground) / 0.07);
+    backdrop-filter: blur(12px) saturate(1.3);
+    -webkit-backdrop-filter: blur(12px) saturate(1.3);
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 12px 40px -28px rgb(0 0 0 / 0.5);
+  }
+}

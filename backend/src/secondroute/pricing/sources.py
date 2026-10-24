@@ -188,6 +188,27 @@ class SyntheticPriceSource:
         "MacBook Air": 0.62,
         "ThinkPad X1 Carbon": 0.72,
         "Dell XPS 13": 0.61,
+        # Phones, tablets and wearables hold their value less well per unit.
+        "iPhone": 0.45,
+        "Galaxy S": 0.45,
+        "Pixel": 0.40,
+        "iPad": 0.50,
+        "Galaxy Tab": 0.30,
+        # Televisions are large and cheap to replace new, so they resell low.
+        "QLED TV": 0.55,
+        "OLED TV": 0.50,
+        "Bravia TV": 0.60,
+        # Appliances are bulky, and a used one is worth little to a buyer.
+        "Refrigerator": 0.50,
+        "Washer": 0.35,
+        # Consoles are cheap, and a second-hand one loses value fast.
+        "PlayStation": 0.30,
+        "Xbox": 0.25,
+        "Nintendo": 0.30,
+        "Steam Deck": 0.35,
+        "Sony Headphones": 0.20,
+        "AirPods": 0.15,
+        "Mirrorless Camera": 0.55,
     }
 
     def __init__(self, sku_family: str = "MacBook Pro", observations: int = 64) -> None:

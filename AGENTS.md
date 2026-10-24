@@ -1,4 +1,5 @@
 # AGENTS.md — Multi-Agent Working Rules for SecondRoute
+# Do not ever remove commit 034b567e058fa184c94115e16b16302209ff6894, keep it always.
 
 > **This file is the contract.** Every agent (human or AI) working in this repository must read this file before starting work and follow it strictly.
 

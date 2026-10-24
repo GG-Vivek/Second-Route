@@ -219,6 +219,14 @@ module = ["jose.*", "psycopg2.*"]
 ignore_missing_imports = true
 follow_untyped_imports = true
 
+# ``scripts/device_photos.py`` is imported by the seed as a top-level
+# module (the seed puts ``scripts/`` on the path), but mypy finds it as
+# ``scripts.device_photos``. Naming it on the path twice is an error, so
+# the import is treated as untyped; the file itself is still checked.
+[[tool.mypy.overrides]]
+module = ["device_photos"]
+ignore_missing_imports = true
+
 # Test files are not annotated as strictly as the source. A test's job is
 # to exercise behaviour, and a fixture's type is usually evident from its
 # name. This mirrors the ruff configuration, which relaxes the argument

@@ -199,4 +199,20 @@ describe('offline inspection - forced disconnect', () => {
 
     expect(await screen.findByText(/You are offline/i)).toBeInTheDocument()
   })
+
+  it('takes an inspection of a device that has no battery', async () => {
+    renderPage()
+
+    await screen.findByText('New Inspection')
+
+    // A television or a refrigerator has no battery health to enter, so the
+    // reading is left empty and the form still goes through.
+    await userEvent.click(screen.getByRole('radio', { name: /Excellent/i }))
+    await userEvent.click(screen.getByRole('button', { name: /Create Inspection/i }))
+
+    await waitFor(() => expect(createInspection).toHaveBeenCalledTimes(1))
+    const [, payload] = createInspection.mock.calls[0]
+    expect(payload.battery_health_pct).toBeUndefined()
+    expect(payload.cosmetic_grade).toBe('A')
+  })
 })
