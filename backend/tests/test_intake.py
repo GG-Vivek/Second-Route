@@ -99,6 +99,54 @@ class TestUnitIntake:
         assert data["status"] == "received"
 
     @pytest.mark.asyncio
+    async def test_a_product_with_no_memory_figure_can_be_listed(
+        self, client: AsyncClient, db_session: AsyncSession
+    ) -> None:
+        """A unit whose model has neither storage nor RAM is still a unit.
+
+        A hair dryer has neither, and the catalogue says so by leaving the
+        two columns empty -- the same way a washing machine has no memory.
+        The unit carries its model, so the model has to serialize: if it
+        refuses, the list of units fails outright and the operator is told
+        they have nothing to display, when what they have is stock the
+        schema cannot describe.
+        """
+        sku = SKU(
+            family="Hair Dryer",
+            model_name="Supersonic HD15",
+            year="2024",
+            storage_gb="",
+            ram_gb="",
+            color="Nickel",
+            region="US",
+            specs_json={"category": "hairdryer", "summary": "1600 W dryer"},
+            source="manufacturer_specs",
+            as_of=datetime(2026, 10, 1).date(),
+        )
+        db_session.add(sku)
+        await db_session.commit()
+        await db_session.refresh(sku)
+
+        created = await client.post(
+            "/api/v1/units",
+            json={
+                "sku_id": str(sku.id),
+                "return_reason_code": "buyer_remorse",
+                "order_channel": "online",
+            },
+        )
+        assert created.status_code == 201
+
+        listed = await client.get("/api/v1/units")
+        assert listed.status_code == 200
+
+        rows = {row["id"]: row for row in listed.json()}
+        shown = rows[created.json()["id"]]
+        assert shown["sku"]["family"] == "Hair Dryer"
+        assert shown["sku"]["storage_gb"] == ""
+        assert shown["sku"]["ram_gb"] == ""
+
+    @pytest.mark.asyncio
     async def test_create_unit_invalid_sku_returns_404(self, client: AsyncClient) -> None:
         """Test that creating a unit with invalid SKU returns 404."""
         fake_id = uuid4()

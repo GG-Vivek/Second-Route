@@ -18,12 +18,16 @@ class SKUBase(BaseModel):
         ..., min_length=1, max_length=200, description="Model name (e.g., M3 Pro)"
     )
     year: str = Field(..., min_length=1, max_length=10, description="Model year (e.g., '2023')")
+    # The two figures are left empty for a product that has not got them: a
+    # hair dryer has no storage and a washing machine has no memory, and the
+    # catalogue says so by leaving the column blank. The column itself is not
+    # null, so the blank is the value rather than an absence of one -- and a
+    # schema that insisted on a figure here would refuse to describe its own
+    # catalogue, which is how a list of units ends up failing to render at all.
     storage_gb: str = Field(
-        ..., min_length=1, max_length=50, description="Storage capacity (e.g., '512', '1TB')"
+        ..., max_length=50, description="Storage capacity (e.g., '512', '1TB'), or empty"
     )
-    ram_gb: str = Field(
-        ..., min_length=1, max_length=50, description="RAM capacity (e.g., '8', '16')"
-    )
+    ram_gb: str = Field(..., max_length=50, description="RAM capacity (e.g., '8', '16'), or empty")
     color: str = Field(
         ..., min_length=1, max_length=50, description="Color (e.g., 'Space Gray', 'Silver')"
     )

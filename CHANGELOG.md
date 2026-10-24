@@ -22,6 +22,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the request omits it, the API accepts it as absent, and the unit's page
   shows a battery line only when there is one.
 - Demonstration photographs are drawn for each category, not as laptops only.
+- `scripts/load_skus.py` treats `data/seeds/skus.csv` as the catalogue rather
+  than as a floor. A row that already exists is refreshed from the CSV, so an
+  edit to a `category`, a `summary` or an `as_of` reaches the database instead
+  of being skipped, and a row the CSV dropped is retired rather than kept —
+  unless a unit, a serial prefix or a price observation still points at it, in
+  which case it stays and is counted as retained. The tenant policies hide
+  other organisations' rows from that check, so the delete runs in a savepoint
+  and takes the database's refusal as the answer.
+- The demonstration data restocks the shop window. The window shows a unit only
+  while the engine has said to resell it and it has not gone, so a pass in
+  which every unit of a kind was sold or sent to parts leaves that kind absent
+  — which reads the same as a category nobody added. Kinds with nothing in the
+  window are given more units to be judged with a different seed, up to three
+  times, and any that still have nothing are reported by name.
+
+### Added (demonstration data)
+- `python scripts/seed_demo_data.py --reset-only` clears the demonstration data
+  and stops, which is what lets the catalogue be reloaded while the retired
+  rows are still referenced. `--if-missing` makes the data only when there is
+  none and never replaces what is there, reporting the kinds the window shows
+  nothing of; combining it with `--reset` is refused.
+- `make dev` runs `--if-missing`, so a fresh database gets a stocked shop
+  window, starting twice never throws work away, and a catalogue that has
+  kinds the window does not show says so at start-up.
 
 ### Added (accounts)
 - Sign-up for a retailer (`POST /api/v1/auth/signup/retailer`), which creates the
@@ -47,6 +71,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The sign-in tests looked the email and password fields up by their bare
   label, while a required field's label carries ` (required)` for screen
   readers. They now match the way the rest of the suite looks fields up.
+- The console showed "no units to display" against a shelf that was full.
+  `SKUBase` insisted that `storage_gb` and `ram_gb` be at least one character
+  long, and the mixed catalogue has twenty rows for which both are blank -- a
+  hair dryer has neither, and a washing machine has no memory -- so the first
+  unit on such a model made the whole list fail to serialize (500) instead of
+  showing its stock. The two figures are now recorded as the catalogue records
+  them: present for a laptop, blank for a dryer. Where a figure is blank the
+  console leaves it out of the line rather than printing "2024, GB" beside a
+  model name, and a new unit can be taken in for such a model as well.
 
 ### Added
 - A shop window: a separate application in `frontend-public/`, served on port 5174,

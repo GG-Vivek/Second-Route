@@ -142,6 +142,7 @@ uv sync --all-extras
 uv run alembic upgrade head
 uv run python scripts/load_skus.py        # the SKU catalogue
 uv run python scripts/seed_dev_org.py     # an organisation to act for
+uv run python scripts/seed_demo_data.py --if-missing   # stock for the shop window
 uv run uvicorn secondroute.api.main:app --reload --port 8000
 
 # 3. The frontend (in another terminal)

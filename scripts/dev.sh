@@ -3,8 +3,9 @@
 # Start the whole application on a developer machine.
 #
 # One command: it checks the prerequisites, prepares the database, runs
-# the migrations, seeds the catalogue and a development organisation, and
-# then starts the API and the frontend. Ctrl-C stops both.
+# the migrations, seeds the catalogue and a development organisation,
+# makes the demonstration data when there is none, and then starts the
+# API and the frontend. Ctrl-C stops both.
 #
 # It is safe to run again: the database is only created when it is
 # missing, the migrations only move forward, and the seeds are
@@ -150,6 +151,18 @@ step "Seeding"
 ORG_ID="$(cd "$BACKEND_DIR" && uv run python scripts/seed_dev_org.py 2>/dev/null | awk '/org id/{print $3}')"
 [ -n "$ORG_ID" ] || fail "the development organisation could not be created."
 info "the organisation is $ORG_ID"
+
+# The shop window shows the demonstration data, and nothing else: on a
+# fresh database it would show an empty shelf. Make the data when it is
+# missing and leave it alone when it is there, so that starting twice
+# never throws away work. Where the catalogue has kinds the window shows
+# nothing of, say so -- a window showing only the old stock looks exactly
+# like a window that never changed.
+if DEMO_OUT="$(cd "$BACKEND_DIR" && uv run python scripts/seed_demo_data.py --if-missing 2>/dev/null)"; then
+    printf '%s\n' "$DEMO_OUT" | grep -E "demonstration data|units +[0-9]|off the window|restock it with" | tail -4 || true
+else
+    info "the demonstration data could not be made; the shop window may be empty."
+fi
 
 # The shop window shows one organisation's stock, and the organisation is
 # named by the deployment rather than by the caller. The backend is told

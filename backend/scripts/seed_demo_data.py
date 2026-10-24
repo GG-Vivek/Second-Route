@@ -12,6 +12,16 @@ what the dashboard shows is what the engine would have said.
 
     python scripts/seed_demo_data.py --units 40
     python scripts/seed_demo_data.py --units 40 --reset
+    python scripts/seed_demo_data.py --reset-only
+    python scripts/seed_demo_data.py --if-missing
+
+``--reset-only`` is for when the catalogue itself has changed: take the
+demonstration data out, reload the catalogue with ``scripts/load_skus.py``,
+then seed again over what the catalogue now says.
+
+``--if-missing`` is what a start-up script wants: make the data when there
+is none, leave it alone when there is, and report the kinds the catalogue
+sells that the shop window has nothing on show of.
 """
 
 from __future__ import annotations
@@ -30,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 # The synthetic generator lives in ``ml/`` at the root of the repository.
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "ml"))
 
-from sqlalchemy import delete, select  # noqa: E402
+from sqlalchemy import delete, func, select  # noqa: E402
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 
 from secondroute.core.db import close_db, init_db, set_session_org_id  # noqa: E402
@@ -244,6 +254,31 @@ async def _reset(session: AsyncSession, org_id: uuid.UUID) -> None:
     logger.info("demo_data_reset", org_id=str(org_id))
 
 
+async def _kinds_missing_from_the_window(session: AsyncSession, org_id: uuid.UUID) -> list[str]:
+    """The kinds the shop window has nothing on show for.
+
+    This asks the storefront rather than restating its rule: a kind is on
+    the window only when a unit of it has a resell decision behind it and
+    has not gone since. A kind whose units were all sold, or which the
+    engine sent to parts, is missing -- and a kind missing from the window
+    reads exactly like a kind the catalogue never had.
+    """
+    from secondroute.storefront.service import list_listings
+
+    await set_session_org_id(session, str(org_id))
+
+    kinds = {
+        category_of(sku.specs_json).key
+        for sku in (await session.execute(select(SKU))).scalars().all()
+    }
+    # The categories are counted over everything for sale, not over the
+    # page, so one listing is enough to ask what is on show.
+    page = await list_listings(session, org_id, limit=1)
+    shown = {category.key for category in page.categories}
+
+    return sorted(kinds - shown)
+
+
 async def _seed_the_sources(
     session: AsyncSession,
     skus: Sequence[SKU],
@@ -333,6 +368,7 @@ async def seed(
     *,
     count: int,
     seed_value: int,
+    skus: Sequence[SKU] | None = None,
 ) -> dict[str, int]:
     """Create the demonstration data.
 
@@ -341,15 +377,23 @@ async def seed(
         org_id: The organisation the data belongs to.
         count: How many units to create.
         seed_value: The seed, so the same data is made every time.
+        skus: What to draw the units from. The whole catalogue when it is
+            left out, which is what a first pass wants. A pass topping up
+            one kind draws only from that kind, so that adding a few
+            units adds them where they are needed.
 
     Returns:
         What was created.
     """
     rng = random.Random(seed_value)
 
-    skus = (await session.execute(select(SKU).order_by(SKU.family, SKU.model_name))).scalars().all()
-    if not skus:
+    catalogue = (
+        (await session.execute(select(SKU).order_by(SKU.family, SKU.model_name))).scalars().all()
+    )
+    if not catalogue:
         raise SystemExit("The catalogue is empty. Run `python scripts/load_skus.py` before this.")
+
+    drawn = catalogue if skus is None else skus
 
     # The row-level security policies read the organisation from the
     # database, so the session has to be told which one it is acting for.
@@ -367,11 +411,11 @@ async def seed(
         "overrides": 0,
         "outcomes": 0,
     }
-    made.update(await _seed_the_sources(session, skus, org_id, seed_value=seed_value))
+    made.update(await _seed_the_sources(session, catalogue, org_id, seed_value=seed_value))
     now = datetime.utcnow()
 
     for index in range(count):
-        sku = skus[index % len(skus)]
+        sku = drawn[index % len(drawn)]
         grade = rng.choices(["A", "B", "C", "D"], weights=[42, 32, 18, 8])[0]
         received = now - timedelta(days=rng.randint(0, 75), hours=rng.randint(0, 23))
 
@@ -513,17 +557,98 @@ async def seed(
     return made
 
 
+#: A kind the window has nothing of is given this many units of each of
+#: its products to be judged again, and the attempt is made this many
+#: times before the fact is reported.
+UNITS_PER_PRODUCT = 2
+TOP_UP_ATTEMPTS = 3
+
+
+async def _stock_every_kind(
+    session: AsyncSession,
+    org_id: uuid.UUID,
+    made: dict[str, int],
+    *,
+    seed_value: int,
+) -> list[str]:
+    """Give the window something of every kind the catalogue sells.
+
+    The window shows a unit only while the engine has said to resell it
+    and it has not gone since, so a pass that happened to sell every unit
+    of a kind, or send them all to parts, leaves that kind off the window
+    -- which reads the same as a kind the catalogue never had.
+
+    Those kinds get more units to be judged, drawn with a different seed
+    so the outcomes differ from the pass that left them out. The engine
+    still decides every one of them; this only keeps offering it stock to
+    decide on.
+
+    Args:
+        session: The database session.
+        org_id: The organisation the data belongs to.
+        made: What has been made so far. Added to in place.
+        seed_value: The seed the first pass used.
+
+    Returns:
+        The kinds that are still off the window, which is empty when
+        every kind is on show.
+    """
+    catalogue = (
+        (await session.execute(select(SKU).order_by(SKU.family, SKU.model_name))).scalars().all()
+    )
+    kind_of = {sku.id: category_of(sku.specs_json).key for sku in catalogue}
+
+    for attempt in range(1, TOP_UP_ATTEMPTS + 1):
+        missing = await _kinds_missing_from_the_window(session, org_id)
+        if not missing:
+            return []
+        target = [sku for sku in catalogue if kind_of[sku.id] in missing]
+        logger.info("stocking_the_window_again", attempt=attempt, kinds=",".join(missing))
+        more = await seed(
+            session,
+            org_id,
+            count=len(target) * UNITS_PER_PRODUCT,
+            seed_value=seed_value + attempt,
+            skus=target,
+        )
+        for key, value in more.items():
+            made[key] = made.get(key, 0) + value
+
+    return await _kinds_missing_from_the_window(session, org_id)
+
+
 async def main() -> None:
     """Seed the demonstration data."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--units", type=int, default=40, help="How many units to create.")
+    parser.add_argument(
+        "--units",
+        type=int,
+        default=40,
+        help="How many units to create, drawn across the catalogue. A "
+        "kind the window still shows nothing of is stocked separately "
+        "afterwards.",
+    )
     parser.add_argument("--seed", type=int, default=20261021, help="The seed.")
     parser.add_argument(
         "--reset",
         action="store_true",
         help="Remove the demonstration data first.",
     )
+    parser.add_argument(
+        "--reset-only",
+        action="store_true",
+        help="Remove the demonstration data and stop, making nothing. "
+        "Between this and a later seed, the catalogue can be reloaded.",
+    )
+    parser.add_argument(
+        "--if-missing",
+        action="store_true",
+        help="Make the demonstration data only when the organisation has "
+        "none. Never replaces what is already there.",
+    )
     args = parser.parse_args()
+    if args.if_missing and (args.reset or args.reset_only):
+        parser.error("--if-missing never replaces data, so it cannot be combined with --reset.")
 
     await init_db()
     try:
@@ -540,16 +665,40 @@ async def main() -> None:
                 await session.flush()
                 await session.refresh(org)
 
-            if args.reset:
+            if args.reset or args.reset_only:
                 await _reset(session, org.id)
                 await session.commit()
 
+            if args.reset_only:
+                print("The demonstration data is out.")
+                print(f"  organisation  {org.id}")
+                return
+
+            if args.if_missing:
+                await set_session_org_id(session, str(org.id))
+                held = await session.scalar(
+                    select(func.count()).select_from(Unit).where(Unit.org_id == org.id)
+                )
+                if held:
+                    print(f"The demonstration data is already there: {held} units.")
+                    off_window = await _kinds_missing_from_the_window(session, org.id)
+                    if off_window:
+                        print(f"  off the window: {', '.join(off_window)}")
+                        print("  restock it with: uv run python scripts/seed_demo_data.py --reset")
+                    return
+
             made = await seed(session, org.id, count=args.units, seed_value=args.seed)
+            off_window = await _stock_every_kind(session, org.id, made, seed_value=args.seed)
 
         print("The demonstration data is in.")
         print(f"  organisation  {org.id}")
         for key, value in made.items():
             print(f"  {key:<12} {value}")
+        if off_window:
+            # Said last, and said out loud: the window really will not
+            # show these kinds, and someone looking at it should be told
+            # rather than left to wonder whether they were ever added.
+            print(f"  off the window: {', '.join(off_window)}")
     finally:
         await close_db()
 

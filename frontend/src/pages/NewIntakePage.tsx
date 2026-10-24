@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Check, Loader2, Search } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { memoryFigures } from '@/utils/specs'
 import {
   Button,
   Callout,
@@ -65,11 +66,14 @@ export function NewIntakePage() {
       try {
         const loaded = await listSKUs({ limit: 100 })
         setSkus(
-          loaded.map((sku) => ({
-            value: sku.id,
-            label: `${sku.family} ${sku.model_name} (${sku.year}) - ${sku.storage_gb}/${sku.ram_gb} ${sku.color}`,
-            sku,
-          }))
+          loaded.map((sku) => {
+            const memory = memoryFigures(sku)
+            return {
+              value: sku.id,
+              label: `${sku.family} ${sku.model_name} (${sku.year})${memory ? ` - ${memory}` : ''} ${sku.color}`,
+              sku,
+            }
+          })
         )
       } catch {
         // The catalogue is a convenience. The serial lookup is the real
@@ -107,9 +111,10 @@ export function NewIntakePage() {
     try {
       const result = await lookupSKUBySerial(value)
       if (asked !== lookupCounter.current) return
+      const memory = memoryFigures(result.sku)
       setSelectedSKU({
         value: result.sku.id,
-        label: `${result.sku.family} ${result.sku.model_name} (${result.sku.year}) - ${result.sku.storage_gb}/${result.sku.ram_gb} ${result.sku.color}`,
+        label: `${result.sku.family} ${result.sku.model_name} (${result.sku.year})${memory ? ` - ${memory}` : ''} ${result.sku.color}`,
         sku: result.sku,
       })
     } catch (error: unknown) {
@@ -266,9 +271,9 @@ export function NewIntakePage() {
                             {option.sku.family} {option.sku.model_name}
                           </span>
                           <span className="block text-xs text-muted-foreground">
-                            {option.sku.year} &middot; {option.sku.storage_gb}/{
-                              option.sku.ram_gb
-                            } &middot; {option.sku.color} &middot; {option.sku.region}
+                            {[option.sku.year, memoryFigures(option.sku), option.sku.color, option.sku.region]
+                              .filter(Boolean)
+                              .join(' · ')}
                           </span>
                         </button>
                       ))}

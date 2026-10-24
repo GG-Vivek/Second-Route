@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/utils/cn'
+import { storageFigure } from '@/utils/specs'
 import {
   Badge,
   Button,
@@ -138,7 +139,9 @@ export function UnitDetailPage() {
             </div>
             <p className="mt-1 font-mono text-sm text-muted-foreground">
               {unit.serial ?? unit.id}
-              {unit.sku ? ` - ${unit.sku.year}, ${unit.sku.storage_gb}GB` : ''}
+              {unit.sku
+                ? ` - ${[unit.sku.year, storageFigure(unit.sku)].filter(Boolean).join(', ')}`
+                : ''}
             </p>
           </div>
         </div>

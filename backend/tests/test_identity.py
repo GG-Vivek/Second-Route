@@ -5,6 +5,7 @@ Tests for the SKU catalog and serial prefix lookup (Phase 1 - F1.1, F1.2).
 import pytest
 from datetime import date
 from httpx import AsyncClient
+from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -366,14 +367,183 @@ class TestSeedData:
         csv_path = Path(__file__).parent.parent.parent / "data" / "seeds" / "skus.csv"
 
         # First load
-        created1, skipped1 = await load_skus_from_csv(csv_path, db_session)
-        assert created1 > 0
-        assert skipped1 == 0
+        first = await load_skus_from_csv(csv_path, db_session)
+        assert first.created > 0
+        assert first.skipped == 0
 
         # Second load
-        created2, skipped2 = await load_skus_from_csv(csv_path, db_session)
-        assert created2 == 0
-        assert skipped2 == created1  # All skipped on second run
+        second = await load_skus_from_csv(csv_path, db_session)
+        assert second.created == 0
+        assert second.updated == 0  # Nothing to bring forward
+        assert second.skipped == first.created  # All skipped on second run
+
+    @pytest.mark.asyncio
+    async def test_a_row_the_catalogue_changed_is_refreshed(
+        self, db_session: AsyncSession, tmp_path: Path
+    ) -> None:
+        """A row that already exists is brought back to what the CSV says.
+
+        The catalogue is the CSV. A loader that only ever inserts leaves the
+        database saying something the catalogue no longer says -- the row
+        keeps the summary, and the category, it was born with.
+        """
+        from scripts.load_skus import load_skus_from_csv
+
+        csv_path = tmp_path / "skus.csv"
+        csv_path.write_text(
+            "family,model_name,year,storage_gb,ram_gb,color,region,specs_json,source,as_of\n"
+            'TestTV,55-inch,2024,,,Black,US,"{""summary"": ""first thought""}",'
+            "manufacturer_specs,2024-01-15\n",
+            encoding="utf-8",
+        )
+        first = await load_skus_from_csv(csv_path, db_session)
+        assert first.created == 1
+
+        csv_path.write_text(
+            "family,model_name,year,storage_gb,ram_gb,color,region,specs_json,source,as_of\n"
+            'TestTV,55-inch,2024,,,Black,US,"{""summary"": ""second thought"",'
+            ' ""category"": ""tv""}",manufacturer_specs,2025-06-01\n',
+            encoding="utf-8",
+        )
+        second = await load_skus_from_csv(csv_path, db_session)
+
+        assert second.created == 0
+        assert second.updated == 1
+        assert second.skipped == 0
+
+        result = await db_session.execute(select(SKU))
+        sku = result.scalars().one()
+        assert sku.specs_json["category"] == "tv"
+        assert sku.specs_json["summary"] == "second thought"
+        assert sku.source == "manufacturer_specs"
+        assert sku.as_of == date(2025, 6, 1)
+
+    @pytest.mark.asyncio
+    async def test_a_row_the_catalogue_dropped_goes_away(
+        self, db_session: AsyncSession, tmp_path: Path
+    ) -> None:
+        """A row nothing needs any more is removed with the catalogue's edit.
+
+        Deleting a row from the CSV is how the catalogue says "this stopped
+        being sold". Keeping it would show the shop a product the catalogue
+        has retired.
+        """
+        from scripts.load_skus import load_skus_from_csv
+
+        csv_path = tmp_path / "skus.csv"
+        header = "family,model_name,year,storage_gb,ram_gb,color,region,specs_json,source,as_of\n"
+        row = '{family},{model},2024,,,Black,US,"{{""summary"": ""a device""}}",manufacturer_specs,2024-01-15\n'
+
+        csv_path.write_text(header + row.format(family="Retired", model="Model"), encoding="utf-8")
+        await load_skus_from_csv(csv_path, db_session)
+
+        csv_path.write_text(header + row.format(family="Current", model="Model"), encoding="utf-8")
+        second = await load_skus_from_csv(csv_path, db_session)
+
+        assert second.created == 1
+        assert second.removed == 1
+
+        result = await db_session.execute(select(SKU))
+        assert {sku.family for sku in result.scalars().all()} == {"Current"}
+
+    @pytest.mark.asyncio
+    async def test_a_dropped_row_with_units_behind_it_is_kept(
+        self, db_session: AsyncSession, tmp_path: Path
+    ) -> None:
+        """A retired row that still has a unit against it is not removed.
+
+        The unit's unit is a record of what came back. Removing its product
+        out from under it would leave an inspection of nothing.
+        """
+        from datetime import UTC, datetime
+
+        from scripts.load_skus import load_skus_from_csv
+        from secondroute.intake.models import OrderChannel, ReturnReasonCode, Unit
+
+        csv_path = tmp_path / "skus.csv"
+        header = "family,model_name,year,storage_gb,ram_gb,color,region,specs_json,source,as_of\n"
+        csv_path.write_text(
+            header + 'Retired,Model,2024,,,Black,US,"{""summary"": ""a device""}",'
+            "manufacturer_specs,2024-01-15\n",
+            encoding="utf-8",
+        )
+        await load_skus_from_csv(csv_path, db_session)
+
+        result = await db_session.execute(select(SKU))
+        sku = result.scalars().one()
+        db_session.add(
+            Unit(
+                sku_id=sku.id,
+                serial="KEEPME",
+                received_at=datetime.now(UTC),
+                return_reason_code=ReturnReasonCode.BUYER_REMORSE,
+                order_channel=OrderChannel.ONLINE,
+            )
+        )
+        await db_session.commit()
+
+        csv_path.write_text(
+            header + 'Current,Model,2024,,,Black,US,"{""summary"": ""a device""}",'
+            "manufacturer_specs,2024-01-15\n",
+            encoding="utf-8",
+        )
+        second = await load_skus_from_csv(csv_path, db_session)
+
+        assert second.created == 1
+        assert second.removed == 0
+        assert second.retained == 1
+
+        result = await db_session.execute(select(SKU))
+        families = {row.family for row in result.scalars().all()}
+        assert families == {"Retired", "Current"}
+
+    @pytest.mark.asyncio
+    async def test_a_delete_of_a_product_in_use_is_refused_by_the_database(
+        self, db_session: AsyncSession, tmp_path: Path
+    ) -> None:
+        """The delete asks the database, and takes no for an answer.
+
+        In production the tenant policies hide other organisations' rows
+        from the reference check, so the delete is what really decides. Its
+        refusal has to land as "retained" rather than as a broken
+        transaction: the rest of the load still has to run.
+        """
+        from sqlalchemy import text
+
+        from scripts.load_skus import _remove_retired, load_skus_from_csv
+        from secondroute.intake.models import OrderChannel, ReturnReasonCode, Unit
+
+        csv_path = tmp_path / "skus.csv"
+        csv_path.write_text(
+            "family,model_name,year,storage_gb,ram_gb,color,region,specs_json,source,as_of\n"
+            'Retired,Model,2024,,,Black,US,"{""summary"": ""a device""}",'
+            "manufacturer_specs,2024-01-15\n",
+            encoding="utf-8",
+        )
+        await load_skus_from_csv(csv_path, db_session)
+
+        result = await db_session.execute(select(SKU))
+        sku = result.scalars().one()
+        db_session.add(
+            Unit(
+                sku_id=sku.id,
+                serial="KEEPME",
+                return_reason_code=ReturnReasonCode.BUYER_REMORSE,
+                order_channel=OrderChannel.ONLINE,
+            )
+        )
+        await db_session.commit()
+
+        # SQLite does not enforce foreign keys until asked. The
+        # enforcement is what makes this test the same test the database
+        # runs in production.
+        await db_session.execute(text("PRAGMA foreign_keys=ON"))
+
+        assert await _remove_retired(db_session, sku) is False
+
+        # The savepoint caught it, so the transaction is still usable.
+        result = await db_session.execute(select(SKU))
+        assert [row.family for row in result.scalars().all()] == ["Retired"]
 
     @pytest.mark.asyncio
     async def test_all_seed_rows_have_source_and_as_of(self, db_session: AsyncSession) -> None:
