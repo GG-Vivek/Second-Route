@@ -92,7 +92,10 @@ brew services start postgresql@16   # once
 make dev                             # every time
 ```
 
-The application is then on <http://localhost:5173>.
+The application is then on <http://localhost:5173>, its landing page on
+<http://localhost:5173/welcome> and the sign-up on
+<http://localhost:5173/signup>. The shop window is on
+<http://localhost:5174>.
 
 ### By hand, with Docker
 

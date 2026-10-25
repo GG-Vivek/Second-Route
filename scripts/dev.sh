@@ -216,6 +216,8 @@ wait_for "$SHOP_URL" "the shop window" "$SHOP_LOG" || exit 1
 
 printf '\n%s%s is running%s\n' "$GREEN" "SecondRoute" "$RESET"
 printf '    the application   %s\n' "$WEB_URL"
+printf '    the landing page  %s/welcome\n' "$WEB_URL"
+printf '    an account        %s/signup  (sign in: %s/signin)\n' "$WEB_URL" "$WEB_URL"
 printf '    the shop window   %s\n' "$SHOP_URL"
 printf '    the API           %s/api/v1\n' "$API_URL"
 printf '    the health check  %s/health\n' "$API_URL"
