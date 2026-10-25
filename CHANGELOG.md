@@ -54,6 +54,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   them: the pair list names tokens, the stylesheet is parsed for their values,
   and a colour that changes is measured again on the next run.
 - The visual baselines of both applications were regenerated, in both themes.
+- The backdrop belongs to the frame rather than to one page. The console's
+  shell and the shop window sit on the animated mesh gradient in both themes,
+  with the CSS fallback where WebGL is missing, and the window's device page no
+  longer drops out of the room the window is in.
+- The channel landscape is drawn in the hues its channels carry. `seriesHue` in
+  `src/theme/meaning.ts` gives the recommendation the brand hue and walks the
+  two measured hues through the alternatives, and the flat drawing, the
+  three-dimensional scene and the readout dots all ask that one rule, in both
+  themes — an alternative is a measurement and never wears a caution hue.
+- The three-dimensional view has a floor, and a camera that frames it. The
+  camera's up is the scene's up (z), which is what OrbitControls measures its
+  polar angle from: with the default y it clamped every pose to a view from
+  straight overhead, so the landscape was a plate seen from above and the
+  framing `FrameCamera` works out was overwritten on the next frame.
 
 ### Added (demonstration data)
 - `python scripts/seed_demo_data.py --reset-only` clears the demonstration data

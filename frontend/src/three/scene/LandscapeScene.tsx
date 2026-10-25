@@ -12,9 +12,10 @@ export interface LandscapeSceneProps {
   axisMin: number
   axisMax: number
   recommendedChannel: string
-  recommendedColor: string
-  otherColor: string
+  /** The hue each series carries, by its position (F11.8). */
+  colorFor: (channel: string, index: number) => string
   gridColor: string
+  floorColor: string
   labelColor: string
 }
 
@@ -38,9 +39,9 @@ export function LandscapeScene({
   axisMin,
   axisMax,
   recommendedChannel,
-  recommendedColor,
-  otherColor,
+  colorFor,
   gridColor,
+  floorColor,
   labelColor,
 }: LandscapeSceneProps) {
   // The depth follows the number of channels, so that the ridges are
@@ -57,22 +58,12 @@ export function LandscapeScene({
         channels,
         axisMin,
         axisMax,
-        recommendedChannel,
         width: WIDTH,
         depth,
         height: HEIGHT,
-        recommendedColor,
-        otherColor,
+        colorFor,
       }),
-    [
-      channels,
-      axisMin,
-      axisMax,
-      recommendedChannel,
-      depth,
-      recommendedColor,
-      otherColor,
-    ]
+    [channels, axisMin, axisMax, depth, colorFor]
   )
 
   const gridLines = useMemo(() => {
@@ -94,6 +85,22 @@ export function LandscapeScene({
       <FrameCamera geometries={geometries} target={target} />
 
       <LandscapeSurface geometries={geometries} channels={channels} />
+
+      {/* The floor itself, so the ridges stand on a ground rather than on
+          the void. It is unlit and slightly translucent: a plate of the
+          page's own muted surface, not a lit object with an opinion. It
+          paints before the ridges rather than by distance, because a
+          translucent plane that is wider than it is deep otherwise sorts
+          in front of the ridge whose foot it should be behind. */}
+      <mesh position={[0, 0, -0.004]} renderOrder={-1}>
+        <planeGeometry args={[WIDTH, depth + 0.6]} />
+        <meshBasicMaterial
+          color={floorColor}
+          transparent
+          opacity={0.6}
+          depthWrite={false}
+        />
+      </mesh>
 
       {/* The floor, with a grid that fades into the distance. */}
       <lineSegments position={[0, 0, -0.001]}>

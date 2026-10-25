@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTheme } from '@/theme'
+import type { Hue } from '@/theme/meaning'
 
 /** Read a colour token out of the document. */
 function readColor(token: string): string {
@@ -42,24 +43,42 @@ export function useThemeColor(token: string): string {
 
 /** The colours the landscape is drawn with. */
 export interface LandscapeColors {
-  /** The recommended channel. */
-  recommended: string
-  /** The other channels. */
-  other: string
+  /**
+   * Every accent, resolved to a colour (F11.8).
+   *
+   * The flat drawing asks the stylesheet for `--lime`, `--teal` and
+   * `--cyan`; this scene cannot, so it reads the same tokens out of the
+   * document and answers the same question the same way. All seven are
+   * read because the hue rule is allowed to name all seven.
+   */
+  series: Record<Hue, string>
   /** The grid on the floor. */
   grid: string
+  /** The floor itself. */
+  floor: string
   /** The text of the labels. */
   label: string
 }
 
 export function useLandscapeColors(): LandscapeColors {
-  const recommended = useThemeColor('--primary')
-  const other = useThemeColor('--muted-foreground')
+  const lime = useThemeColor('--lime')
+  const teal = useThemeColor('--teal')
+  const cyan = useThemeColor('--cyan')
+  const purple = useThemeColor('--purple')
+  const orange = useThemeColor('--orange')
+  const yellow = useThemeColor('--yellow')
+  const red = useThemeColor('--red')
   const grid = useThemeColor('--border')
+  const floor = useThemeColor('--muted')
   const label = useThemeColor('--foreground')
 
   return useMemo(
-    () => ({ recommended, other, grid, label }),
-    [recommended, other, grid, label]
+    () => ({
+      series: { lime, teal, cyan, purple, orange, yellow, red },
+      grid,
+      floor,
+      label,
+    }),
+    [lime, teal, cyan, purple, orange, yellow, red, grid, floor, label]
   )
 }

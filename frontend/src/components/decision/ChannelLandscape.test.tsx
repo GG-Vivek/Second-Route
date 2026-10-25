@@ -126,6 +126,59 @@ describe('the flat landscape', () => {
   })
 })
 
+/**
+ * What each curve is drawn in (F11.8, ADR-008).
+ *
+ * The landscape used to draw the recommendation in the brand hue and
+ * everything else in the muted foreground, which is grey: three curves, two
+ * colours, and no way to follow one channel from its shape to its label to
+ * the readout at the bottom. Each channel now carries a hue of its own,
+ * taken from the meaning table — the recommendation is the thing that was
+ * chosen, and the alternatives are the two measured hues alternating, so no
+ * two channels are ever drawn in the same colour and no alternative is
+ * drawn in the brand hue.
+ */
+describe('the hue of each curve', () => {
+  it('draws the recommendation in the brand hue and the alternatives in the measured hues', () => {
+    render(
+      <ChannelLandscape2D
+        distribution={DISTRIBUTION}
+        recommendedChannel="RESELL_OPEN_BOX"
+      />,
+    )
+
+    expect(screen.getByTestId('landscape-curve-RESELL_OPEN_BOX')).toHaveAttribute(
+      'fill',
+      'rgb(var(--lime))'
+    )
+    expect(screen.getByTestId('landscape-curve-RESELL_REFURB')).toHaveAttribute(
+      'fill',
+      'rgb(var(--teal))'
+    )
+    expect(screen.getByTestId('landscape-curve-RECYCLE')).toHaveAttribute(
+      'fill',
+      'rgb(var(--cyan))'
+    )
+  })
+
+  it('names each channel in the hue its curve is drawn in', () => {
+    render(
+      <ChannelLandscape2D
+        distribution={DISTRIBUTION}
+        recommendedChannel="RESELL_OPEN_BOX"
+      />,
+    )
+
+    const svg = screen.getByTestId('channel-landscape-2d')
+    const labels = Array.from(svg.querySelectorAll('text'))
+    const labelFor = (text: string) => labels.find((node) => node.textContent === text)
+
+    expect(labelFor('Open-box')).toHaveAttribute('fill', 'rgb(var(--lime))')
+    expect(labelFor('Refurbish')).toHaveAttribute('fill', 'rgb(var(--teal))')
+    expect(labelFor('Recycle')).toHaveAttribute('fill', 'rgb(var(--cyan))')
+  })
+})
+
 describe('the landscape switch', () => {
   it('draws flat when the browser has no WebGL', () => {
     render(
@@ -188,8 +241,8 @@ describe('the surface geometry', () => {
     width: 10,
     depth: 6,
     height: 2,
-    recommendedColor: 'rgb(200, 242, 64)',
-    otherColor: 'rgb(198, 200, 184)',
+    colorFor: (channel: string) =>
+      channel === 'RESELL_OPEN_BOX' ? 'rgb(200, 242, 64)' : 'rgb(0, 128, 128)',
   }
 
   it('builds one ridge per channel', () => {
@@ -235,15 +288,26 @@ describe('the surface geometry', () => {
     expect(first.getY(0)).toBeLessThan(second.getY(0))
   })
 
-  it('colours the recommended channel differently', () => {
+  it('gives every ridge the colour its own channel asks for', () => {
     const geometries = buildSurfaceGeometries(input)
-    const color = geometries[0].getAttribute('color')
-    const other = geometries[1].getAttribute('color')
-    expect([color.getX(0), color.getY(0), color.getZ(0)]).not.toEqual([
-      other.getX(0),
-      other.getY(0),
-      other.getZ(0),
+    const recommended = geometries[0].getAttribute('color')
+    const alternative = geometries[1].getAttribute('color')
+
+    expect([recommended.getX(0), recommended.getY(0), recommended.getZ(0)]).not.toEqual([
+      alternative.getX(0),
+      alternative.getY(0),
+      alternative.getZ(0),
     ])
+
+    // The alternative is the colour that was asked for, up to the shading
+    // at the foot of a ridge, which multiplies every channel by the same
+    // factor: green equal to blue, and red absent — a relation no shade
+    // can undo.
+    expect(alternative.getX(0)).toBeCloseTo(0, 6)
+    expect(alternative.getY(0)).toBeCloseTo(alternative.getZ(0), 6)
+
+    // And the recommendation is not grey.
+    expect(recommended.getX(0)).toBeGreaterThan(0)
   })
 
   it('always gives the same geometry', () => {

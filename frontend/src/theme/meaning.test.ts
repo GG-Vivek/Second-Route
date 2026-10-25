@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import source from './meaning.ts?raw'
-import { MEANING, fillFor, textFor, type Meaning } from './meaning'
+import { MEANING, fillFor, seriesHue, textFor, type Meaning } from './meaning'
 
 /**
  * What a hue means (ADR-008).
@@ -46,5 +46,49 @@ describe('what the hues mean', () => {
   it('does not give two meanings the same hue', () => {
     const hues = Object.values(MEANING)
     expect(new Set(hues).size).toBe(hues.length)
+  })
+})
+
+/**
+ * The hue of a series (F11.8).
+ *
+ * Several channels are drawn on one landscape and a reader has to be able
+ * to follow one of them from the curve to the label to the readout. The
+ * hues come from the same table as everything else, in the order the
+ * meanings were decided: the recommendation is the thing that was chosen
+ * and carries the brand hue, and the alternatives walk the two measured
+ * hues so that two of them are never drawn in the same colour.
+ *
+ * This is not the categorical ramp of thirteen hues that a chart library
+ * would hand out. An alternative channel is a measurement the engine made,
+ * and drawing it in the caution or the synthetic hue would say something
+ * false about it in order to make it distinguishable.
+ */
+describe('the hue of a series', () => {
+  it('gives the recommendation the brand hue, wherever it sits', () => {
+    expect(seriesHue(0, true)).toBe(MEANING.recovered)
+    expect(seriesHue(3, true)).toBe(MEANING.recovered)
+  })
+
+  it('alternates the two measured hues along the alternatives', () => {
+    expect(seriesHue(1, false)).toBe(MEANING.measured)
+    expect(seriesHue(2, false)).toBe(MEANING.alsoMeasured)
+    expect(seriesHue(3, false)).toBe(MEANING.measured)
+    expect(seriesHue(4, false)).toBe(MEANING.alsoMeasured)
+  })
+
+  it('never paints an alternative in the brand hue', () => {
+    for (let index = 0; index < 8; index++) {
+      expect(seriesHue(index, false)).not.toBe(MEANING.recovered)
+    }
+  })
+
+  it('only ever answers with a hue the tokens define', () => {
+    const hues = Object.values(MEANING) as string[]
+    for (let index = 0; index < 8; index++) {
+      for (const recommended of [true, false]) {
+        expect(hues).toContain(seriesHue(index, recommended))
+      }
+    }
   })
 })

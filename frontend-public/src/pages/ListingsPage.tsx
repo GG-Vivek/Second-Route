@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search, X } from 'lucide-react'
-import { useTheme } from '@design-system/theme'
 import { Badge, Callout, EmptyState, Skeleton } from '@design-system/components/ui'
-import { ShaderBackdrop, GlassPanel, LiquidGlassFilter } from '@design-system/components/visual'
+import { GlassPanel, LiquidGlassFilter } from '@design-system/components/visual'
 
 import { ListingCard } from '@/components/ListingCard'
 import { categoryIcon } from '@/components/categoryIcons'
@@ -35,7 +34,6 @@ function useSettled<T>(value: T, delay: number): T {
  * for every letter.
  */
 export function ListingsPage() {
-  const { resolvedTheme } = useTheme()
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<string | undefined>(undefined)
   const [shown, setShown] = useState(PAGE_SIZE)
@@ -58,9 +56,9 @@ export function ListingsPage() {
 
   return (
     <div>
-      {/* The pitch, over the gradient. */}
+      {/* The pitch. The gradient behind it belongs to the frame now, so
+          this section only has to keep its own content above it. */}
       <section className="relative isolate overflow-hidden">
-        <ShaderBackdrop palette={resolvedTheme === 'dark' ? 'dark' : 'light'} className="-z-10" />
         <LiquidGlassFilter />
         <div className="mx-auto max-w-6xl px-6 pb-10 pt-14 sm:pt-20">
           <h1 className="max-w-2xl text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">

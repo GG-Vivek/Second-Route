@@ -302,6 +302,7 @@ green on a laptop, and CI provides one.
 | F11.5 The backdrop | Done | human-ui-ux-designer | (reference build) | 2026-10-24T00:00:00Z | 2026-10-25T00:00:00Z | (this commit) | `components/visual/ShaderBackdrop.tsx` |
 | F11.6 The glass surfaces | Done | human-ui-ux-designer | (reference build) | 2026-10-24T00:00:00Z | 2026-10-25T00:00:00Z | (this commit) | `components/visual/LiquidGlass.tsx` and the `glass-panel` / `glass-card` layers |
 | F11.7 The colour, and what it carries | Done | ai-mimo-ses_e90b81ea6ffe | main | 2026-10-24T23:11:44Z | 2026-10-25T00:00:00Z | (this commit) | Light is the default; the dark theme is a teal ink rather than a near-black; `src/theme/meaning.ts` says what each hue means; the contrast suite measures `index.css` instead of a copy of it; ADR-008 |
+| F11.8 The backdrop and the glass, everywhere | Done | ai-mimo-ses_e90b81ea6ffe | main | 2026-10-24T23:11:44Z | 2026-10-25T06:45:00Z | (this commit) | The console's shell and the shop window both sit on the backdrop in both themes; the landscape is drawn one hue per channel through `seriesHue`, flat and three-dimensional alike; the three-dimensional view has a floor and a camera whose up is the scene's up |
 
 **Notes on Phase 11**
 
@@ -317,12 +318,13 @@ green on a laptop, and CI provides one.
 - **The application opened in the dark, and the dark was black.** `--background` was `#141311`, a warm near-black, so the first impression of the product was a screen switched off. It opens in light now, the dark theme is re-based on a deep teal ink with a ramp above it, and `tokens.test.ts` fails if any surface in either theme has no hue in it or resolves to black. The two defaults — the inline script in `index.html` and `ThemeProvider` — are read by `theme-default.test.ts` and have to agree, or the first paint flashes the wrong theme.
 - **The contrast suite was measuring a copy of itself.** `contrast.test.ts` carried a pasted snapshot of every colour, so a token could be edited in `index.css` and the suite would keep passing against numbers that no longer appeared anywhere on the page. It parses the stylesheet and resolves the pairs by token name now, which is what F9.1 always claimed it did: forty-eight pairs, both themes.
 - **Colour meant one hue.** Seven accents and five callout roles existed in both themes and were almost never drawn — every chart, bar and badge was lime, so a reader could not tell two series apart by looking. `src/theme/meaning.ts` is the one place that says what each hue is for, and the analytics panels and the source conditions read from it: regret is a cost in the caution hue, the baseline is a measurement in teal, and a stale source is no longer wearing the yellow that means synthetic data. ADR-008 records the rule and the two things deliberately left outside it.
+- **A backdrop behind a frame has to be behind it in two senses at once.** It paints above the root's own background and below the content, which is what `relative isolate` on the root and a negative z index on the backdrop's first child gives; a positive index puts it over the content, and no index at all puts it under an opaque background. The console's shell and the shop window both use that shape, and the shop window's device page no longer owns a second copy of the gradient.
+- **The three-dimensional landscape had a camera whose up was not the scene's.** The scene stands its ridges up the z axis, but OrbitControls measures its polar angle from `camera.up`, which defaults to y: every pose was clamped to a view from directly overhead, so the landscape rendered as a plate seen from above with two curves painted on it, and the framing `FrameCamera` works out was discarded on the next frame. The camera says `up: [0, 0, 1]` now, and the ridges stand up as they are drawn.
 
 ---
 
 ## In Progress
 
-- F11.8 The backdrop and the glass, everywhere — Agent: ai-mimo-ses_e90b81ea6ffe — Started: 2026-10-24T23:11:44Z — Branch: main
 - F11.9 The motion — Agent: ai-mimo-ses_e90b81ea6ffe — Started: 2026-10-24T23:11:44Z — Branch: main
 - F8.0 Design decision and dependency licences — Agent: ai-minimax-m3.1-flash-ses_ea3fe5877ffewBwwUBDer1x75Z — Started: 2026-10-21T00:00:00Z — Branch: feat/F8.0-design-decision-and-licences
 - Phase 4/6/7 consolidation — Agent: ai-minimax-m3.1-flash-ses_ea89089b — Started: 2026-10-20T45:45:00Z — Branch: feat/phase5-integration

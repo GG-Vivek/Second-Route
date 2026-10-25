@@ -1,5 +1,6 @@
 import { useMemo, useState, type PointerEvent } from 'react'
 import { cn } from '@/utils/cn'
+import { seriesHue } from '@/theme/meaning'
 import { channelShortLabel, formatMoney } from '@/types/decision'
 import { decisionChannels, focusAxis } from '@/types/distribution'
 import type { ChannelDistribution, DecisionDistribution } from '@/types/distribution'
@@ -27,6 +28,7 @@ interface PlacedLabel {
   channel: string
   x: number
   y: number
+  index: number
   isRecommended: boolean
 }
 
@@ -71,6 +73,14 @@ export function ChannelLandscape2D({
   const plotHeight = HEIGHT - PAD_TOP - PAD_BOTTOM
 
   const toX = (value: number) => PAD_LEFT + ((value - axis.min) / span) * plotWidth
+
+  /**
+   * The colour a channel is drawn in, written the way the stylesheet
+   * writes its tokens, so that a curve, its name, its marker and its dot
+   * in the readout are all the same colour in either theme (F11.8).
+   */
+  const colourFor = (index: number, isRecommended: boolean) =>
+    `rgb(var(--${seriesHue(index, isRecommended)}))`
 
   /** The peak of each channel, which is what its own curve is scaled to. */
   const peakOf = useMemo(() => {
@@ -118,13 +128,14 @@ export function ChannelLandscape2D({
     const plotWidthLocal = WIDTH - PAD_LEFT - PAD_RIGHT
     const plotHeightLocal = HEIGHT - PAD_TOP - PAD_BOTTOM
 
-    const candidates = eligible.map((channel) => {
+    const candidates = eligible.map((channel, index) => {
       const peak = peakOf.get(channel.channel) ?? 1
       const top = channel.bins.reduce((best, bin) =>
         bin.density > best.density ? bin : best
       )
       return {
         channel: channel.channel,
+        index,
         x: PAD_LEFT + ((top.x - axisMin) / axisSpan) * plotWidthLocal,
         y:
           PAD_TOP +
@@ -206,15 +217,16 @@ export function ChannelLandscape2D({
         })}
 
         {/* The densities. */}
-        {eligible.map((channel) => {
+        {eligible.map((channel, index) => {
           const isRecommended = channel.channel === recommendedChannel
+          const colour = colourFor(index, isRecommended)
           return (
             <path
               key={channel.channel}
               d={pathFor(channel)}
-              fill={isRecommended ? 'rgb(var(--primary))' : 'rgb(var(--muted-foreground))'}
+              fill={colour}
               fillOpacity={isRecommended ? 0.42 : 0.16}
-              stroke={isRecommended ? 'rgb(var(--primary))' : 'rgb(var(--muted-foreground))'}
+              stroke={colour}
               strokeOpacity={isRecommended ? 1 : 0.5}
               strokeWidth={isRecommended ? 1.6 : 1}
               data-testid={`landscape-curve-${channel.channel}`}
@@ -231,7 +243,7 @@ export function ChannelLandscape2D({
             textAnchor="middle"
             fontSize="12"
             fontWeight={label.isRecommended ? 600 : 400}
-            fill={label.isRecommended ? 'rgb(var(--primary))' : 'rgb(var(--muted-foreground))'}
+            fill={colourFor(label.index, label.isRecommended)}
             fillOpacity={label.isRecommended ? 1 : 0.85}
           >
             {channelShortLabel(label.channel)}
@@ -250,7 +262,7 @@ export function ChannelLandscape2D({
               strokeOpacity="0.35"
               strokeWidth="1"
             />
-            {eligible.map((channel) => {
+            {eligible.map((channel, index) => {
               const bin = binAt(channel, hoverX)
               const peak = peakOf.get(channel.channel) ?? 1
               return (
@@ -259,11 +271,7 @@ export function ChannelLandscape2D({
                   cx={toX(bin.x)}
                   cy={toY(bin.density, peak)}
                   r="3"
-                  fill={
-                    channel.channel === recommendedChannel
-                      ? 'rgb(var(--primary))'
-                      : 'rgb(var(--muted-foreground))'
-                  }
+                  fill={colourFor(index, channel.channel === recommendedChannel)}
                 />
               )
             })}
@@ -334,17 +342,14 @@ export function ChannelLandscape2D({
         ) : (
           <ul className="flex flex-wrap gap-x-6 gap-y-1">
             <li className="font-mono text-foreground">{formatMoney(hoverX)}</li>
-            {eligible.map((channel) => {
+            {eligible.map((channel, index) => {
               const bin = binAt(channel, hoverX)
               return (
                 <li key={channel.channel} className="flex items-center gap-1.5">
                   <span
                     className="size-2 rounded-full"
                     style={{
-                      background:
-                        channel.channel === recommendedChannel
-                          ? 'rgb(var(--primary))'
-                          : 'rgb(var(--muted-foreground))',
+                      background: colourFor(index, channel.channel === recommendedChannel),
                     }}
                     aria-hidden="true"
                   />

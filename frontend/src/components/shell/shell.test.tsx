@@ -31,6 +31,33 @@ const COMMANDS: Command[] = [
   { id: 'do-thing', label: 'Do the thing', hint: 'Something specific', action: () => undefined },
 ]
 
+/**
+ * The backdrop, and where it is allowed to be (F11.8).
+ *
+ * Until now the mesh gradient was an account-page speciality: it appeared
+ * on sign-in and sign-up and nowhere else, so a reader who had signed in
+ * arrived in a different room from the one they had knocked at. The frame
+ * sits on the same gradient as the auth pages do, and it sits behind them:
+ * the shell is the positioned parent, and the gradient fills it without
+ * taking part in the layout or in the reading order.
+ */
+describe('the frame of the application', () => {
+  it('sits on the animated backdrop, behind the content', () => {
+    render(
+      <Wrapper>
+        <AppShell>
+          <div>The page</div>
+        </AppShell>
+      </Wrapper>,
+    )
+
+    const backdrop = document.querySelector('[data-testid^="shader-"]')
+    expect(backdrop).not.toBeNull()
+    expect(backdrop).toHaveAttribute('aria-hidden', 'true')
+    expect(backdrop).toHaveClass('absolute', 'inset-0', '-z-10')
+  })
+})
+
 describe('Sidebar', () => {
   it('lists every destination', () => {
     render(

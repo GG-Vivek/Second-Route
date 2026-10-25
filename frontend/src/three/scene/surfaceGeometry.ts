@@ -8,18 +8,20 @@ export interface SurfaceGeometryInput {
   axisMin: number
   /** The right end of the shared axis. */
   axisMax: number
-  /** The channel the engine recommended. */
-  recommendedChannel: string
   /** How wide the landscape is, in world units. */
   width: number
   /** How deep it is, from the first channel to the last. */
   depth: number
   /** How tall the tallest ridge is. */
   height: number
-  /** The colour of the recommended channel. */
-  recommendedColor: string
-  /** The colour of the other channels. */
-  otherColor: string
+  /**
+   * The colour a ridge is drawn in, for its channel and its position.
+   *
+   * The scene asks rather than being told two colours, so that a ridge
+   * takes the hue its own channel carries in the flat drawing: the two
+   * views are the same data and are drawn in the same colours (F11.8).
+   */
+  colorFor: (channel: string, index: number) => string
 }
 
 /** How dark the foot of a ridge is, relative to its colour. */
@@ -47,12 +49,10 @@ export function buildSurfaceGeometries({
   channels,
   axisMin,
   axisMax,
-  recommendedChannel,
   width,
   depth,
   height,
-  recommendedColor,
-  otherColor,
+  colorFor,
 }: SurfaceGeometryInput): THREE.BufferGeometry[] {
   const span = axisMax - axisMin || 1
   const rowSpacing = channels.length > 1 ? depth / (channels.length - 1) : 0
@@ -72,9 +72,9 @@ export function buildSurfaceGeometries({
     }
     if (peak <= 0) peak = 1
 
-    const colour = new THREE.Color(
-      channel.channel === recommendedChannel ? recommendedColor : otherColor
-    )
+    // The hue of the channel itself, which is the one the flat drawing
+    // gives it. The shade below is applied to it afterwards.
+    const colour = new THREE.Color(colorFor(channel.channel, row))
     const y = (row - (channels.length - 1) / 2) * rowSpacing
 
     // Two vertices per column: the top of the ridge and its foot.

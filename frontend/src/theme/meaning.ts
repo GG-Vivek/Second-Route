@@ -73,3 +73,26 @@ export function textFor<M extends Meaning>(meaning: M): (typeof TEXT)[M] {
 export function fillFor<M extends Meaning>(meaning: M): (typeof FILL)[M] {
   return FILL[meaning]
 }
+
+/**
+ * The hue of one series on a chart, by its position (F11.8).
+ *
+ * Several channels are drawn on one landscape and a reader has to follow
+ * one of them from its curve to its label to the readout. The hues come
+ * from the table above and in its order: the recommendation is the thing
+ * that was chosen and carries the brand hue, and the alternatives walk the
+ * two measured hues, so no two series are drawn in the same colour.
+ *
+ * This is deliberately not the categorical ramp a chart library would
+ * hand out. An alternative channel is a measurement the engine made, and
+ * painting it in the caution or the synthetic hue would say something false
+ * about it in order to make it distinguishable.
+ *
+ * `index` is the position of the series in the list being drawn, not a
+ * count of how many have been coloured, so the same channel keeps the same
+ * hue whether it is drawn with two others or six.
+ */
+export function seriesHue(index: number, recommended: boolean): Hue {
+  if (recommended) return MEANING.recovered
+  return index % 2 === 1 ? MEANING.measured : MEANING.alsoMeasured
+}

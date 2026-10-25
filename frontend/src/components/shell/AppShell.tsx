@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Plus, SunMoon } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { useTheme } from '@/theme'
+import { ShaderBackdrop } from '@/components/visual'
 import { Sheet } from '@/components/ui'
 import { Sidebar } from '@/components/shell/Sidebar'
 import { Topbar } from '@/components/shell/Topbar'
@@ -15,12 +16,19 @@ export interface AppShellProps {
 /**
  * The application shell.
  *
- * A sidebar, a glass header and the page. The command palette is bound to
- * the whole application, so everything is reachable from the keyboard
- * without the pointer.
+ * A sidebar, a glass header and the page, all of it standing on the same
+ * mesh gradient that the sign-in page stands on (F11.8). The gradient is
+ * the first child and is pushed behind the frame with a negative index,
+ * and the frame isolates its own stacking context, so the gradient paints
+ * over the frame's background and under everything the frame draws — the
+ * sidebar is translucent and the header blurs, so the gradient reads
+ * through both of them rather than around them.
+ *
+ * The command palette is bound to the whole application, so everything is
+ * reachable from the keyboard without the pointer.
  */
 export function AppShell({ children }: AppShellProps) {
-  const { preference, setPreference } = useTheme()
+  const { preference, setPreference, resolvedTheme } = useTheme()
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
@@ -79,7 +87,12 @@ export function AppShell({ children }: AppShellProps) {
   }, [])
 
   return (
-    <div className="flex min-h-dvh bg-background">
+    <div className="relative isolate flex min-h-dvh bg-background">
+      <ShaderBackdrop
+        palette={resolvedTheme === 'dark' ? 'dark' : 'light'}
+        className="-z-10"
+      />
+
       <Sidebar className="hidden lg:flex" />
 
       <div className="flex min-w-0 flex-1 flex-col">
