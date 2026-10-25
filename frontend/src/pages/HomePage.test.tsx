@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { HomePage } from './HomePage'
 import { getHealth } from '@/api/health'
 import { getNorthStar } from '@/api/decision'
+import { textFor } from '@/theme/meaning'
 
 vi.mock('@/api/health', () => ({
   getHealth: vi.fn(),
@@ -86,6 +87,23 @@ describe('HomePage', () => {
     await waitFor(() => {
       expect(screen.getByText('Synthetic data')).toBeInTheDocument()
     })
+  })
+
+  /**
+   * The dashboard is the first screen, and it repeats the north star that
+   * the analytics page shows. It has to say the same thing in the same
+   * colours there, or a reader learns teal on one page and finds white on
+   * the other (ADR-008).
+   */
+  it('writes what was recovered in the brand hue and the baseline in the measured hue', async () => {
+    mockGetHealth.mockResolvedValue(HEALTHY)
+    render(<HomePage />, { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('net-recovered')).toHaveClass(textFor('recovered'))
+    })
+    expect(screen.getByTestId('baseline-per-return')).toHaveClass(textFor('measured'))
+    expect(screen.getByTestId('above-baseline')).toHaveClass(textFor('recovered'))
   })
 
   it('prefers the real numbers when there are any', async () => {

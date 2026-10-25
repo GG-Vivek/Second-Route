@@ -18,6 +18,7 @@ import type {
   RegretBucket,
 } from '@/types/decision'
 import { Badge, Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger } from '@/components/ui'
+import { fillFor, MEANING, textFor } from '@/theme/meaning'
 
 /** Which kind of data a panel is showing. */
 export type DataKind = 'synthetic' | 'real'
@@ -32,7 +33,7 @@ export function DataKindBadge({ kind, className }: DataKindBadgeProps) {
   const synthetic = kind === 'synthetic'
   return (
     <Badge
-      variant={synthetic ? 'yellow' : 'lime'}
+      variant={synthetic ? MEANING.synthetic : MEANING.measured}
       className={className}
       data-testid={`data-kind-${kind}`}
     >
@@ -77,13 +78,19 @@ export function NorthStarPanel({
         <dl className="mt-4 grid gap-4 sm:grid-cols-3">
           <div>
             <dt className="text-xs text-muted-foreground">Net recovered per return</dt>
-            <dd className="font-mono text-2xl font-semibold" data-testid="net-recovered">
+            <dd
+              className={cn('font-mono text-2xl font-semibold', textFor('recovered'))}
+              data-testid="net-recovered"
+            >
               {formatMoney(section.net_recovered_per_return)}
             </dd>
           </div>
           <div>
             <dt className="text-xs text-muted-foreground">Baseline per return</dt>
-            <dd className="font-mono text-2xl font-semibold">
+            <dd
+              className={cn('font-mono text-2xl font-semibold', textFor('measured'))}
+              data-testid="baseline-per-return"
+            >
               {formatMoney(section.baseline_per_return)}
             </dd>
           </div>
@@ -92,7 +99,9 @@ export function NorthStarPanel({
             <dd
               className={cn(
                 'font-mono text-2xl font-semibold',
-                section.above_baseline_per_return >= 0 ? 'text-lime' : 'text-destructive'
+                section.above_baseline_per_return >= 0
+                  ? textFor('recovered')
+                  : 'text-destructive'
               )}
               data-testid="above-baseline"
             >
@@ -122,6 +131,10 @@ interface RegretChartProps {
  * The chart shows the mean regret; the list underneath it carries the
  * observed and the estimated counts, which is the difference between a
  * number that was measured and a number that was modelled.
+ *
+ * The bar is drawn in the caution hue: regret is a cost the engine paid, not
+ * a thing it won, and it used to be drawn in the brand hue like everything
+ * else (ADR-008).
  */
 export function RegretChart({ buckets, kind }: RegretChartProps) {
   const largest = useMemo(
@@ -149,7 +162,8 @@ export function RegretChart({ buckets, kind }: RegretChartProps) {
                 </span>
                 <span className="h-3 flex-1 overflow-hidden rounded-full bg-muted">
                   <span
-                    className="block h-full rounded-full bg-primary"
+                    className={cn('block h-full rounded-full', fillFor('caution'))}
+                    data-testid="regret-bar"
                     style={{
                       width: largest > 0 ? `${(bucket.mean_regret / largest) * 100}%` : '0%',
                     }}
@@ -241,7 +255,7 @@ export function CalibrationChart({ bins, kind, ece }: CalibrationChartProps) {
                     stroke="rgb(var(--muted-foreground))"
                     strokeDasharray="4 4"
                   />
-                  <Scatter data={points} fill="rgb(var(--primary))" />
+                  <Scatter data={points} fill={`rgb(var(--${MEANING.measured}))`} />
                 </ScatterChart>
               </ResponsiveContainer>
             </div>
@@ -324,7 +338,8 @@ export function OverrideRatePanel({ section, kind }: OverrideRatePanelProps) {
                 </div>
                 <span className="block h-2 overflow-hidden rounded-full bg-muted">
                   <span
-                    className="block h-full rounded-full bg-primary"
+                    className={cn('block h-full rounded-full', fillFor('measured'))}
+                    data-testid="override-bar"
                     style={{
                       width: largest > 0 ? `${(reason.count / largest) * 100}%` : '0%',
                     }}

@@ -83,13 +83,13 @@ describe('ThemeToggle', () => {
     )
 
     const button = screen.getByTestId('theme-toggle')
-    expect(button).toHaveAttribute('aria-label', 'Switch to light mode')
+    expect(button).toHaveAttribute('aria-label', 'Switch to dark mode')
 
     await userEvent.click(button)
     await waitFor(() => {
       expect(screen.getByTestId('theme-toggle')).toHaveAttribute(
         'aria-label',
-        'Switch to dark mode'
+        'Switch to light mode'
       )
     })
   })

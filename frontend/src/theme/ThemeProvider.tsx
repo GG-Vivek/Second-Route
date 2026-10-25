@@ -1,8 +1,12 @@
 /**
  * The theme provider (F8.1).
  *
- * The application ships dark by default and offers a light mode. The
- * choice is remembered, and the operating system can be followed instead.
+ * The application opens in the light theme (ADR-008) and offers the dark one.
+ * The choice is remembered, and the operating system can be followed instead.
+ *
+ * The default has to agree with the inline script in `index.html`, which runs
+ * before this bundle does; `theme-default.test.ts` reads both and fails if
+ * they drift, which would otherwise show up as a flash on the first paint.
  *
  * The class is put on the document element rather than on a wrapper, so
  * that the tokens apply to the portals the dialogs and the sheets render
@@ -44,7 +48,7 @@ function safeStorage(): Storage | null {
 
 export function ThemeProvider({
   children,
-  defaultPreference = 'dark',
+  defaultPreference = 'light',
   storageKey = THEME_STORAGE_KEY,
 }: ThemeProviderProps) {
   const storage = useMemo(safeStorage, [])

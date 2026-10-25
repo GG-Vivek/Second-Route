@@ -69,6 +69,9 @@ function ThemeProbe() {
       <button type="button" onClick={() => setPreference('light')}>
         set light
       </button>
+      <button type="button" onClick={() => setPreference('dark')}>
+        set dark
+      </button>
       <button type="button" onClick={() => setPreference('system')}>
         set system
       </button>
@@ -89,38 +92,38 @@ describe('ThemeProvider', () => {
     vi.restoreAllMocks()
   })
 
-  it('starts dark when nothing has been chosen', () => {
+  it('starts light when nothing has been chosen', () => {
     render(
       <ThemeProvider>
         <ThemeProbe />
       </ThemeProvider>,
     )
-
-    expect(screen.getByTestId('resolved')).toHaveTextContent('dark')
-    expect(screen.getByTestId('preference')).toHaveTextContent('dark')
-  })
-
-  it('marks the document as dark so the dark tokens apply', () => {
-    render(
-      <ThemeProvider>
-        <ThemeProbe />
-      </ThemeProvider>,
-    )
-
-    expect(document.documentElement).toHaveClass('dark')
-  })
-
-  it('switches to the light tokens when the light theme is chosen', async () => {
-    render(
-      <ThemeProvider>
-        <ThemeProbe />
-      </ThemeProvider>,
-    )
-
-    await userEvent.click(screen.getByRole('button', { name: 'set light' }))
 
     expect(screen.getByTestId('resolved')).toHaveTextContent('light')
+    expect(screen.getByTestId('preference')).toHaveTextContent('light')
+  })
+
+  it('leaves the document in the light tokens when nothing has been chosen', () => {
+    render(
+      <ThemeProvider>
+        <ThemeProbe />
+      </ThemeProvider>,
+    )
+
     expect(document.documentElement).not.toHaveClass('dark')
+  })
+
+  it('switches to the dark tokens when the dark theme is chosen', async () => {
+    render(
+      <ThemeProvider>
+        <ThemeProbe />
+      </ThemeProvider>,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'set dark' }))
+
+    expect(screen.getByTestId('resolved')).toHaveTextContent('dark')
+    expect(document.documentElement).toHaveClass('dark')
   })
 
   it('remembers the choice across a reload', async () => {
@@ -190,10 +193,10 @@ describe('ThemeProvider', () => {
     )
 
     await userEvent.click(screen.getByRole('button', { name: 'toggle' }))
-    expect(screen.getByTestId('resolved')).toHaveTextContent('light')
+    expect(screen.getByTestId('resolved')).toHaveTextContent('dark')
 
     await userEvent.click(screen.getByRole('button', { name: 'toggle' }))
-    expect(screen.getByTestId('resolved')).toHaveTextContent('dark')
+    expect(screen.getByTestId('resolved')).toHaveTextContent('light')
   })
 
   it('survives a browser that refuses to store the preference', async () => {

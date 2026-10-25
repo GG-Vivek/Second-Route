@@ -17,9 +17,11 @@ import { cn } from '@/utils/cn'
 
 /** The two palettes. Each is four colours, from the base up to the highlights. */
 const PALETTES: Record<'dark' | 'light', readonly [number, number, number][]> = {
-  // Warm near-black, lime, teal and a dull ochre, for the dark application.
+  // The dark ink, lime, teal and a dull ochre, for the dark application.
+  // The base is the background token itself, so the gradient and the surface
+  // it sits behind are the same colour (ADR-008).
   dark: [
-    [0.09, 0.085, 0.075],
+    [0.063, 0.11, 0.102],
     [0.42, 0.56, 0.1],
     [0.04, 0.3, 0.3],
     [0.32, 0.24, 0.14],

@@ -15,6 +15,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { cn } from '@/utils/cn'
+import { textFor } from '@/theme/meaning'
 import { getHealth, type DependencyState } from '@/api/health'
 import { getNorthStar } from '@/api/decision'
 import { formatMoney } from '@/types/decision'
@@ -101,7 +102,10 @@ export function HomePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="font-mono text-3xl font-semibold" data-testid="net-recovered">
+                <p
+                  className={cn('font-mono text-3xl font-semibold', textFor('recovered'))}
+                  data-testid="net-recovered"
+                >
                   {formatMoney(headline?.net_recovered_per_return ?? 0)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -117,7 +121,10 @@ export function HomePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="font-mono text-3xl font-semibold">
+                <p
+                  className={cn('font-mono text-3xl font-semibold', textFor('measured'))}
+                  data-testid="baseline-per-return"
+                >
                   {formatMoney(headline?.baseline_per_return ?? 0)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -137,7 +144,7 @@ export function HomePage() {
                   className={cn(
                     'font-mono text-3xl font-semibold',
                     (headline?.above_baseline_per_return ?? 0) >= 0
-                      ? 'text-lime'
+                      ? textFor('recovered')
                       : 'text-destructive'
                   )}
                   data-testid="above-baseline"

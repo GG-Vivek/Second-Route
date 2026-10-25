@@ -609,6 +609,21 @@ The shop window is not the console with the serial number hidden. It is a differ
 ### F11.6 The glass surfaces
 - Frosted panels and cards: translucent and blurred, refracting through a shared SVG filter where a browser can apply one to a backdrop, and plain frosted glass where it cannot.
 
+### F11.7 The colour, and what it carries
+- The application opens in the light theme: warm off-white surfaces, the lime brand, the light half of the palette that already exists. The dark theme remains a choice, re-toned from a near-black that reads as a screen switched off to a deep ink that is visibly of a hue, because the reference gradients never use pure black either.
+- The seven accent tokens and the five callout roles stop being decoration and start carrying meaning — lime is the brand and the recommended thing, teal is the measured thing, and the rest are the status hues — and charts, statuses, category chips and the channel landscape all read by that same rule in both themes.
+- The contrast suite measures the tokens as they are written in `index.css`, not a copy of them, so a colour that is changed and not measured cannot pass.
+- **Accept:** a first run opens light; every pair still measures 4.5 to one for body text and 3 to one for a control boundary; no application surface is pure black; the visual suite is regenerated and green.
+
+### F11.8 The backdrop and the glass, everywhere
+- The animated backdrop and the frosted panels stop being an account-page speciality: the console's frame and the shop window sit on the same gradient, with glass where content is read over it.
+- The channel landscape stops being a dark rectangle: one hue per channel, a floor of its own, and a camera that frames the data rather than the void around it.
+- **Accept:** both applications show the backdrop behind their frame in both themes with the CSS fallback where WebGL is missing, and the three-dimensional view is never a blank or black rectangle.
+
+### F11.9 The motion
+- Entrance choreography for a page's sections, a route transition, and hover and press states on the surfaces that invite them — written with CSS keyframes and the Web Animations API, so that no new dependency is paid for.
+- **Accept:** with `prefers-reduced-motion` nothing translates or fades in, and the application is complete with every animation switched off.
+
 **Phase 11 exit:** a retailer can sign up and a person can join it, the window shows the kinds of device a shop shows, and a device with no battery is not graded as one with a dead battery.
 
 ---

@@ -6,16 +6,17 @@
  * The design tokens (F8.1).
  *
  * The palette is the pmndrs Material Design 3 output for a lime seed
- * (#CAF543) on a warm neutral seed (#C1B793). Warm off-whites and warm
- * near-blacks, never pure white or pure black.
+ * (#CAF543) on a warm neutral seed (#C1B793). Warm off-whites in the light
+ * theme and a deep teal ink in the dark one, never pure white or pure black.
  *
  * Every colour is stored as its red, green and blue channels rather than as
  * a hex value, so that Tailwind's opacity modifiers work: `ring-foreground/10`
  * and `bg-primary/5` need to be able to apply an alpha to the token.
  *
- * The light theme is the default in CSS. The application ships dark, and the
- * inline script in `index.html` puts the `dark` class on the document before
- * the first paint so the page never flashes.
+ * The application opens in the light theme (ADR-008). The inline script in
+ * `index.html` puts the `dark` class on the document before the first paint
+ * when the reader has asked for dark, so the page never flashes, and
+ * `theme-default.test.ts` keeps the two in step.
  */
 
 @layer base {
@@ -120,19 +121,28 @@
   .dark {
     color-scheme: dark;
 
-    --background: 20 19 17; /* #141311 */
+    /*
+     * An ink, not a black.
+     *
+     * The dark theme used to be a warm near-black, which is the colour of a
+     * screen that has been switched off. It is now a deep teal — the same hue
+     * the gradient backdrop draws — with a ramp above it on that hue, so a
+     * dark surface still reads as a colour (ADR-008). No surface here resolves
+     * to black, which `tokens.test.ts` measures rather than takes on trust.
+     */
+    --background: 16 28 26; /* #101c1a */
     --foreground: 230 226 221; /* #e6e2dd */
-    --card: 29 27 25; /* #1d1b19 */
+    --card: 21 36 33; /* #152421 */
     --card-foreground: 230 226 221; /* #e6e2dd */
-    --popover: 33 31 29; /* #211f1d */
+    --popover: 24 42 38; /* #182a26 */
     --popover-foreground: 230 226 221; /* #e6e2dd */
-    --muted: 43 42 39; /* #2b2a27 */
-    --muted-foreground: 198 200 184; /* #c6c8b8 */
-    --accent: 54 53 50; /* #363532 */
+    --muted: 29 50 46; /* #1d322e */
+    --muted-foreground: 194 207 198; /* #c2cfc6 */
+    --accent: 36 64 58; /* #24403a */
     --accent-foreground: 230 226 221; /* #e6e2dd */
-    --surface-2: 33 31 29; /* #211f1d */
-    --surface-3: 43 42 39; /* #2b2a27 */
-    --surface-4: 54 53 50; /* #363532 */
+    --surface-2: 24 42 38; /* #182a26 */
+    --surface-3: 29 50 46; /* #1d322e */
+    --surface-4: 36 64 58; /* #24403a */
 
     --primary: 200 242 64; /* #c8f240 */
     --primary-foreground: 40 53 0; /* #283500 */
@@ -144,10 +154,10 @@
     --destructive: 255 77 130; /* #ff4d82 */
     --destructive-foreground: 87 0 33; /* #570021 */
 
-    --border: 70 72 60; /* #46483c */
-    --input: 144 146 132; /* #909284 */
+    --border: 51 84 76; /* #33544c */
+    --input: 147 164 154; /* #93a49a */
     --ring: 200 242 64; /* #c8f240 */
-    --outline: 144 146 132; /* #909284 */
+    --outline: 147 164 154; /* #93a49a */
 
     --lime: 200 242 64; /* #c8f240 */
     --lime-container: 200 242 64; /* #c8f240 */
@@ -177,7 +187,7 @@
     --warning: 229 196 70; /* #e5c446 */
     --caution: 255 181 154; /* #ffb59a */
 
-    --hairline: 70 72 60; /* #46483c */
+    --hairline: 51 84 76; /* #33544c */
   }
 
   * {

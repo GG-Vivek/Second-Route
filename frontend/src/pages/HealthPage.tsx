@@ -13,6 +13,7 @@ import {
   EmptyState,
   Skeleton,
 } from '@/components/ui'
+import { MEANING } from '@/theme/meaning'
 
 /**
  * The health of the system.
@@ -106,12 +107,12 @@ export function HealthPage() {
           <CardTitle>The data sources</CardTitle>
           {sourceHealth && sourceHealth.summary.total > 0 && (
             <span className="flex flex-wrap items-center gap-2 text-xs">
-              <Badge variant="lime">{sourceHealth.summary.fresh} fresh</Badge>
+              <Badge variant={MEANING.recovered}>{sourceHealth.summary.fresh} fresh</Badge>
               {sourceHealth.summary.stale > 0 && (
-                <Badge variant="yellow">{sourceHealth.summary.stale} stale</Badge>
+                <Badge variant={MEANING.caution}>{sourceHealth.summary.stale} stale</Badge>
               )}
               {sourceHealth.summary.missing > 0 && (
-                <Badge variant="outline">{sourceHealth.summary.missing} missing</Badge>
+                <Badge variant={MEANING.missing}>{sourceHealth.summary.missing} missing</Badge>
               )}
               {sourceHealth.summary.errors > 0 && (
                 <Badge variant="destructive">{sourceHealth.summary.errors} errors</Badge>
@@ -215,10 +216,17 @@ function describe(state: DependencyState | undefined, down: string): string {
   return down
 }
 
-function SourceBadge({ status }: { status: 'fresh' | 'stale' | 'missing' }) {
+/**
+ * The condition of one source, drawn in the hue that carries it (ADR-008).
+ *
+ * Fresh is the state the system wants to be in, so it keeps the brand hue.
+ * Stale is a caution and missing is a failure — neither of them is synthetic
+ * data, which is what the yellow this page used to draw them in means.
+ */
+export function SourceBadge({ status }: { status: 'fresh' | 'stale' | 'missing' }) {
   if (status === 'fresh') {
     return (
-      <Badge variant="lime">
+      <Badge variant={MEANING.recovered}>
         <CheckCircle2 className="size-3" aria-hidden="true" />
         Fresh
       </Badge>
@@ -226,14 +234,14 @@ function SourceBadge({ status }: { status: 'fresh' | 'stale' | 'missing' }) {
   }
   if (status === 'stale') {
     return (
-      <Badge variant="yellow">
+      <Badge variant={MEANING.caution}>
         <TriangleAlert className="size-3" aria-hidden="true" />
         Stale
       </Badge>
     )
   }
   return (
-    <Badge variant="outline">
+    <Badge variant={MEANING.missing}>
       <AlertCircle className="size-3" aria-hidden="true" />
       Missing
     </Badge>

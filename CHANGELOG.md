@@ -36,6 +36,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   — which reads the same as a category nobody added. Kinds with nothing in the
   window are given more units to be judged with a different seed, up to three
   times, and any that still have nothing are reported by name.
+- The application opens in the light theme, in the console and in the shop
+  window alike. The dark theme stays as a choice, re-toned from a warm
+  near-black (`#141311`) to a deep teal ink with a ramp above it: no surface
+  in either theme is black, which `tokens.test.ts` measures rather than
+  assumes, and `theme-default.test.ts` keeps the inline script in `index.html`
+  and the `ThemeProvider` default in step so the first paint cannot flash.
+- Colour carries meaning (ADR-008). `src/theme/meaning.ts` is the one place
+  that says what each hue is for — lime is the value that was recovered, teal
+  what was measured, cyan a second measured series, orange a cost, purple an
+  estimate, yellow synthetic data, red destructive or missing — and the
+  analytics panels, the data-kind badge and the source conditions read that
+  rule. Regret is drawn as a cost rather than in the brand hue, the
+  reliability curve's points are measurements, and a stale source no longer
+  wears the yellow that means synthetic data.
+- The contrast suite measures the tokens in `index.css` instead of a copy of
+  them: the pair list names tokens, the stylesheet is parsed for their values,
+  and a colour that changes is measured again on the next run.
+- The visual baselines of both applications were regenerated, in both themes.
 
 ### Added (demonstration data)
 - `python scripts/seed_demo_data.py --reset-only` clears the demonstration data

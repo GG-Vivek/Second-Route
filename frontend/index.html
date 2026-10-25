@@ -5,22 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="SecondRoute - Decision engine for returned electronics" />
-    <meta name="theme-color" content="#141311" />
+    <meta name="theme-color" content="#fef8f4" />
     <title>SecondRoute</title>
     <!--
       The theme is applied before the first paint.
 
-      The application ships dark. This script reads the stored preference and
-      puts the class on the document element before anything is drawn, so the
-      page never flashes the wrong theme. It is deliberately inline and
-      deliberately has no dependencies: it has to run before the bundle does.
+      The application opens in the light theme. This script reads the stored
+      preference and puts the class on the document element before anything is
+      drawn, so the page never flashes the wrong theme. It is deliberately
+      inline and deliberately has no dependencies: it has to run before the
+      bundle does, and it has to agree with the default of ThemeProvider
+      (which theme-default.test.ts checks).
     -->
     <script>
       ;(function () {
         try {
           var stored = window.localStorage.getItem('secondroute-theme')
           var preference =
-            stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'dark'
+            stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'light'
           var dark =
             preference === 'dark' ||
             (preference === 'system' &&
@@ -28,7 +30,7 @@
           document.documentElement.classList.toggle('dark', dark)
         } catch (error) {
           // A browser that refuses to read storage still gets the default.
-          document.documentElement.classList.add('dark')
+          document.documentElement.classList.remove('dark')
         }
       })()
     </script>

@@ -8,22 +8,24 @@
       name="description"
       content="Refurbished laptops and computers, inspected and priced. SecondRoute."
     />
-    <meta name="theme-color" content="#141311" />
+    <meta name="theme-color" content="#fef8f4" />
     <title>SecondRoute — inspected and priced</title>
     <!--
       The theme is applied before the first paint.
 
-      The storefront ships dark. This script reads the stored preference and
-      puts the class on the document element before anything is drawn, so the
-      page never flashes the wrong theme. It is deliberately inline and
-      deliberately has no dependencies: it has to run before the bundle does.
+      The window opens in the light theme, the same as the console: the two are
+      one product and a reader should not meet a different one on each side of
+      the door. This script reads the stored preference and puts the class on
+      the document element before anything is drawn, so the page never flashes
+      the wrong theme. It is deliberately inline and deliberately has no
+      dependencies: it has to run before the bundle does.
     -->
     <script>
       ;(function () {
         try {
           var stored = window.localStorage.getItem('secondroute-theme')
           var preference =
-            stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'dark'
+            stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'light'
           var dark =
             preference === 'dark' ||
             (preference === 'system' &&
@@ -31,7 +33,7 @@
           document.documentElement.classList.toggle('dark', dark)
         } catch (error) {
           // A browser that refuses to read storage still gets the default.
-          document.documentElement.classList.add('dark')
+          document.documentElement.classList.remove('dark')
         }
       })()
     </script>
