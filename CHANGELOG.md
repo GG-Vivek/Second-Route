@@ -88,6 +88,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   optional for devices that have no battery.
 - Sign-up and sign-in pages in the operator console.
 
+### Added (the landing page)
+- A landing page at `/welcome` that says what the product does for somebody who
+  has never seen it: how a return becomes a decision, what the decision is
+  measured against, and two doors out of it — a retailer to the console's
+  sign-up, a buyer to the shop window (`VITE_SHOP_URL`, `localhost:5174` in
+  development). Sign-up and sign-in sit in the header, the hero and the foot,
+  and the sign-in and sign-up pages link back to it.
+- Its sections reveal themselves as the reader scrolls to them, with no
+  dependency: one IntersectionObserver shared by every section and the motion
+  curve the stylesheet already had. Nothing is hidden unless the script is
+  running and the reader has not asked for less motion — the waiting state is
+  a class the script adds, and it is not added under
+  `prefers-reduced-motion`, which `WelcomePage.test.tsx` checks in an
+  environment that has no observer at all.
+- `ButtonLink` takes an `external` flag, so a button to another origin is a
+  real link to a real address in a new tab rather than a route this
+  application's router would resolve against itself.
+
 ### Fixed
 - Type checking is clean again. Sixteen errors had accumulated in the photo
   scripts, the seed, the storefront service and two test files; the code added

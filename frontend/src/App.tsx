@@ -15,6 +15,7 @@ import { SignUpChooserPage } from '@/pages/auth/SignUpChooserPage'
 import { RetailerSignUpPage } from '@/pages/auth/RetailerSignUpPage'
 import { UserSignUpPage } from '@/pages/auth/UserSignUpPage'
 import { SignInPage } from '@/pages/auth/SignInPage'
+import { WelcomePage } from '@/pages/welcome/WelcomePage'
 
 // The analytics page draws its charts with Recharts, which is a large
 // library and is needed on one route only. It is fetched when the route is
@@ -56,12 +57,14 @@ function ConsoleRoutes() {
 }
 
 /**
- * The application. The sign-in and sign-up pages stand on their own, with no
- * shell around them; everything else is the console.
+ * The application. The landing page, the sign-in and the sign-up pages
+ * stand on their own, with no shell around them; everything else is the
+ * console.
  */
 export function App() {
   return (
     <Routes>
+      <Route path="welcome" element={<WelcomePage />} />
       <Route path="signup" element={<SignUpChooserPage />} />
       <Route path="signup/retailer" element={<RetailerSignUpPage />} />
       <Route path="signup/user" element={<UserSignUpPage />} />

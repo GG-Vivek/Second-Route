@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import {
   Badge,
   Button,
+  ButtonLink,
   Callout,
   Card,
   CardContent,
@@ -57,6 +59,35 @@ describe('Button', () => {
   it('defaults to type button so it never submits a form by accident', () => {
     render(<Button>Accept</Button>)
     expect(screen.getByRole('button', { name: 'Accept' })).toHaveAttribute('type', 'button')
+  })
+})
+
+describe('ButtonLink', () => {
+  it('navigates inside the application', () => {
+    render(
+      <MemoryRouter>
+        <ButtonLink href="/signup">Create an account</ButtonLink>
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Create an account' })
+    expect(link).toHaveAttribute('href', '/signup')
+    expect(link).not.toHaveAttribute('target')
+  })
+
+  it('opens somewhere else as somewhere else', () => {
+    render(
+      <ButtonLink href="https://shop.example" external>
+        Browse the shop window
+      </ButtonLink>,
+    )
+
+    // Another origin is another site: a real link to a real address, in a
+    // tab, that cannot reach back into this one.
+    const link = screen.getByRole('link', { name: 'Browse the shop window' })
+    expect(link).toHaveAttribute('href', 'https://shop.example')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link.getAttribute('rel')).toMatch(/noopener/)
   })
 })
 

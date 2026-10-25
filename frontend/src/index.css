@@ -337,6 +337,33 @@
 }
 
 /**
+ * The reveal (F11.10).
+ *
+ * A section waits a short distance below where it belongs and rises into
+ * its place when the reader scrolls to it. Two things keep it honest. The
+ * waiting state is only ever applied by the script, so a browser that
+ * cannot run it sees the section where it is; and it is only applied when
+ * the reader has not asked for less motion, so nobody is shown a section
+ * that slides. The stylesheet's own reduced-motion rule below is the
+ * second guarantee, for the case where something arms it anyway.
+ */
+.reveal {
+  transition:
+    opacity 700ms var(--transition-timing),
+    transform 700ms var(--transition-timing);
+}
+
+.reveal-armed {
+  opacity: 0;
+  transform: translateY(1.25rem);
+}
+
+.reveal-armed.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/**
  * The motion.
  *
  * Everything that moves uses one duration and one curve, and everything
@@ -354,6 +381,12 @@
 
   .tw-shimmer {
     animation: none;
+  }
+
+  .reveal-armed {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
 

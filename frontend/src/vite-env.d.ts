@@ -12,6 +12,14 @@ interface ImportMetaEnv {
    * production.
    */
   readonly VITE_ORG_ID: string
+  /**
+   * Where the shop window is served from.
+   *
+   * The window is another application — it is the public storefront, and
+   * in development it is served on another port. A page that sends a
+   * reader there has to be told the address rather than guess it.
+   */
+  readonly VITE_SHOP_URL?: string
 }
 
 interface ImportMeta {

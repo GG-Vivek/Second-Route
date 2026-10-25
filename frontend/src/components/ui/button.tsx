@@ -72,6 +72,15 @@ Button.displayName = 'Button'
 export interface ButtonLinkProps extends ButtonProps {
   /** Where the link goes. */
   href: string
+  /**
+   * The link goes to another site rather than to a route here.
+   *
+   * Another origin is another place: the router would turn the address
+   * into a path, and the reader would be sent to a page in this
+   * application instead of to where the button says. It is a plain anchor,
+   * in a tab, that cannot reach back into this one.
+   */
+  external?: boolean
 }
 
 /**
@@ -82,27 +91,33 @@ export interface ButtonLinkProps extends ButtonProps {
  */
 export function ButtonLink({
   href,
+  external,
   className,
   variant = 'default',
   size = 'default',
   ...props
 }: ButtonLinkProps) {
+  const classes = cn(
+    'group/button inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap',
+    'rounded-4xl border border-transparent bg-clip-padding text-sm font-medium',
+    'outline-none transition-all',
+    'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30',
+    'active:translate-y-px',
+    'aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20',
+    '[&_svg]:size-4',
+    VARIANTS[variant],
+    SIZES[size],
+    className
+  )
+  const anchor = props as AnchorHTMLAttributes<HTMLAnchorElement>
+
+  if (external) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" className={classes} {...anchor} />
+    )
+  }
+
   return (
-    <Link
-      to={href}
-      className={cn(
-        'group/button inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap',
-        'rounded-4xl border border-transparent bg-clip-padding text-sm font-medium',
-        'outline-none transition-all',
-        'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30',
-        'active:translate-y-px',
-        'aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20',
-        '[&_svg]:size-4',
-        VARIANTS[variant],
-        SIZES[size],
-        className
-      )}
-      {...(props as AnchorHTMLAttributes<HTMLAnchorElement>)}
-    />
+    <Link to={href} className={classes} {...anchor} />
   )
 }

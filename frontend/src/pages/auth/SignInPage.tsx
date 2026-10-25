@@ -39,12 +39,19 @@ export function SignInPage() {
       title="Sign in"
       lead="Use the email address and password you signed up with."
       footer={
-        <p>
-          New here?{' '}
-          <Link to="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Create an account
-          </Link>
-        </p>
+        <div className="space-y-2">
+          <p>
+            New here?{' '}
+            <Link to="/signup" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Create an account
+            </Link>
+          </p>
+          <p>
+            <Link to="/welcome" className="font-medium text-foreground underline-offset-4 hover:underline">
+              See how it works
+            </Link>
+          </p>
+        </div>
       }
     >
       <form className="space-y-5" noValidate onSubmit={handleSubmit((values) => mutation.mutate(values))}>

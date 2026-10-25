@@ -14,12 +14,19 @@ export function SignUpChooserPage() {
       title="Create an account"
       lead="Who are you signing up as?"
       footer={
-        <p>
-          Already have an account?{' '}
-          <Link to="/signin" className="font-medium text-foreground underline-offset-4 hover:underline">
-            Sign in
-          </Link>
-        </p>
+        <div className="space-y-2">
+          <p>
+            Already have an account?{' '}
+            <Link to="/signin" className="font-medium text-foreground underline-offset-4 hover:underline">
+              Sign in
+            </Link>
+          </p>
+          <p>
+            <Link to="/welcome" className="font-medium text-foreground underline-offset-4 hover:underline">
+              See how it works
+            </Link>
+          </p>
+        </div>
       }
     >
       <div className="grid gap-3">

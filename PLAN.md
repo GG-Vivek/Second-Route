@@ -624,6 +624,11 @@ The shop window is not the console with the serial number hidden. It is a differ
 - Entrance choreography for a page's sections, a route transition, and hover and press states on the surfaces that invite them — written with CSS keyframes and the Web Animations API, so that no new dependency is paid for.
 - **Accept:** with `prefers-reduced-motion` nothing translates or fades in, and the application is complete with every animation switched off.
 
+### F11.10 The landing page
+- A page at `/welcome` that says what the product does for someone who has never seen it: how a return becomes a decision, what the decision is measured against, and two doors out of it — a retailer goes to the console's sign-up, a buyer goes to the shop window.
+- The sections reveal themselves as the reader scrolls, with the motion that F11.9 allows: no dependency, nothing hidden unless the script is running and the reader has not asked for less motion.
+- **Accept:** sign-up and sign-in are one click from the top of the page; both doors go where they say; with `prefers-reduced-motion`, with the script off, or with no `IntersectionObserver`, the page is complete and every section is readable.
+
 **Phase 11 exit:** a retailer can sign up and a person can join it, the window shows the kinds of device a shop shows, and a device with no battery is not graded as one with a dead battery.
 
 ---
