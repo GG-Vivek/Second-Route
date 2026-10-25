@@ -31,6 +31,12 @@ BACKEND_DIR="${REPO_ROOT}/backend"
 FRONTEND_DIR="${REPO_ROOT}/frontend"
 SHOP_DIR="${REPO_ROOT}/frontend-public"
 
+# Activate the backend virtual environment if present
+if [ -f "${BACKEND_DIR}/.venv/bin/activate" ]; then
+    # shellcheck source=/dev/null
+    . "${BACKEND_DIR}/.venv/bin/activate"
+fi
+
 : "${PGHOST:=127.0.0.1}"
 : "${PGPORT:=5432}"
 : "${PGDATABASE:=secondroute}"
@@ -58,10 +64,31 @@ fail() { printf '%serror:%s %s\n' "${RED}" "${RESET}" "$1" >&2; exit 1; }
 # The prerequisites
 # ---------------------------------------------------------------------
 step "Checking the prerequisites"
-for command in uv node npm psql; do
+HAS_UV=0
+if command -v uv >/dev/null 2>&1; then
+    HAS_UV=1
+fi
+
+for command in node npm psql; do
     command -v "$command" >/dev/null 2>&1 || fail "$command is not installed."
 done
-info "uv $(uv --version 2>/dev/null | awk '{print $2}'), node $(node --version)"
+
+if [ "$HAS_UV" = "1" ]; then
+    info "uv $(uv --version 2>/dev/null | awk '{print $2}'), node $(node --version)"
+elif command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1; then
+    PY_BIN="$(command -v python3 || command -v python)"
+    info "python $($PY_BIN --version 2>/dev/null | awk '{print $2}'), node $(node --version)"
+else
+    fail "Neither uv nor python is installed."
+fi
+
+py_run() {
+    if [ "$HAS_UV" = "1" ]; then
+        uv run "$@"
+    else
+        "$@"
+    fi
+}
 
 if ! pg_isready -h "$PGHOST" -p "$PGPORT" >/dev/null 2>&1; then
     fail "PostgreSQL is not answering on ${PGHOST}:${PGPORT}.
@@ -74,7 +101,13 @@ info "PostgreSQL is up on ${PGHOST}:${PGPORT}"
 # The dependencies
 # ---------------------------------------------------------------------
 step "Installing the dependencies"
-(cd "$BACKEND_DIR" && uv sync --all-extras >/dev/null) || fail "the backend dependencies could not be installed."
+if [ "$HAS_UV" = "1" ]; then
+    (cd "$BACKEND_DIR" && uv sync --all-extras >/dev/null) || fail "the backend dependencies could not be installed."
+elif [ -d "${BACKEND_DIR}/.venv" ]; then
+    info "using existing virtual environment in ${BACKEND_DIR}/.venv"
+else
+    fail "the backend dependencies could not be installed: uv is not installed and no virtualenv exists."
+fi
 [ -d "${FRONTEND_DIR}/node_modules" ] || (cd "$FRONTEND_DIR" && npm install >/dev/null) || fail "the frontend dependencies could not be installed."
 [ -d "${SHOP_DIR}/node_modules" ] || (cd "$SHOP_DIR" && npm install >/dev/null) || fail "the shop window's dependencies could not be installed."
 info "the backend, the frontend and the shop window are ready"
@@ -109,7 +142,7 @@ if [ "${SKIP_SETUP:-0}" != "1" ]; then
 
     step "Running the migrations"
     (cd "$BACKEND_DIR" && DATABASE_URL="postgresql+psycopg2://secondroute_app:${POSTGRES_PASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" \
-        uv run alembic upgrade head >/dev/null) || fail "the migrations failed."
+        py_run alembic upgrade head >/dev/null) || fail "the migrations failed."
     info "the schema is up to date"
 fi
 
@@ -147,8 +180,8 @@ info "the API will use ${PGDATABASE} on ${PGHOST}:${PGPORT}"
 # The seeds
 # ---------------------------------------------------------------------
 step "Seeding"
-(cd "$BACKEND_DIR" && uv run python scripts/load_skus.py 2>/dev/null | tail -1) || fail "the catalogue could not be loaded."
-ORG_ID="$(cd "$BACKEND_DIR" && uv run python scripts/seed_dev_org.py 2>/dev/null | awk '/org id/{print $3}')"
+(cd "$BACKEND_DIR" && py_run python scripts/load_skus.py 2>/dev/null | tail -1) || fail "the catalogue could not be loaded."
+ORG_ID="$(cd "$BACKEND_DIR" && py_run python scripts/seed_dev_org.py 2>/dev/null | awk '/org id/{print $3}')"
 [ -n "$ORG_ID" ] || fail "the development organisation could not be created."
 info "the organisation is $ORG_ID"
 
@@ -158,7 +191,7 @@ info "the organisation is $ORG_ID"
 # never throws away work. Where the catalogue has kinds the window shows
 # nothing of, say so -- a window showing only the old stock looks exactly
 # like a window that never changed.
-if DEMO_OUT="$(cd "$BACKEND_DIR" && uv run python scripts/seed_demo_data.py --if-missing 2>/dev/null)"; then
+if DEMO_OUT="$(cd "$BACKEND_DIR" && py_run python scripts/seed_demo_data.py --if-missing 2>/dev/null)"; then
     printf '%s\n' "$DEMO_OUT" | grep -E "demonstration data|units +[0-9]|off the window|restock it with" | tail -4 || true
 else
     info "the demonstration data could not be made; the shop window may be empty."
@@ -188,7 +221,7 @@ cleanup() {
 }
 trap cleanup INT TERM EXIT
 
-(cd "$BACKEND_DIR" && uv run uvicorn secondroute.api.main:app --host 127.0.0.1 --port "$APP_PORT" >"$API_LOG" 2>&1) &
+(cd "$BACKEND_DIR" && py_run uvicorn secondroute.api.main:app --host 127.0.0.1 --port "$APP_PORT" >"$API_LOG" 2>&1) &
 API_PID=$!
 
 (cd "$FRONTEND_DIR" && npm run dev -- --port "$WEB_PORT" >"$WEB_LOG" 2>&1) &

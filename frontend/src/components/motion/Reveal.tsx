@@ -5,28 +5,23 @@ export interface RevealProps extends HTMLAttributes<HTMLElement> {
   /** The element the section is drawn as. */
   as?: ElementType
   children: ReactNode
+  /** Delay in milliseconds for staggered Theatre-style sequence choreography. */
+  delay?: number
 }
 
 /**
  * A section that arrives as the reader scrolls to it (F11.10).
  *
- * The whole mechanism is one class and one observer, with no dependency:
- * the section is given a waiting state, an IntersectionObserver takes it
- * off when the section comes into view, and the transition in the
- * stylesheet does the rest. Nothing here decides how anything moves.
+ * The mechanism is one class and one observer: the section is given a waiting
+ * state, an IntersectionObserver takes it off when the section comes into view,
+ * and the transition in the stylesheet does the rest.
  *
- * Three positions are handled rather than assumed:
+ * Supports optional `delay` prop for staggered Theatre-style cascade entrances.
  *
- * - No IntersectionObserver (an old browser, or this test environment):
- *   nothing is ever given the waiting state, so nothing is ever hidden.
- * - The reader has asked for less motion: same, nothing is armed. The
- *   stylesheet's own reduced-motion rule is the second line of defence.
- * - The script never ran: the waiting state only ever exists as a class
- *   the script adds, so the section is simply where it was written.
- *
- * One observer is shared by every section on the page. A page has a
- * handful of them and each one stops being watched as soon as it has
- * arrived, so there is nothing here worth allocating per section.
+ * Three positions are handled:
+ * - No IntersectionObserver: nothing is armed, so nothing is ever hidden.
+ * - Reader asked for less motion: nothing is armed.
+ * - Script never ran: section is simply rendered where it was written.
  */
 let watcher: IntersectionObserver | null = null
 
@@ -45,14 +40,14 @@ function sharedWatcher(): IntersectionObserver | null {
       // A section is revealed when most of it is on the screen, and a
       // little before it reaches the top, so the reader never watches a
       // heading arrive after they have started reading it.
-      { threshold: 0.2, rootMargin: '0px 0px -6% 0px' },
+      { threshold: 0.15, rootMargin: '0px 0px -6% 0px' },
     )
   }
 
   return watcher
 }
 
-export function Reveal({ as, className, children, ...props }: RevealProps) {
+export function Reveal({ as, className, children, delay, style, ...props }: RevealProps) {
   const Tag = (as ?? 'div') as ElementType
   const ref = useRef<HTMLElement | null>(null)
   const [armed, setArmed] = useState(false)
@@ -68,11 +63,16 @@ export function Reveal({ as, className, children, ...props }: RevealProps) {
     return () => observer.unobserve(element)
   }, [])
 
+  const combinedStyle = delay
+    ? { ...style, transitionDelay: `${delay}ms` }
+    : style
+
   return (
     <Tag
       ref={ref}
       data-reveal=""
       className={cn('reveal', armed && 'reveal-armed', className)}
+      style={combinedStyle}
       {...props}
     >
       {children}

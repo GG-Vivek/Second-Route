@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => {
         // the operator's application, so they have to resolve there too.
         { find: /^@\/utils\/cn$/, replacement: `${shared}/utils/cn.ts` },
         { find: /^@\/types\/decision$/, replacement: `${shared}/types/decision.ts` },
+        { find: /^@\/three\/(.*)$/, replacement: `${shared}/three/$1` },
         // This application's own code.
         { find: /^@\//, replacement: `${path.resolve(__dirname, 'src')}/` },
       ],

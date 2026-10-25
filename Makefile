@@ -11,7 +11,10 @@ help: ## Show this help
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 dev: ## Start the API and the frontend
-	@bash scripts/dev.sh
+	@if [ -f backend/.venv/bin/activate ]; then \
+		. backend/.venv/bin/activate; \
+	fi; \
+	bash scripts/dev.sh
 
 setup: ## Install the dependencies
 	cd backend && uv sync --all-extras

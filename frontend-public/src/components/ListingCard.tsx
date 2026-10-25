@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom'
-import { Camera, BatteryCharging } from 'lucide-react'
+import { Camera, BatteryCharging, MessageCircle } from 'lucide-react'
 import { Badge } from '@design-system/components/ui'
 import { formatMoney } from '@/types/decision'
 import type { Listing } from '@/api/listings'
 import { categoryIcon } from '@/components/categoryIcons'
+import { getWhatsAppBuyUrl } from '@/utils/whatsapp'
 
 /**
  * The grade, in a colour.
@@ -65,21 +66,37 @@ export function ListingCard({ listing }: { listing: Listing }) {
             <p className="text-lg font-semibold tabular">{formatMoney(listing.price.amount)}</p>
             <p className="text-[11px] text-muted-foreground">estimated resale price</p>
           </div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              window.open(getWhatsAppBuyUrl(listing), '_blank', 'noopener,noreferrer')
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:bg-primary/85 hover:shadow active:scale-95"
+            aria-label={`Buy ${listing.title} on WhatsApp`}
+          >
+            <MessageCircle className="size-3.5" aria-hidden="true" />
+            Buy
+          </button>
+        </div>
+
+        {(listing.battery_health_pct || listing.photo_count > 0) && (
+          <div className="flex items-center gap-3 border-t border-border/40 pt-2 text-[11px] text-muted-foreground">
             {listing.battery_health_pct && (
               <span className="inline-flex items-center gap-1">
                 <BatteryCharging className="size-3" aria-hidden="true" />
-                {listing.battery_health_pct}%
+                {listing.battery_health_pct}% battery
               </span>
             )}
             {listing.photo_count > 0 && (
               <span className="inline-flex items-center gap-1">
                 <Camera className="size-3" aria-hidden="true" />
-                {listing.photo_count}
+                {listing.photo_count} photos
               </span>
             )}
           </div>
-        </div>
+        )}
       </div>
     </Link>
   )

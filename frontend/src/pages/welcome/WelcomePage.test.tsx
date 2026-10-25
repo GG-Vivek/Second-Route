@@ -90,6 +90,14 @@ describe('the landing page', () => {
     expect(SHOP_WINDOW).toMatch(/^https?:\/\//)
   })
 
+  it('renders the interactive disposition inspection preview with channels and flip condition', () => {
+    renderPage()
+
+    expect(screen.getByRole('tablist', { name: /disposition channels/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /refurbish/i })).toBeInTheDocument()
+    expect(screen.getByText(/flip condition:/i)).toBeInTheDocument()
+  })
+
   it('writes its sections to reveal themselves as they are scrolled to', () => {
     renderPage()
 

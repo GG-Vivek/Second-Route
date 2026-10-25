@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { supportsWebGL } from '../../three/webgl'
 import { cn } from '@/utils/cn'
 
 /**
@@ -54,6 +55,7 @@ const FRAGMENT_SHADER = `
 precision mediump float;
 uniform vec2 resolution;
 uniform float time;
+uniform vec2 mouse;
 uniform vec3 colours[4];
 
 // A soft field: strong at the centre, gone by the radius.
@@ -66,16 +68,28 @@ void main() {
   vec2 uv = gl_FragCoord.xy / resolution;
   float t = time * 0.12;
 
-  vec2 a = vec2(0.22 + 0.16 * sin(t * 1.1), 0.72 + 0.12 * cos(t * 0.9));
-  vec2 b = vec2(0.78 + 0.14 * cos(t * 0.8), 0.28 + 0.18 * sin(t * 1.3));
+  // Fluid wave distortion inspired by shadergradient
+  vec2 m = (mouse - 0.5) * 0.25;
+  vec2 warp = vec2(
+    sin(uv.y * 3.2 + t * 0.9 + m.x * 2.0),
+    cos(uv.x * 3.2 + t * 0.7 + m.y * 2.0)
+  ) * 0.12;
+  vec2 wuv = uv + warp;
+
+  vec2 a = vec2(0.22 + 0.18 * sin(t * 1.1 + m.x), 0.72 + 0.14 * cos(t * 0.9 + m.y));
+  vec2 b = vec2(0.78 + 0.16 * cos(t * 0.8 + m.y), 0.28 + 0.20 * sin(t * 1.3 + m.x));
   vec2 c = vec2(0.50 + 0.24 * sin(t * 0.6 + 1.3), 0.50 + 0.20 * cos(t * 0.7));
-  vec2 d = vec2(0.92 + 0.08 * sin(t * 1.7), 0.92 + 0.08 * cos(t * 1.2));
+  vec2 d = vec2(0.92 + 0.10 * sin(t * 1.7), 0.92 + 0.10 * cos(t * 1.2));
 
   vec3 colour = colours[0];
-  colour = mix(colour, colours[1], 0.75 * field(uv, a, 0.48));
-  colour = mix(colour, colours[2], 0.70 * field(uv, b, 0.52));
-  colour = mix(colour, colours[3], 0.60 * field(uv, c, 0.42));
-  colour = mix(colour, colours[1], 0.35 * field(uv, d, 0.30));
+  colour = mix(colour, colours[1], 0.78 * field(wuv, a, 0.52));
+  colour = mix(colour, colours[2], 0.72 * field(wuv, b, 0.56));
+  colour = mix(colour, colours[3], 0.60 * field(wuv, c, 0.44));
+  colour = mix(colour, colours[1], 0.38 * field(wuv, d, 0.32));
+
+  // Subtle interactive light sheen around mouse
+  float pointerGlow = exp(-length(uv - mouse) * 4.5) * 0.08;
+  colour += colours[1] * pointerGlow;
 
   // A little grain, so the gradient does not band on a good screen.
   float grain = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
@@ -114,6 +128,11 @@ export function ShaderBackdrop({ palette = 'dark', className }: ShaderBackdropPr
   const [unsupported, setUnsupported] = useState(false)
 
   useEffect(() => {
+    if (!supportsWebGL()) {
+      setUnsupported(true)
+      return
+    }
+
     const canvas = canvasRef.current
     if (!canvas) return
 
@@ -149,8 +168,21 @@ export function ShaderBackdrop({ palette = 'dark', className }: ShaderBackdropPr
 
     const resolutionLocation = gl.getUniformLocation(program, 'resolution')
     const timeLocation = gl.getUniformLocation(program, 'time')
+    const mouseLocation = gl.getUniformLocation(program, 'mouse')
     const coloursLocation = gl.getUniformLocation(program, 'colours')
     gl.uniform3fv(coloursLocation, PALETTES[palette].flat())
+
+    let targetMouseX = 0.5
+    let targetMouseY = 0.5
+    let currentMouseX = 0.5
+    let currentMouseY = 0.5
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (typeof window === 'undefined') return
+      targetMouseX = Math.max(0, Math.min(1, e.clientX / window.innerWidth))
+      targetMouseY = Math.max(0, Math.min(1, 1 - e.clientY / window.innerHeight))
+    }
+    window.addEventListener('pointermove', onPointerMove, { passive: true })
 
     const resize = () => {
       // A high pixel density costs a great deal for a soft gradient, and
@@ -164,7 +196,10 @@ export function ShaderBackdrop({ palette = 'dark', className }: ShaderBackdropPr
     }
 
     const draw = (milliseconds: number) => {
+      currentMouseX += (targetMouseX - currentMouseX) * 0.05
+      currentMouseY += (targetMouseY - currentMouseY) * 0.05
       gl.uniform1f(timeLocation, milliseconds / 1000)
+      gl.uniform2f(mouseLocation, currentMouseX, currentMouseY)
       gl.drawArrays(gl.TRIANGLES, 0, 3)
     }
 
@@ -201,6 +236,7 @@ export function ShaderBackdrop({ palette = 'dark', className }: ShaderBackdropPr
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      window.removeEventListener('pointermove', onPointerMove)
       document.removeEventListener('visibilitychange', onVisibility)
       pause()
       observer.disconnect()

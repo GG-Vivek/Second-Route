@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Check, X as Cross } from 'lucide-react'
+import { ArrowLeft, Check, MessageCircle, X as Cross } from 'lucide-react'
 import { Badge, Callout, Skeleton } from '@design-system/components/ui'
 
 import { describeFailure } from '@/api/client'
 import { getListing } from '@/api/listings'
 import { formatMoney } from '@/types/decision'
+import { getWhatsAppBuyUrl } from '@/utils/whatsapp'
 
 /**
  * One device, in full.
@@ -143,6 +144,17 @@ export function ListingPage() {
                 This is a demonstration price. It comes from a model, not from a market.
               </p>
             )}
+
+            <a
+              href={getWhatsAppBuyUrl(listing)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:bg-primary/90 hover:shadow-lg active:translate-y-px"
+              aria-label={`Buy ${listing.title} on WhatsApp`}
+            >
+              <MessageCircle className="size-4" aria-hidden="true" />
+              Buy via WhatsApp (+91 94711 90089)
+            </a>
           </div>
 
           {listing.highlights.length > 0 && (

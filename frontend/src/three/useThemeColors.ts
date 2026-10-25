@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useTheme } from '@/theme'
-import type { Hue } from '@/theme/meaning'
+import { useTheme } from '../theme'
+import type { Hue } from '../theme/meaning'
 
 /** Read a colour token out of the document. */
 function readColor(token: string): string {

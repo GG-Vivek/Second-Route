@@ -6,3 +6,4 @@ export {
   type GlassPanelProps,
   type LiquidLogoProps,
 } from './LiquidGlass'
+export { HeroInspectionCard } from './HeroInspectionCard'
